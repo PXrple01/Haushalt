@@ -1,0 +1,88 @@
+/* =====================================================================
+   Themes: nur Design-Tokens. Komponenten lesen diese Variablen.
+   Theme-spezifische Formen stehen bei der jeweiligen Komponente
+   (immer mit :where([data-theme=…]), damit die Spezifität flach bleibt).
+   ===================================================================== */
+
+/* ---------- Baby (Josefine): Stickerbuch-Cutecore ---------- */
+:root[data-theme="baby"] {
+  color-scheme: light;
+  --bg: #FFE4F2;
+  --surface: #FFFFFF;
+  --surface-2: #FFF5FA;
+  --surface-3: #FDEAF5;
+  --line: #F7CBE2;
+  --line-strong: #EFA6CD;
+  --ink: #5A1E4B;
+  --ink-soft: #8C4A78;
+  --ink-faint: #B783A6;
+  --primary: #D1307F;
+  --primary-hi: #EE4F9B;
+  --primary-lo: #C02472;
+  --primary-edge: #97185A;
+  --primary-ink: #FFFFFF;
+  --accent: #FF5FA8;
+  --accent-2: #B79CFF;
+  --accent-ink: #7B4FD6;
+  --sky: #8FD3FF;
+  --mint: #8EE6C1;
+  --butter: #FFE27A;
+  --good: #23885C; --good-bg: #D3F6E6; --good-line: #8EE6C1;
+  --bad: #C9305A; --bad-bg: #FFE0EA; --bad-line: #FF9BB8;
+  --maybe: #9A6410; --maybe-bg: #FFF1C9; --maybe-line: #FFD873;
+  --focus: #7B4FD6;
+  --font-display: "Mochiy Pop One", "Nunito", system-ui, sans-serif;
+  --font-body: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-hand: "Caveat", "Segoe Print", cursive;
+  --display-weight: 400;
+  --display-track: 0;
+  --r-s: 14px; --r-m: 22px; --r-l: 30px; --r-pill: 999px;
+  --shadow-s: 0 2px 0 rgba(151, 24, 90, .08), 0 6px 14px rgba(199, 42, 120, .10);
+  --shadow-m: 0 4px 0 rgba(151, 24, 90, .08), 0 16px 32px rgba(199, 42, 120, .16);
+  --glass: rgba(255, 255, 255, .78);
+  --backdrop: rgba(90, 30, 75, .32);
+  --theme-color: #FFE4F2;
+}
+
+/* ---------- Lila (Johann): Neon-Nacht mit Manga-Akzenten ---------- */
+:root[data-theme="lila"] {
+  color-scheme: dark;
+  --bg: #160B33;
+  --surface: #221146;
+  --surface-2: #2A1658;
+  --surface-3: #351C6E;
+  --line: #3F2B7C;
+  --line-strong: #6B4FD0;
+  --ink: #F3ECFF;
+  --ink-soft: #B8A6E6;
+  --ink-faint: #8C7BC0;
+  --primary: #7C4DFF;
+  --primary-hi: #9064FF;
+  --primary-lo: #6233E0;
+  --primary-edge: #47E5FF;
+  --primary-ink: #FFFFFF;
+  --accent: #D19BFF;
+  --accent-2: #47E5FF;
+  --accent-ink: #47E5FF;
+  --sky: #47E5FF;
+  --mint: #5CF2B8;
+  --butter: #FFD36E;
+  --good: #5CF2B8; --good-bg: rgba(92, 242, 184, .13); --good-line: rgba(92, 242, 184, .55);
+  --bad: #FF6B95; --bad-bg: rgba(255, 92, 138, .15); --bad-line: rgba(255, 107, 149, .6);
+  --maybe: #FFD36E; --maybe-bg: rgba(255, 211, 110, .13); --maybe-line: rgba(255, 211, 110, .55);
+  --focus: #47E5FF;
+  --font-display: "Anton", Impact, "Arial Narrow", sans-serif;
+  --font-body: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-hand: "Caveat", "Segoe Print", cursive;
+  --display-weight: 400;
+  --display-track: .012em;
+  --r-s: 6px; --r-m: 10px; --r-l: 14px; --r-pill: 999px;
+  --shadow-s: 0 0 0 1px rgba(209, 155, 255, .16), 0 8px 18px rgba(5, 2, 20, .45);
+  --shadow-m: 0 0 0 1px rgba(209, 155, 255, .22), 0 18px 40px rgba(5, 2, 20, .55);
+  --glass: rgba(30, 15, 64, .78);
+  --backdrop: rgba(6, 2, 20, .62);
+  --theme-color: #160B33;
+}
+
+html { background: var(--bg); }
+body { background: transparent; }

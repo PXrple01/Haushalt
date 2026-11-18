@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="de" data-theme="baby" data-motion="full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kicherkiste</title>
+  <meta name="description" content="Ratespiele für Johann und Josefine: Galgenmännchen, Wer bin ich? und Zahl erraten.">
+  <meta name="theme-color" content="#FFE4F2">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Kicherkiste">
+  <link rel="preload" href="assets/fonts/nunito.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/mochiy-pop-one.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/anton.woff2" as="font" type="font/woff2" crossorigin>
+  <script>
+    // Theme und Bewegung vor dem ersten Zeichnen setzen (kein Aufblitzen der falschen Farben)
+    (function () {
+      try {
+        var ns = (new URLSearchParams(location.search).get('ns') || '').replace(/[^a-z0-9]/gi, '').slice(0, 12);
+        var P = 'kk' + (ns ? '-' + ns : '') + ':';
+        var prefs = JSON.parse(localStorage.getItem(P + 'prefs') || '{}') || {};
+        var me = JSON.parse(localStorage.getItem(P + 'me') || 'null');
+        var tf = prefs.themeFor || {};
+        var theme = me ? (tf[me] || (me === 'joh' ? 'lila' : 'baby')) : 'baby';
+        var d = document.documentElement;
+        d.dataset.theme = theme;
+        var m = prefs.motion || 'auto';
+        d.dataset.motion = m === 'reduced' || (m === 'auto' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'reduced' : 'full';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'lila' ? '#160B33' : '#FFE4F2');
+      } catch (e) { /* Standard bleibt */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/scene.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/screens.css">
+  <link rel="stylesheet" href="css/games.css">
+</head>
+<body>
+  <div id="scene" aria-hidden="true"></div>
+  <main id="app" tabindex="-1"></main>
+  <div id="layer"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div id="sr" class="sr-only" aria-live="assertive"></div>
+  <noscript><p style="padding:24px;font-family:sans-serif">Die Kicherkiste braucht JavaScript. Bitte im Browser aktivieren.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

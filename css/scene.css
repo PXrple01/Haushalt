@@ -1,0 +1,132 @@
+/* =====================================================================
+   Hintergrund-Szenen (#scene). Aufbau in js/core/scene.js.
+   .amb = bewegte Deko (wird bei „Bewegung reduzieren“ ausgeblendet).
+   ===================================================================== */
+
+.sc { position: absolute; inset: 0; overflow: hidden; }
+
+/* ================= Baby ================= */
+.sc-baby .sky {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(90% 55% at 15% 0%, rgba(255, 196, 228, .95) 0%, transparent 70%),
+    radial-gradient(80% 50% at 100% 30%, rgba(214, 196, 255, .8) 0%, transparent 70%),
+    radial-gradient(90% 60% at 30% 100%, rgba(196, 232, 255, .85) 0%, transparent 70%),
+    linear-gradient(180deg, #FFDDEE 0%, #FFE8F4 40%, #EFE3FF 72%, #DDF2FF 100%);
+}
+.sc-baby .dots {
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, .85) 2.3px, transparent 2.8px);
+  background-size: 28px 28px;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, .12) 55%, transparent 85%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, .12) 55%, transparent 85%);
+}
+.sc-baby .rainbow {
+  position: absolute; width: 360px; height: 180px; right: -110px; top: 54px;
+  opacity: .5; transform: rotate(14deg);
+  filter: saturate(1.1);
+}
+.sc-baby .rainbow.amb { animation: kk-rb-shimmer 9s ease-in-out infinite; }
+@keyframes kk-rb-shimmer { 50% { opacity: .68; transform: rotate(14deg) translateY(-6px); } }
+
+.sc-baby .cloud { position: absolute; left: 0; width: var(--w, 160px); top: var(--y, 20%); opacity: var(--o, .95); }
+.sc-baby .cloud svg { width: 100%; height: auto; filter: drop-shadow(0 6px 10px rgba(183, 156, 255, .25)); }
+.sc-baby .cloud.amb { animation: kk-drift var(--t, 80s) linear infinite; animation-delay: var(--dl, 0s); }
+.sc-baby .cloud.static { left: var(--x, 0); }
+@keyframes kk-drift { from { transform: translateX(-40vw); } to { transform: translateX(120vw); } }
+
+.sc-baby .spark {
+  position: absolute; left: var(--x); top: var(--y);
+  width: var(--s, 14px); height: var(--s, 14px);
+  background: var(--c, #fff);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, .9));
+  animation: kk-twinkle var(--t, 3.2s) ease-in-out infinite;
+  animation-delay: var(--dl, 0s);
+}
+@keyframes kk-twinkle { 0%, 100% { transform: scale(.35) rotate(0deg); opacity: .25; } 50% { transform: scale(1) rotate(45deg); opacity: 1; } }
+
+.sc-baby .float {
+  position: absolute; bottom: -40px; left: var(--x);
+  width: var(--s, 18px); height: var(--s, 18px);
+  color: var(--c, #FF9DCB);
+  animation: kk-rise var(--t, 18s) linear infinite;
+  animation-delay: var(--dl, 0s);
+}
+.sc-baby .float svg { width: 100%; height: 100%; }
+@keyframes kk-rise {
+  0% { transform: translate(0, 0) rotate(-8deg); opacity: 0; }
+  10% { opacity: .85; }
+  50% { transform: translate(18px, -55vh) rotate(8deg); }
+  90% { opacity: .7; }
+  100% { transform: translate(-10px, -112vh) rotate(-6deg); opacity: 0; }
+}
+
+/* ================= Lila ================= */
+.sc-lila .night {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(110% 60% at 78% -5%, #3B1C88 0%, rgba(59, 28, 136, 0) 65%),
+    radial-gradient(90% 55% at 0% 100%, rgba(78, 24, 120, .75) 0%, transparent 70%),
+    linear-gradient(180deg, #1F0E4A 0%, #160B33 45%, #0F0727 100%);
+}
+.sc-lila .nebula {
+  position: absolute; border-radius: 50%;
+  width: var(--w, 70vmax); height: var(--w, 70vmax);
+  left: var(--x); top: var(--y);
+  background: radial-gradient(circle, var(--c) 0%, transparent 62%);
+  opacity: var(--o, .5);
+  mix-blend-mode: screen;
+}
+.sc-lila .nebula.amb { animation: kk-nebula var(--t, 46s) ease-in-out infinite alternate; }
+@keyframes kk-nebula { to { transform: translate(var(--dx, 8vw), var(--dy, -6vh)) scale(1.12); } }
+
+.sc-lila .stars { position: absolute; left: 0; top: 0; width: 1px; height: 1px; border-radius: 50%; background: transparent; }
+.sc-lila .stars.s2 { width: 2px; height: 2px; }
+.sc-lila .stars.amb { animation: kk-stars var(--t, 5s) ease-in-out infinite alternate; }
+@keyframes kk-stars { from { opacity: 1; } to { opacity: .35; } }
+
+.sc-lila .spark {
+  position: absolute; left: var(--x); top: var(--y);
+  width: var(--s, 12px); height: var(--s, 12px);
+  background: var(--c, #fff);
+  clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%);
+  filter: drop-shadow(0 0 6px var(--c, #fff));
+  animation: kk-twinkle var(--t, 4s) ease-in-out infinite;
+  animation-delay: var(--dl, 0s);
+}
+.sc-lila .tone {
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle, rgba(209, 155, 255, .2) 1.15px, transparent 1.6px);
+  background-size: 8px 8px;
+  -webkit-mask-image: radial-gradient(70% 45% at 0% 0%, #000 0%, transparent 70%), radial-gradient(60% 40% at 100% 100%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(70% 45% at 0% 0%, #000 0%, transparent 70%), radial-gradient(60% 40% at 100% 100%, #000 0%, transparent 70%);
+}
+.sc-lila .moon {
+  position: absolute; right: 26px; top: calc(var(--safe-t) + 74px);
+  width: 64px; height: 64px; border-radius: 50%;
+  box-shadow: inset -15px 6px 0 0 #F5EEFF;
+  filter: drop-shadow(0 0 14px rgba(209, 155, 255, .75)) drop-shadow(0 0 40px rgba(124, 77, 255, .55));
+  transform: rotate(-18deg);
+  opacity: .9;
+}
+.sc-lila .shoot {
+  position: absolute; left: 60%; top: 8%;
+  width: 140px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff 70%, #C9F7FF);
+  filter: drop-shadow(0 0 6px #9FF0FF);
+  opacity: 0;
+  transform: rotate(-32deg);
+  animation: kk-shoot 11s ease-in infinite;
+  animation-delay: var(--dl, 3s);
+}
+@keyframes kk-shoot {
+  0%, 88% { opacity: 0; transform: rotate(-32deg) translateX(0); }
+  90% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(-32deg) translateX(-70vw); }
+}
+
+/* ================= Duo (Personenauswahl): beide Welten nebeneinander ================= */
+.sc-duo .sc-baby { -webkit-mask-image: linear-gradient(100deg, #000 38%, transparent 62%); mask-image: linear-gradient(100deg, #000 38%, transparent 62%); }
+.sc-duo .sc-lila { -webkit-mask-image: linear-gradient(100deg, transparent 38%, #000 62%); mask-image: linear-gradient(100deg, transparent 38%, #000 62%); }
+.sc-duo .sc-lila .moon { top: calc(var(--safe-t) + 24px); }
