@@ -34,8 +34,8 @@
 .sc.splash i { animation: kk-splash .6s ease-out; }
 @keyframes kk-hitpop { from { transform: scale(0) rotate(-90deg); } }
 @keyframes kk-splash { from { transform: scale(.2); opacity: 0; } 60% { transform: scale(1.3); opacity: 1; } }
-.sc.ok { background: rgba(92, 220, 160, .55); }
-.sc.bad { background: rgba(255, 92, 138, .55); }
+.sc.ok { background: rgba(60, 205, 135, .6); box-shadow: inset 0 0 0 2px #2FCB86; }
+.sc.bad { background: rgba(255, 92, 138, .6); box-shadow: inset 0 0 0 2px #FF4F7E; }
 .sea.armed .sc.aim { background: rgba(255, 211, 110, .55); box-shadow: inset 0 0 0 2px #FFC21A; }
 .sea.armed { box-shadow: 0 0 0 4px #FFC21A, 0 0 30px rgba(255, 194, 26, .5); }
 :where([data-theme="lila"]) .sea { border-radius: 8px; box-shadow: 0 0 0 2px var(--sea-frame), 0 0 34px rgba(62, 123, 255, .35); }
@@ -54,7 +54,11 @@
 .piece.sunk { z-index: 2; }
 .piece.sunk::after { content: ""; position: absolute; inset: 0; border-radius: 10px; box-shadow: inset 0 0 0 2px var(--sea-hit); opacity: .6; }
 .piece.ghosted { opacity: .45; filter: grayscale(.3); }
-.piece.ghost { position: fixed; z-index: 70; pointer-events: none; transition: none; filter: drop-shadow(0 16px 18px rgba(30, 40, 80, .35)); transform: scale(1.08); }
+.piece.ghost { position: fixed; z-index: 70; pointer-events: none; transition: none; opacity: .88; filter: drop-shadow(0 16px 18px rgba(30, 40, 80, .35)); transform: scale(1.08); }
+/* Liegeplatz: zeigt, welche Felder eine Figur belegt */
+.piece.own::before, .piece.sunk::before { content: ""; position: absolute; inset: 3px; border-radius: 12px; background: rgba(255, 255, 255, .5); border: 2px dashed rgba(255, 95, 168, .55); }
+:where([data-theme="lila"]) .piece.own::before, :where([data-theme="lila"]) .piece.sunk::before { background: rgba(71, 229, 255, .1); border-color: rgba(71, 229, 255, .5); border-radius: 6px; }
+.piece .pi-in { position: relative; }
 .sink-katze .pi-in { animation: kk-curl 1.6s ease-in-out 1 .4s; }
 .sink-wolke svg { animation: kk-greycloud 2.4s ease-out forwards .2s; }
 .sink-stern svg { animation: kk-zoomstar 1.1s cubic-bezier(.65, 0, .35, 1) .2s; }
@@ -103,3 +107,4 @@
 .proj .ic { width: 100%; height: 100%; }
 .proj.big { width: 54px; height: 54px; font-size: 48px; }
 :root[data-theme="lila"] .proj { color: #FFD36E; filter: drop-shadow(0 0 10px #FFD36E); }
+:where([data-theme="lila"]) .sea::before { background: repeating-linear-gradient(165deg, transparent 0 22px, rgba(71, 229, 255, .06) 22px 24px); }

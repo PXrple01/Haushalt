@@ -99,7 +99,7 @@ export function play(root, sid) {
     const tools = h('div', { class: 'row place-tools' });
     tools.innerHTML = `<button class="btn grow" type="button" data-a="rand">${icon('dice')}<span>Zufällig</span></button><button class="btn quiet" type="button" data-a="clear">${icon('undo')}<span>Alle zurück</span></button>`;
     const done = h('button', { class: 'btn primary big block', type: 'button', disabled: true });
-    done.innerHTML = `${icon('lock')}<span>Fertig – Figuren verstecken</span>`;
+    done.innerHTML = `${icon('lock')}<span>Fertig!</span>`;
     box.append(sea, tray, tools, done);
     setBody(box);
     const piecesLayer = sea.querySelector('.sea-pieces');
