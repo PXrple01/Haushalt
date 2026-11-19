@@ -5,6 +5,11 @@ import * as WA from '../js/games/whoami/logic.js';
 import * as NU from '../js/games/number/logic.js';
 import * as SH from '../js/games/ships/logic.js';
 import * as MI from '../js/games/mime/logic.js';
+import * as ES from '../js/games/escape/logic.js';
+import { PUZZLES, hintsFor, wireAnswer } from '../js/games/escape/puzzles.js';
+import { THEMES } from '../js/games/escape/themes.js';
+import { SYMBOLS, COLORS } from '../js/games/escape/symbols.js';
+import { makeRng } from '../js/games/escape/rng.js';
 import { enc } from '../js/games/secret.js';
 import { cleanWord, nameMatch } from '../js/core/util.js';
 
@@ -212,6 +217,84 @@ test('Pantomime: Punkte nach Tempo, Ende nach allen Runden', () => {
   // Baby stellt Runden 0,2,4 dar: 3 + 0 + 1 = 4, rät richtig in 1,3,5: +3 → 7
   // Johann stellt 1,3,5 dar: 1 + 1 + 1 = 3, rät richtig in 0 und 4: +2 → 5
   assert.deepEqual(st.score, { jos: 7, joh: 5 }); assert.equal(st.winner, 'jos');
+});
+
+test('Escape: Geschichten vollständig (4 Räume, Symbole, Zutaten, Dinge)', () => {
+  assert.equal(THEMES.length, 7);
+  const kinds = {};
+  for (const th of THEMES) {
+    assert.equal(th.rooms.length, 4, th.id);
+    assert.ok(th.symbols.length >= 6 && th.symbols.every((x) => SYMBOLS[x]), th.id);
+    assert.ok(th.intro.length && th.outro.length && th.lose, th.id);
+    for (const rm of th.rooms) {
+      kinds[rm.kind] = (kinds[rm.kind] || 0) + 1;
+      assert.ok(SYMBOLS[rm.icon], `${th.id}: Symbol ${rm.icon}`);
+      for (const x of [...(rm.skin.ingredients || []), ...(rm.skin.objects || [])]) assert.ok(SYMBOLS[x.sym] && COLORS[x.col], `${th.id}: ${x.id}`);
+    }
+  }
+  assert.deepEqual(Object.values(kinds), [4, 4, 4, 4, 4, 4, 4]);
+});
+
+test('Escape: Rätsel sind gleich auf beiden Handys und immer lösbar', () => {
+  const skinOf = (kind) => THEMES.flatMap((t) => t.rooms).find((r) => r.kind === kind).skin;
+  for (const [kind, P] of Object.entries(PUZZLES)) {
+    for (const diff of ['gemuetlich', 'normal', 'knifflig']) {
+      for (let i = 0; i < 60; i++) {
+        const o = { diff, skin: skinOf(kind), symbols: THEMES[i % 7].symbols };
+        const sp = P.gen(makeRng(`t${i}${kind}${diff}`), o);
+        assert.deepEqual(sp, P.gen(makeRng(`t${i}${kind}${diff}`), o));
+        let st = P.init(sp), solved = false;
+        for (const a of P.solution(sp)) { const r = P.apply(sp, st, a); st = r.state; assert.ok(!r.mistake, kind); solved ||= !!r.solved; }
+        assert.ok(solved, `${kind} ${diff} ${i}`);
+        for (const hnt of hintsFor(kind, sp, o.skin, P.init(sp))) assert.ok(!/undefined|\{|\}/.test(hnt), hnt);
+      }
+    }
+  }
+  assert.deepEqual(wireAnswer(['rosa', 'blau', 'blau', 'gruen'], 10), { idx: 1, rule: 0 });
+});
+
+test('Escape: Rollen, Fehler, Tipps (einmal), Pause zwischen Räumen, Sieg', () => {
+  const m = meta('escape', 'remote');
+  const evs = [ev('jos', 'setup', { theme: 'lebkuchen', diff: 'normal', seed: 'abc', first: 'joh' }), ev('jos', 'ready'), ev('joh', 'ready')];
+  let st = ES.reduce(m, evs);
+  assert.equal(st.phase, 'room'); assert.equal(ES.handsOf(st), 'joh'); assert.equal(st.limit, 25 * 60e3);
+  const rm = st.rooms[0];
+  evs.push(ev('jos', 'act', { r: 0, k: 'open', code: rm.spec.code })); // falsche Person → zählt nicht
+  evs.push(ev('joh', 'act', { r: 0, k: 'open', code: '0000' }));
+  evs.push(ev('jos', 'hint', { r: 0, n: 1 }), ev('joh', 'hint', { r: 0, n: 1 })); // gleichzeitig → nur ein Tipp
+  st = ES.reduce(m, evs);
+  assert.equal(st.phase, 'room'); assert.equal(st.mistakes, 1); assert.equal(st.hints, 1);
+  assert.equal(st.penaltyMs, 20e3 + 60e3);
+  evs.push(ev('joh', 'act', { r: 0, k: 'open', code: rm.spec.code }));
+  st = ES.reduce(m, evs);
+  assert.equal(st.phase, 'cleared');
+  const frozen = ES.elapsed(st, st.pauseSince + 999999);
+  assert.equal(frozen, ES.elapsed(st, st.pauseSince + 5)); // Zeit steht zwischen den Räumen
+  evs.push(ev('jos', 'next', { r: 0 }), ev('joh', 'next', { r: 0 }));
+  st = ES.reduce(m, evs);
+  assert.equal(st.room, 1); assert.equal(ES.handsOf(st), 'jos');
+  for (let r = 1; r < 4; r++) {
+    const x = st.rooms[r];
+    for (const a of PUZZLES[x.kind].solution(x.spec)) evs.push(ev(ES.handsOf(st), 'act', { r, ...a }));
+    if (r < 3) evs.push(ev('joh', 'next', { r }));
+    st = ES.reduce(m, evs);
+  }
+  assert.equal(st.phase, 'end'); assert.ok(st.won); assert.ok(ES.starsOf(st) >= 1);
+  assert.ok(ES.label(st).startsWith('Geschafft'));
+});
+
+test('Escape: Zeit um → ohne Zeit weiter (1 Stern) / Aufgeben', () => {
+  const m = meta('escape', 'remote');
+  const evs = [ev('jos', 'setup', { theme: 'mond', diff: 'knifflig', seed: 'q', first: 'jos' }), ev('jos', 'ready'), ev('joh', 'ready')];
+  let st = ES.reduce(m, evs);
+  assert.ok(!ES.timeUp(st, st.startT + 14 * 60e3));
+  assert.ok(ES.timeUp(st, st.startT + 15 * 60e3 + 1));
+  evs.push(ev('joh', 'cont'));
+  st = ES.reduce(m, evs);
+  assert.ok(st.overtime); assert.ok(!ES.timeUp(st, st.startT + 99 * 60e3));
+  evs.push(ev('jos', 'giveup'));
+  st = ES.reduce(m, evs);
+  assert.equal(st.phase, 'end'); assert.ok(st.gaveUp); assert.equal(ES.starsOf(st), 0);
 });
 
 console.log(`\n${ok} Prüfungen bestanden.`);

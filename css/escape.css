@@ -367,16 +367,13 @@ html[data-motion="reduced"] .scene * { animation: none !important; }
 .mz-mist { position: absolute; inset: -20%; z-index: 3; pointer-events: none; background: radial-gradient(40% 30% at 30% 40%, rgba(255, 255, 255, .1), transparent 70%), radial-gradient(35% 30% at 70% 60%, rgba(255, 255, 255, .08), transparent 70%); animation: es-mist 9s ease-in-out infinite alternate; }
 @keyframes es-mist { to { transform: translate(8%, -6%) rotate(6deg); } }
 .mz-board.done { box-shadow: 0 0 0 3px #FFE27A, 0 0 40px #FFE27A; }
-.mz-pad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 52px); gap: 5px; justify-content: center; grid-template-areas: ". n ." "w m e" ". s ."; }
-.mz-btn { display: grid; place-items: center; border-radius: 18px; color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--es-acc) 90%, #fff), var(--es-acc)); box-shadow: 0 5px 0 color-mix(in srgb, var(--es-acc) 55%, #000), 0 10px 18px rgba(0, 0, 0, .2); transition: transform .1s; }
+.mz-pad { display: grid; grid-template-columns: repeat(4, minmax(0, 76px)); gap: 8px; justify-content: center; }
+.mz-btn { display: grid; place-items: center; height: 58px; border-radius: 18px; color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--es-acc) 90%, #fff), var(--es-acc)); box-shadow: 0 5px 0 color-mix(in srgb, var(--es-acc) 55%, #000), 0 10px 18px rgba(0, 0, 0, .2); transition: transform .1s; }
 .mz-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 color-mix(in srgb, var(--es-acc) 55%, #000); }
 .mz-btn .ic { width: 30px; height: 30px; stroke-width: 3; }
-.mz-btn.n { grid-area: n; } .mz-btn.n .ic { transform: rotate(90deg); }
-.mz-btn.s { grid-area: s; } .mz-btn.s .ic { transform: rotate(-90deg); }
-.mz-btn.w { grid-area: w; }
-.mz-btn.e { grid-area: e; } .mz-btn.e .ic { transform: rotate(180deg); }
-.mz-mid { grid-area: m; display: grid; place-items: center; color: var(--es-soft); }
-.mz-mid .ic { width: 26px; height: 26px; }
+.mz-btn.n .ic { transform: rotate(90deg); }
+.mz-btn.s .ic { transform: rotate(-90deg); }
+.mz-btn.e .ic { transform: rotate(180deg); }
 .mz-map { width: min(100%, 320px); margin: 4px auto 0; }
 .mz-map svg { display: block; width: 100%; height: auto; }
 .mz-floor { fill: rgba(255, 255, 255, .45); }

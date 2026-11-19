@@ -176,10 +176,10 @@ Wunsch: schönes Design, sensationelle Animationen. **Escape-Abenteuer** sehr au
 - Escape als große Abenteuer-Karte oben, darunter die Spielzeug-Karten: Galgenmännchen (breit), Wer bin ich? + Zahl erraten, Kritzelspiel (Skizzenblock) + Pantomime (Theatervorhang), Herzchen versenken (breit, Mini-Gitter).
 
 ## Etappen
-- [ ] **10 – Plan + Grundlagen** (Register, Router, Validierung, Lobby-Karten)
-- [ ] **11 – Pantomime**
-- [ ] **12 – Kritzelspiel**
-- [ ] **13 – Herzchen versenken Deluxe**
-- [ ] **14 – Escape-Motor + 7 Rätsel-Arten**
-- [ ] **15 – Escape-Geschichten (7 Themes)**
-- [ ] **16 – Tests, Feinschliff, Veröffentlichen**
+- [x] **10 – Plan + Grundlagen** (Register, Router, Validierung, Lobby-Karten)
+- [x] **11 – Pantomime**
+- [x] **12 – Kritzelspiel**
+- [x] **13 – Herzchen versenken Deluxe**
+- [x] **14 – Escape-Motor + 7 Rätsel-Arten**
+- [x] **15 – Escape-Geschichten (7 Themes)**
+- [x] **16 – Tests, Feinschliff, Veröffentlichen**

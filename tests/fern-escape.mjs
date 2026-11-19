@@ -7,7 +7,7 @@ const THEME = process.argv[3] || 'schloss';
 const DIFF = process.argv[4] || 'normal';
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch();
-const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, reducedMotion: process.env.RUHIG ? 'reduce' : 'no-preference' });
 const prefs = { mode: 'remote', code: 'escapetest-' + THEME };
 const A = await openPage(browser, { context: ctx, ns: 'a', query: 'net=local', store: { me: 'jos', prefs } });
 const B = await openPage(browser, { context: ctx, ns: 'b', query: 'net=local', store: { me: 'joh', prefs } });

@@ -59,6 +59,19 @@ async function tour({ p, w, h, reduced = false }) {
   await page.click('.np-key[data-k="rand"]'); await page.click('.numpad .btn.primary'); await W(600);
   await page.click('.handoff .btn'); await W(800);
   await check(page, errors, `${tag}-nu-brett`);
+  await page.click('[data-a="back"]'); await W(900);
+  // Pantomime, Kritzelspiel, Herzchen versenken: Einstellungen
+  for (const g of ['mime', 'draw', 'ships']) {
+    await page.click(`[data-game="${g}"]`); await W(1000);
+    await check(page, errors, `${tag}-${g}-setup`);
+    await page.click('[data-a="back"]'); await W(900);
+  }
+  // Escape-Abenteuer: Auswahl der Geschichte + Detail-Blatt
+  await page.click('[data-game="escape"]'); await W(1600);
+  await check(page, errors, `${tag}-escape-auswahl`);
+  await page.click('.es-tcard[data-theme="meer"]'); await W(900);
+  await check(page, errors, `${tag}-escape-geschichte`);
+  await page.keyboard.press('Escape'); await W(400);
   await ctx.close();
 }
 

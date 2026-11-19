@@ -227,11 +227,10 @@ function mazeHands(c) {
       <div class="mz-mist" aria-hidden="true"></div>
     </div>
     <div class="mz-pad" role="group" aria-label="Richtung">
-      <button class="mz-btn n" type="button" data-d="n" aria-label="Hoch">${icon('back')}</button>
       <button class="mz-btn w" type="button" data-d="w" aria-label="Links">${icon('back')}</button>
-      <span class="mz-mid">${icon('target')}</span>
-      <button class="mz-btn e" type="button" data-d="e" aria-label="Rechts">${icon('back')}</button>
+      <button class="mz-btn n" type="button" data-d="n" aria-label="Hoch">${icon('back')}</button>
       <button class="mz-btn s" type="button" data-d="s" aria-label="Runter">${icon('back')}</button>
+      <button class="mz-btn e" type="button" data-d="e" aria-label="Rechts">${icon('back')}</button>
     </div>`;
   const board = box.querySelector('.mz-board');
   const meEl = box.querySelector('.mz-me');
@@ -383,7 +382,7 @@ function echoHands(c) {
   box.querySelector('.ec-replay').addEventListener('click', () => { sfx.tap(); playSeq(); });
   c.el.append(box);
   drawSlots();
-  setTimeout(playSeq, 900);
+  const startT = setTimeout(playSeq, motionOK() ? 2100 : 600); // erst wenn die Tür offen ist
   return {
     update(next, last, fresh) {
       rs = next;
@@ -400,7 +399,7 @@ function echoHands(c) {
         Object.values(crys).forEach((e, i) => setTimeout(() => { e.classList.add('on'); sfx.note?.(72 + i * 3); }, i * 90));
       }
     },
-    destroy() { playing++; },
+    destroy() { playing++; clearTimeout(startT); },
   };
 }
 function echoBook(c) {
@@ -675,7 +674,7 @@ export function roleLine(kind, role, skin, partner) {
   const L = {
     lock: [`Sag ${partner} die Farben der ${skin.gems}. Dann stell die Symbole ein und öffne.`, 'Frag nach den Farben und sag, welche Symbole eingestellt werden.'],
     wires: [`Beschreib ${partner} die ${skin.threads} und die ${skin.plate}. Dann schneid den richtigen durch.`, 'Frag nach Anzahl und Farben und finde die passende Regel.'],
-    maze: [`Du steckst im ${skin.fog}. ${partner} lotst dich – du steuerst.`, `Lotse ${partner} ${skin.goalTo}.`],
+    maze: [`Du steckst im ${skin.fog}. ${partner} lotst dich – wisch übers Feld oder tipp die Pfeile.`, `Lotse ${partner} ${skin.goalTo}.`],
     echo: [`Sag ${partner} die Farben der leuchtenden ${skin.lights} – und tipp die Symbole.`, 'Übersetze die Farben in Symbole.'],
     potion: [`Sag ${partner} die Farbe im ${skin.pot} und gib die Zutaten hinein.`, 'Sag, welche Zutat als Nächstes hinein muss.'],
     safe: [`Zähl die Dinge im Raum für ${partner} und tipp den Code ein.`, 'Frag nach den Zahlen und rechne die Ziffern aus.'],

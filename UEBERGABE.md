@@ -1,9 +1,9 @@
 # Übergabe für spätere Sitzungen – Kicherkiste
 
-Stand: 19.11.2026, Version 1.0 (Cache `kicherkiste-v2`). Bauplan mit Design-System und Etappen: `PLAN.md`.
+Stand: 19.11.2026, Version 2.0 (Cache `kicherkiste-v3`): + Pantomime, Kritzelspiel, Herzchen versenken, Escape-Abenteuer. Bauplan mit Design-System und Etappen: `PLAN.md`.
 
 ## 1. Was das Projekt ist
-- Private PWA mit drei Ratespielen für Johann (`joh`) und Josefine (`jos`), Sprache Deutsch.
+- Private PWA mit sieben Spielen für Johann (`joh`) und Josefine (`jos`), Sprache Deutsch: `hangman`, `whoami`, `number`, `mime` (Pantomime), `draw` (Kritzelspiel – nicht „Montagsmaler“ nennen!), `ships` (Herzchen versenken), `escape` (Escape-Abenteuer, kooperativ).
 - **Anzeigename von Josefine ist „Baby“** (Wunsch des Nutzers). Echte Namen nur auf „Wer spielt?“ (`realName`), überall sonst `nameOf()` (Spitznamen, in den Einstellungen änderbar, `prefs.nicks`).
 - Themes: `baby` (Cutecore-Stickerbuch, Einhorn **Kiki**) und `lila` (Neon-Nacht mit Manga-Akzenten, Katze **Kuro**). Standard je Person, umschaltbar.
 - Modi: `couch` (Nebeneinander, ein Gerät, Übergabe-Bildschirme) und `remote` (Weit weg, zwei Geräte live).
@@ -19,7 +19,10 @@ Stand: 19.11.2026, Version 1.0 (Cache `kicherkiste-v2`). Bauplan mit Design-Syst
 - Kein Build-Schritt. ES-Module, `index.html` lädt `js/main.js`.
 - `js/core/`: `router` (Hash-Routen `#/wer`, `#/lobby`, `#/neu/<spiel>`, `#/spiel/<id>`, `#/dev`), `store` (localStorage mit Präfix `kk:`, Test-Namensraum `?ns=a`), `theme`, `scene` (Hintergründe), `fx` (Partikel-Leinwand), `sound` (Web Audio), `ui` (Toast/Blatt/Dialog/Übergabe/Segment), `net` (Supabase Realtime), `sync` (Ereignis-Protokoll), `stats` (Duell-Bilanz), `notify` (Einladungen, „Du bist dran“, Bilanz-Einträge), `util`.
 - `js/games/<spiel>/logic.js` = reine Logik (`reduce(meta, evs)`, `todo`, `label`), `view.js` = Oberfläche (`setup(root)`, `play(root, sid)`). Gemeinsames in `js/games/common.js`.
-- `js/data/`: Wortpool (459), Figurenpool (323), Fragen-Ideen mit Regeln (`test(n)`).
+- `js/data/`: Wortpool (459), Figurenpool (323), Fragen-Ideen mit Regeln (`test(n)`), `terms.js` (Begriffe für Pantomime/Kritzelspiel, `!` = schwer, `~` = leicht).
+- Neue Spiele hängen in `js/games/registry.js` (LOGIC/VIEW), `js/games/info.js` (Titel), `js/core/sync.js` (`GAMES` zur Prüfung), `js/core/router.js` (Route `#/neu/<spiel>`) und in der Lobby.
+- Rundenspiele (Pantomime, Kritzelspiel): gemeinsame Logik `js/games/rounds.js`, Oberfläche `rounds-ui.js` (Einstellungen, Punkte-Leiste, Ring-Timer, 3-2-1, Vorhang). Leinwand `js/games/draw/canvas.js` (Koordinaten 0–1000, Striche vereinfacht), Kunstbuch lokal (`kunstbuch`).
+- Herzchen versenken: `js/games/ships/` (8×8, Flotte verschleiert, Treffer = nochmal, Bombe 3×3), Figuren-SVGs in `art.js`.
 - `vendor/realtime.js` = `@supabase/realtime-js` 2.119.1, mit esbuild gebündelt (nur `RealtimeClient`).
 
 ## 4. Abgleich (wichtig!)
@@ -29,9 +32,17 @@ Stand: 19.11.2026, Version 1.0 (Cache `kicherkiste-v2`). Bauplan mit Design-Syst
 - Im Couch-Modus wird `e.by` nicht geprüft (alle Ereignisse kommen vom selben Gerät); Couch-„Rückgängig“ = Ereignis `undo {id}`.
 - Geheimnisse (Wort/Figur/Zahl) werden mit `js/games/secret.js` verschleiert (kein echter Schutz).
 
+## 4b. Escape-Abenteuer (`js/games/escape/`)
+- Immer **zwei Handys** (Modus wird beim Öffnen auf „Weit weg“ gestellt, wenn ein Code da ist). Rollen je Raum: `handsOf(st, r)` = `r % 2 ? andere(first) : first`. Nur „Hände“ dürfen `act` senden (im Reducer geprüft).
+- Rätsel entstehen aus dem Seed (`rng.js`, mulberry32) – beide Geräte rechnen dasselbe, nichts Geheimes wird verschickt. `puzzles.js` = 7 Arten (lock, wires, maze, echo, potion, safe, lineup) mit `gen/init/apply/hints/solution`.
+- `themes.js` = 7 Geschichten (je 4 Räume, Texte, Farben `pal`, Symbole, Zutaten/Dinge/Figuren als „skin“). Grammatik: Geschlechter vermeiden (Nummern statt „der zweite Faden“), `goalTo` = „zum/zur …“.
+- `logic.js`: Ereignisse `setup {theme,diff,seed,first}`, `ready`, `act {r,k,…}`, `hint {r,n}` (n verhindert Doppel-Tipps), `next {r}`, `cont`, `giveup`, `abort`. Zeit: `elapsed()` (Pause zwischen Räumen), Strafen 20 s/5 s/60 s, `timeUp()`, `starsOf()`.
+- Oberfläche: `view.js` (Auswahl, Intro mit Schreibmaschine, Tür-Übergang, „Raum geschafft“, Zeit um, Finale, Rekorde `escapeRecords`), `rooms.js` (je Art Hände- und Wissen-Ansicht), `art.js` (Szenen, Figuren), `symbols.js` (30 Symbole, 9 Farben), Stil `css/escape.css`.
+
 ## 5. Testen
 - Server: `python3 -m http.server 5178 --bind 127.0.0.1` im Repo. Chromium + Playwright sind vorinstalliert.
-- `node tests/logic.test.mjs` (Spiellogik), `node tests/smoke.mjs [bilder]` (alle Bildschirme, beide Themes, 340/390/1280 px, ruhige Bewegung), `node tests/fern-galgenmaennchen.mjs`, `node tests/fern-werbinich-zahl.mjs`, `node tests/couch-werbinich-zahl.mjs`.
+- `node tests/logic.test.mjs` (Spiellogik inkl. Escape: alle Rätsel lösbar und gleich auf beiden Geräten), `node tests/smoke.mjs [bilder]` (alle Bildschirme, beide Themes, 340/390/1280 px, ruhige Bewegung), `node tests/fern-galgenmaennchen.mjs`, `node tests/fern-werbinich-zahl.mjs`, `node tests/couch-werbinich-zahl.mjs`, `node tests/fern-herzchen.mjs`, `node tests/fern-pantomime.mjs`.
+- Escape: `node tests/fern-escape.mjs [bilder] [geschichte] [stufe]` spielt eine Geschichte komplett über die Oberfläche durch (mit Fehlern und Tipp, `RUHIG=1` für reduzierte Bewegung); `node tests/fern-escape-zeit.mjs` prüft Zeit um, Weiterspielen, Aufgeben, Beenden.
 - Zwei Geräte lokal: `?net=local&ns=a` und `?net=local&ns=b` in **einem** Browser-Kontext (BroadcastChannel).
 - Die echte WebSocket-Verbindung zu Supabase ist in der Cloud-Sandbox nicht testbar (Proxy blockt WebSockets). REST-Broadcast mit dem Schlüssel liefert 202 → Realtime ist freigeschaltet.
 - Prüf-Seite `#/dev` zeigt alle Bausteine und Maskottchen-Stimmungen.
@@ -44,6 +55,6 @@ Stand: 19.11.2026, Version 1.0 (Cache `kicherkiste-v2`). Bauplan mit Design-Syst
 - Neue Dateien → `tests/update-sw.mjs` laufen lassen, sonst fehlen sie offline.
 
 ## 7. Ideen für später
-- Weitere Spiele (z. B. „Wer kennt wen besser?“, Pantomime-Timer, Montagsmaler).
+- Weitere Spiele (z. B. „Wer kennt wen besser?“), weitere Escape-Geschichten (neues Objekt in `themes.js` mit 4 Räumen genügt) oder neue Rätsel-Arten (in `puzzles.js` + `rooms.js`).
 - Eigene Wörter/Figuren-Listen speichern, Lieblingswörter.
 - Bilanz-Verlauf mit Grafik, Abzeichen.
