@@ -95,6 +95,7 @@ export function reduce(meta, evs) {
       }
       case 'hint': {
         if (st.phase !== 'room' || d.r !== st.room || st.hintsUsed[st.room] >= MAX_HINTS) break;
+        if (d.n && st.hintsUsed[st.room] >= d.n) break; // beide gleichzeitig gedrückt → nur einmal
         st.hintsUsed[st.room]++;
         st.hints++;
         if (st.limit && !st.overtime) st.penaltyMs += PEN.hint;

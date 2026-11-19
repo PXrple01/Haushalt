@@ -18,8 +18,8 @@ import { GAMES } from './info.js';
 export const modeOf = (sid) => (sid ? getSession(sid)?.meta.mode : prefs.get('mode')) || 'couch';
 
 // ---------- Rahmen ----------
-export function shell({ root, game, sid, rules = [] }) {
-  const mode = modeOf(sid);
+export function shell({ root, game, sid, rules = [], mode: forced }) {
+  const mode = forced || modeOf(sid);
   const s = h('section', { class: `screen game g-${game}`, dataset: { mode } });
   s.innerHTML = `
     <header class="g-top">

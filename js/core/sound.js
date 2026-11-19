@@ -92,6 +92,9 @@ export const sfx = {
   splash: () => { noise({ dur: 0.5, vol: 0.22, from: 1200, to: 300 }); tone(N(70), { dur: 0.12, vol: 0.12, slide: -300 }); },
   boom: () => { noise({ dur: 0.7, vol: 0.3, from: 900, to: 80 }); tone(N(36), { dur: 0.6, type: 'sine', vol: 0.4, slide: -30 }); },
   unlock: () => { tone(N(79), { dur: 0.08, vol: 0.25, type: 'triangle' }); tone(N(86), { at: 0.08, dur: 0.1, vol: 0.25, type: 'triangle' }); noise({ at: 0.04, dur: 0.12, vol: 0.12, from: 4000, to: 2500 }); },
+  note: (n) => { tone(N(n), { dur: 0.55, type: 'sine', vol: 0.3 }); tone(N(n + 12), { dur: 0.32, type: 'triangle', vol: 0.06 }); },
+  door: () => { noise({ dur: 0.8, vol: 0.14, from: 380, to: 90 }); tone(N(38), { dur: 0.7, type: 'triangle', vol: 0.22, slide: -8 }); },
+  key: () => tone(N(98 + Math.floor(Math.random() * 5)), { dur: 0.018, type: 'square', vol: 0.02 }),
   crack: () => { noise({ dur: 0.12, vol: 0.2, from: 3200, to: 900 }); tone(N(62), { at: 0.02, dur: 0.12, type: 'triangle', vol: 0.18, slide: -60 }); },
 };
 

@@ -56,7 +56,8 @@ on('session', ({ id, local, isNew }) => {
   lastTodo.set(id, todo);
   if (onScreen(id)) return;
   if (st.phase === 'end' && !st.aborted) {
-    toast(`${gameTitle(s.meta.game)}: ${st.winner === 'draw' ? 'Unentschieden!' : `${nameOf(st.winner)} hat gewonnen!`}`, { icon: 'trophy', action: { label: 'Ansehen', run: () => nav('#/spiel/' + id) } });
+    const line = LOGIC[s.meta.game].endLine ? LOGIC[s.meta.game].endLine(st) : (st.winner === 'draw' ? 'Unentschieden!' : `${nameOf(st.winner)} hat gewonnen!`);
+    toast(`${gameTitle(s.meta.game)}: ${line}`, { icon: 'trophy', action: { label: 'Ansehen', run: () => nav('#/spiel/' + id) } });
   } else if (todo && todo !== before) {
     sfx.join();
     toast(`${gameTitle(s.meta.game)} – du bist dran: ${todo}`, { icon: 'sparkle', ms: 5000, action: { label: 'Los', run: () => nav('#/spiel/' + id) } });

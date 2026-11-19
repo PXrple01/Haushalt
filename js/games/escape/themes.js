@@ -43,7 +43,7 @@ export const THEMES = [
         kind: 'maze', name: 'Der Heckengarten', icon: 'blume',
         story: 'Ein Labyrinth aus Rosenhecken, eingehüllt in Glitzernebel. Wer drinsteht, sieht kaum die eigene Nasenspitze. Aber am Brunnen hängt eine Gartenkarte.',
         done: 'Ihr steht vor dem Regenbogentor – aber es ist blass und durchsichtig …',
-        skin: { map: 'Gartenkarte', goal: 'das Regenbogentor', fog: 'Glitzernebel', wall: 'Hecke' },
+        skin: { map: 'Gartenkarte', goal: 'das Regenbogentor', goalTo: 'zum Regenbogentor', fog: 'Glitzernebel', wall: 'Hecke' },
       },
       {
         kind: 'potion', name: 'Nimbellas Hexenküche', icon: 'flasche',
@@ -87,7 +87,7 @@ export const THEMES = [
         kind: 'maze', name: 'Die Nudelgassen', icon: 'blitz',
         story: 'Der Geheimgang endet in einem Gewirr aus Gassen, voller Dampf von hundert Nudelküchen. Man sieht keinen Meter weit – aber das Handy hat eine Stadtkarte.',
         done: 'Da! Die Treppe zur U-Bahn. Aber das Drehkreuz ist verriegelt.',
-        skin: { map: 'Stadtkarte', goal: 'die U-Bahn-Treppe', fog: 'Nudeldampf', wall: 'Mauer' },
+        skin: { map: 'Stadtkarte', goal: 'die U-Bahn-Treppe', goalTo: 'zur U-Bahn-Treppe', fog: 'Nudeldampf', wall: 'Mauer' },
       },
       {
         kind: 'wires', name: 'Das Drehkreuz', icon: 'zahnrad',
@@ -194,7 +194,7 @@ export const THEMES = [
         kind: 'maze', name: 'Das Korallenlabyrinth', icon: 'stern',
         story: 'Dahinter: ein Labyrinth aus Korallen, voller aufgewirbeltem Sand. Man sieht keine Flosse vor Augen. Zum Glück trägt Perlina immer eine Muschelkarte bei sich.',
         done: 'Ihr schwimmt in die Schatzgrotte. Dort warten sechs Fische – und alle tun ganz unschuldig.',
-        skin: { map: 'Muschelkarte', goal: 'die Schatzgrotte', fog: 'Sandwolken', wall: 'Koralle' },
+        skin: { map: 'Muschelkarte', goal: 'die Schatzgrotte', goalTo: 'zur Schatzgrotte', fog: 'Sandnebel', wall: 'Koralle' },
       },
       {
         kind: 'lineup', name: 'Die Fischparade', icon: 'fisch',
@@ -245,7 +245,7 @@ export const THEMES = [
         kind: 'maze', name: 'Der Kraterpfad', icon: 'mond',
         story: 'Die Rakete steht draußen, hinter einem Feld voller Krater. Mondstaub wirbelt auf, die Sicht ist null. Der Rover hat ein Navi – aber nur auf dem anderen Bildschirm.',
         done: 'Der Rover rumpelt an die Startrampe. Die Rakete ragt über euch in den Sternenhimmel.',
-        skin: { map: 'Navi-Karte', goal: 'die Startrampe', fog: 'Mondstaub', wall: 'Kraterrand' },
+        skin: { map: 'Navi-Karte', goal: 'die Startrampe', goalTo: 'zur Startrampe', fog: 'Mondstaub', wall: 'Kraterrand' },
       },
       {
         kind: 'safe', name: 'Das Vorratsmodul', icon: 'rakete',

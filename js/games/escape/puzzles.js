@@ -274,7 +274,8 @@ const safe = {
     let ci = 0;
     for (const o of objs) for (let k = 0; k < counts[o.id]; k++) {
       const c = cells[ci++];
-      place.push({ id: o.id, x: (c % 8) * 12.5 + rng.int(1, 4), y: Math.floor(c / 8) * 16.6 + rng.int(1, 5), r: rng.int(-20, 20), s: rng.int(85, 115) / 100 });
+      // Mittelpunkt in Prozent: Spalten 3–97 %, Zeilen 10–99 % (oben bleibt Platz für das Schild)
+      place.push({ id: o.id, x: 3 + (c % 8) * 11.75 + 5.9 + rng.int(-2, 2), y: 10 + Math.floor(c / 8) * 14.8 + 7.4 + rng.int(-2, 2), r: rng.int(-20, 20), s: rng.int(85, 112) / 100 });
     }
     return { len, objs: objs.map((o) => o.id), counts, lines, code: lines.map((l) => l.value).join(''), place };
   },
