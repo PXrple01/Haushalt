@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import * as HM from '../js/games/hangman/logic.js';
 import * as WA from '../js/games/whoami/logic.js';
 import * as NU from '../js/games/number/logic.js';
+import * as SH from '../js/games/ships/logic.js';
+import * as MI from '../js/games/mime/logic.js';
 import { enc } from '../js/games/secret.js';
 import { cleanWord, nameMatch } from '../js/core/util.js';
 
@@ -163,6 +165,53 @@ test('Rückgängig (Nebeneinander) hebt eine Antwort auf', () => {
   assert.equal(st.turn, 'jos'); assert.equal(st.counts.jos, 0);
   const mr = meta('whoami', 'remote');
   assert.equal(WA.reduce(mr, [ev('jos', 'setup', { first: 'jos' }), ev('jos', 'undo', { id: 'x' })]).phase, 'setup');
+});
+
+test('Herzchen versenken: Flotte prüfen, zufällig verteilen', () => {
+  for (let i = 0; i < 50; i++) assert.ok(SH.validFleet(SH.randomFleet()));
+  const f = SH.randomFleet();
+  const bad = f.map((x) => ({ ...x }));
+  bad[1] = { ...bad[0], id: bad[1].id };
+  assert.equal(SH.validFleet(bad), false);
+  assert.equal(SH.fits({ id: 'einhorn', x: 6, y: 0, dir: 'h' }), false);
+  assert.equal(SH.fits({ id: 'einhorn', x: 4, y: 0, dir: 'h' }), true);
+});
+
+test('Herzchen versenken: Treffer = nochmal, versenken, Bombe, Sieg', () => {
+  const m = meta('ships');
+  const fj = [{ id: 'einhorn', x: 0, y: 0, dir: 'h' }, { id: 'wolke', x: 0, y: 2, dir: 'h' }, { id: 'katze', x: 0, y: 4, dir: 'h' }, { id: 'herz', x: 0, y: 6, dir: 'h' }, { id: 'stern', x: 6, y: 6, dir: 'v' }];
+  const fh = [{ id: 'einhorn', x: 7, y: 0, dir: 'v' }, { id: 'wolke', x: 0, y: 7, dir: 'h' }, { id: 'katze', x: 3, y: 3, dir: 'v' }, { id: 'herz', x: 5, y: 0, dir: 'h' }, { id: 'stern', x: 0, y: 0, dir: 'v' }];
+  const evs = [ev('jos', 'setup', { first: 'jos' }), ev('jos', 'fleet', { p: 'jos', f: enc(JSON.stringify(fj), m.id) }), ev('jos', 'fleet', { p: 'joh', f: enc(JSON.stringify(fh), m.id) })];
+  let st = SH.reduce(m, evs);
+  assert.equal(st.phase, 'play'); assert.equal(st.turn, 'jos');
+  evs.push(ev('jos', 'shot', { x: 4, y: 4 }));               // daneben
+  st = SH.reduce(m, evs); assert.equal(st.turn, 'joh');
+  evs.push(ev('jos', 'shot', { x: 0, y: 6 }));               // Johann trifft Herz
+  st = SH.reduce(m, evs); assert.equal(st.turn, 'joh'); assert.equal(st.hitsBy.joh, 1);
+  evs.push(ev('jos', 'shot', { x: 1, y: 6 }));               // versenkt
+  st = SH.reduce(m, evs); assert.deepEqual(st.sunk.joh, ['herz']); assert.equal(st.last.sunk[0], 'herz');
+  evs.push(ev('jos', 'shot', { x: 1, y: 6 }));               // schon beschossen → ignoriert
+  st = SH.reduce(m, evs); assert.equal(st.shots.joh.length, 2);
+  evs.push(ev('jos', 'shot', { x: 5, y: 1, bomb: true }));   // Bombe: 3×3 – trifft nichts
+  st = SH.reduce(m, evs); assert.equal(st.bombUsed.joh, true); assert.equal(st.shots.joh.length, 11); assert.equal(st.turn, 'jos');
+  // Baby versenkt alles
+  for (const pc of fh) for (const [x, y] of SH.cellsOf(pc)) evs.push(ev('jos', 'shot', { x, y }));
+  st = SH.reduce(m, evs);
+  assert.equal(st.phase, 'end'); assert.equal(st.winner, 'jos'); assert.equal(st.sunk.jos.length, 5);
+});
+
+test('Pantomime: Punkte nach Tempo, Ende nach allen Runden', () => {
+  const m = meta('mime');
+  const evs = [ev('jos', 'setup', { first: 'jos', n: 3, dur: 60 })];
+  for (let r = 0; r < 6; r++) {
+    evs.push(ev('jos', 'term', { r, w: enc('Kuss', m.id), cat: 'Wir zwei' }), ev('jos', 'go', { r }));
+    evs.push(r === 2 ? ev('jos', 'miss', { r }) : ev('jos', 'got', { r, ms: r === 0 ? 10000 : 50000 }));
+  }
+  const st = MI.reduce(m, evs);
+  assert.equal(st.phase, 'end');
+  // Baby stellt Runden 0,2,4 dar: 3 + 0 + 1 = 4, rät richtig in 1,3,5: +3 → 7
+  // Johann stellt 1,3,5 dar: 1 + 1 + 1 = 3, rät richtig in 0 und 4: +2 → 5
+  assert.deepEqual(st.score, { jos: 7, joh: 5 }); assert.equal(st.winner, 'jos');
 });
 
 console.log(`\n${ok} Prüfungen bestanden.`);
