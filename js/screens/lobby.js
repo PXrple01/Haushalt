@@ -59,7 +59,24 @@ export function mount(root) {
       <div data-slot="link"></div>
     </div>
     <div data-slot="resume" style="--i:3"></div>
-    <div class="toys" style="--i:3">
+    <button class="toy escape" type="button" data-game="escape" style="--i:3">
+      <span class="t-text">
+        <span class="t-badge">Neu – zu zweit mit zwei Handys</span>
+        <span class="t-title">${GAMES.escape.title}</span>
+        <span class="t-sub">7 Geschichten. Befreit euch gemeinsam – jeder sieht etwas anderes.</span>
+      </span>
+      <svg class="t-art door" viewBox="0 0 120 150" aria-hidden="true">
+        <defs><radialGradient id="kh-glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="var(--door-glow)"/><stop offset="1" stop-color="var(--door-glow)" stop-opacity="0"/></radialGradient></defs>
+        <path class="d-frame" d="M8 150 V62 A52 52 0 0 1 112 62 V150 Z"/>
+        <path class="d-door" d="M18 150 V64 A42 42 0 0 1 102 64 V150 Z"/>
+        <path class="d-line" d="M60 22 V150 M30 84 H50 M70 84 H90 M30 120 H50 M70 120 H90"/>
+        <circle class="d-glowc" cx="60" cy="100" r="34" fill="url(#kh-glow)"/>
+        <path class="d-hole" d="M60 90 a8 8 0 0 1 4.5 14.6 L67 118 H53 l2.5 -13.4 A8 8 0 0 1 60 90 z"/>
+        <path class="d-spark s1" d="M100 18 l2.4 -7 2.4 7 7 2.4 -7 2.4 -2.4 7 -2.4 -7 -7 -2.4 z"/>
+        <path class="d-spark s2" d="M14 36 l1.8 -5 1.8 5 5 1.8 -5 1.8 -1.8 5 -1.8 -5 -5 -1.8 z"/>
+      </svg>
+    </button>
+    <div class="toys" style="--i:4">
       <button class="toy hang" type="button" data-game="hangman">
         <svg class="t-art" viewBox="0 0 100 110" aria-hidden="true">
           <path d="M8 102 Q50 95 92 102"/><path d="M28 101 V10"/><path d="M28 10 H74"/><path d="M28 30 L47 10"/><path d="M74 10 V23"/>
@@ -76,8 +93,28 @@ export function mount(root) {
         <span class="t-big" aria-hidden="true">${num}?</span>
         <span class="t-title">${GAMES.number.title}</span><span class="t-sub">Von 1 bis 100</span>
       </button>
+      <button class="toy draw" type="button" data-game="draw">
+        <svg class="t-art" viewBox="0 0 100 70" aria-hidden="true">
+          <path class="dd" d="M30 36 C18 22 32 8 44 22 C54 8 70 20 58 36 L44 52 Z"/>
+          <path class="dd2" d="M66 52 c6 -10 14 -10 18 -2 c3 6 -4 10 -7 4 M12 60 q14 -8 26 0 t26 0"/>
+        </svg>
+        <span class="t-title">${GAMES.draw.title}</span><span class="t-sub">Einer kritzelt, einer rät.</span>
+      </button>
+      <button class="toy mime" type="button" data-game="mime">
+        <svg class="t-art" viewBox="0 0 100 80" aria-hidden="true">
+          <path class="sp" d="M50 6 L82 80 H18 Z"/>
+          <path class="cu" d="M0 0 H34 C31 26 26 52 14 80 H0 Z M100 0 H66 C69 26 74 52 86 80 H100 Z"/>
+          <path class="va" d="M0 0 H100 V9 Q87.5 17 75 9 Q62.5 17 50 9 Q37.5 17 25 9 Q12.5 17 0 9 Z"/>
+          <g class="fig"><circle cx="50" cy="40" r="6"/><path d="M50 46 V62 M50 50 L40 42 M50 50 L60 44 M50 62 L43 74 M50 62 L57 74"/></g>
+        </svg>
+        <span class="t-title">${GAMES.mime.title}</span><span class="t-sub">Darstellen ohne Worte.</span>
+      </button>
+      <button class="toy ships" type="button" data-game="ships">
+        <span class="t-text"><span class="t-title">${GAMES.ships.title}</span><span class="t-sub">Versteckt Einhörner, Wolken und Katzen – und findet die des anderen.</span></span>
+        <span class="mini-sea" aria-hidden="true">${Array.from({ length: 24 }, (_, i) => `<i class="${[3, 4, 13].includes(i) ? 'hit' : [7, 10, 17, 20].includes(i) ? 'miss' : ''}"></i>`).join('')}</span>
+      </button>
     </div>
-    <section class="panel score" style="--i:4" aria-label="Duell-Bilanz" data-slot="score"></section>`;
+    <section class="panel score" style="--i:5" aria-label="Duell-Bilanz" data-slot="score"></section>`;
   root.append(s);
 
   // ---------- Modus ----------

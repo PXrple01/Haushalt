@@ -25,7 +25,7 @@ function save() {
 }
 
 const PIDS = ['jos', 'joh'];
-const GAMES = ['hangman', 'whoami', 'number'];
+const GAMES = ['hangman', 'whoami', 'number', 'mime', 'draw', 'ships', 'escape'];
 function validEvent(e) {
   return e && typeof e.id === 'string' && e.id.length <= 24 && Number.isFinite(e.n) && PIDS.includes(e.by)
     && typeof e.ty === 'string' && e.ty.length <= 24 && e.d && typeof e.d === 'object' && JSON.stringify(e.d).length < 4000;

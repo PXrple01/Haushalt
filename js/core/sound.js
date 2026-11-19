@@ -87,6 +87,11 @@ export const sfx = {
   sparkle: () => [96, 100, 103, 108].forEach((n, i) => tone(N(n), { at: i * 0.045, dur: 0.12, vol: 0.14 })),
   flip: () => tone(N(88), { dur: 0.05, type: 'square', vol: 0.06 }),
   draw: () => noise({ dur: 0.42, vol: 0.05, from: 2600, to: 1500 }),
+  tick: () => tone(N(98), { dur: 0.035, type: 'square', vol: 0.05 }),
+  buzz: () => { tone(N(41), { dur: 0.55, type: 'square', vol: 0.12, slide: -8 }); tone(N(46), { dur: 0.55, type: 'triangle', vol: 0.18 }); },
+  splash: () => { noise({ dur: 0.5, vol: 0.22, from: 1200, to: 300 }); tone(N(70), { dur: 0.12, vol: 0.12, slide: -300 }); },
+  boom: () => { noise({ dur: 0.7, vol: 0.3, from: 900, to: 80 }); tone(N(36), { dur: 0.6, type: 'sine', vol: 0.4, slide: -30 }); },
+  unlock: () => { tone(N(79), { dur: 0.08, vol: 0.25, type: 'triangle' }); tone(N(86), { at: 0.08, dur: 0.1, vol: 0.25, type: 'triangle' }); noise({ at: 0.04, dur: 0.12, vol: 0.12, from: 4000, to: 2500 }); },
   crack: () => { noise({ dur: 0.12, vol: 0.2, from: 3200, to: 900 }); tone(N(62), { at: 0.02, dur: 0.12, type: 'triangle', vol: 0.18, slide: -60 }); },
 };
 
