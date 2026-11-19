@@ -1,12 +1,19 @@
 // Kleine Helfer ohne Abhängigkeiten.
 
 export const PLAYERS = {
-  jos: { id: 'jos', name: 'Josefine', theme: 'baby' },
-  joh: { id: 'joh', name: 'Johann', theme: 'lila' },
+  jos: { id: 'jos', name: 'Josefine', nick: 'Baby', theme: 'baby' },
+  joh: { id: 'joh', name: 'Johann', nick: 'Johann', theme: 'lila' },
 };
 export const PIDS = ['jos', 'joh'];
 export const other = (p) => (p === 'jos' ? 'joh' : 'jos');
-export const nameOf = (p) => PLAYERS[p]?.name ?? '';
+
+// Anzeigenamen (Spitznamen). Die echten Namen stehen nur auf „Wer spielt?“ (realName).
+const NICK = { jos: PLAYERS.jos.nick, joh: PLAYERS.joh.nick };
+export function setNicks(n = {}) {
+  for (const p of PIDS) NICK[p] = String(n?.[p] || '').trim().slice(0, 20) || PLAYERS[p].nick;
+}
+export const nameOf = (p) => NICK[p] ?? '';
+export const realName = (p) => PLAYERS[p]?.name ?? '';
 
 // Zufällige ID (für Partien und Ereignisse)
 export function uid(n = 10) {

@@ -42,11 +42,13 @@ async function render(o = {}) {
     return;
   }
   if (my !== token) return; // inzwischen woanders hin navigiert
-  const swap = () => {
+  const swap = async () => {
     try { current?.(); } catch (e) { console.error(e); }
     current = null;
     app.replaceChildren();
-    current = mod.mount(app, ...params) || null;
+    let res = null;
+    try { res = await mod.mount(app, ...params); } catch (e) { console.error(e); }
+    current = typeof res === 'function' ? res : null;
     window.scrollTo(0, 0);
   };
   const useVT = o.vt !== false && !!document.startViewTransition && motionOK() && app.childElementCount > 0;
@@ -56,7 +58,7 @@ async function render(o = {}) {
       await t.updateCallbackDone;
     } catch { /* Übergang abgebrochen – Inhalt ist trotzdem getauscht */ }
   } else {
-    swap();
+    await swap();
   }
 }
 

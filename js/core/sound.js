@@ -86,6 +86,8 @@ export const sfx = {
   heart: () => { tone(N(48), { dur: 0.12, vol: 0.5, slide: -10 }); tone(N(48), { at: 0.2, dur: 0.14, vol: 0.4, slide: -10 }); },
   sparkle: () => [96, 100, 103, 108].forEach((n, i) => tone(N(n), { at: i * 0.045, dur: 0.12, vol: 0.14 })),
   flip: () => tone(N(88), { dur: 0.05, type: 'square', vol: 0.06 }),
+  draw: () => noise({ dur: 0.42, vol: 0.05, from: 2600, to: 1500 }),
+  crack: () => { noise({ dur: 0.12, vol: 0.2, from: 3200, to: 900 }); tone(N(62), { at: 0.02, dur: 0.12, type: 'triangle', vol: 0.18, slide: -60 }); },
 };
 
 // Vibration (nur Android-Browser; iPhone ignoriert das)

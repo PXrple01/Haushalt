@@ -74,7 +74,7 @@ export function mount(root) {
       </button>
       <button class="toy num" type="button" data-game="number">
         <span class="t-big" aria-hidden="true">${num}?</span>
-        <span class="t-title">${GAMES.number.title}</span><span class="t-sub">1 bis 100 – wer braucht weniger Fragen?</span>
+        <span class="t-title">${GAMES.number.title}</span><span class="t-sub">Von 1 bis 100</span>
       </button>
     </div>
     <section class="panel score" style="--i:4" aria-label="Duell-Bilanz" data-slot="score"></section>`;
@@ -137,9 +137,9 @@ export function mount(root) {
     const per = Object.entries(t.games).map(([g, v]) => `<span>${esc(gameTitle(g))} ${v.jos}:${v.joh}</span>`).join('');
     scoreEl.innerHTML = `
       <div class="score-main">
-        <div class="score-side jos"><b class="tnum">${t.jos}</b><span>Josefine</span></div>
+        <div class="score-side jos"><b class="tnum">${t.jos}</b><span>${esc(nameOf('jos'))}</span></div>
         <div class="hrt">${fullHeart()}</div>
-        <div class="score-side joh"><b class="tnum">${t.joh}</b><span>Johann</span></div>
+        <div class="score-side joh"><b class="tnum">${t.joh}</b><span>${esc(nameOf('joh'))}</span></div>
       </div>
       ${total ? `<div class="score-games">${per}${t.draw ? `<span>Unentschieden ${t.draw}</span>` : ''}</div>` : '<p class="score-empty">Noch keine Runde gespielt. Wer holt sich den ersten Punkt?</p>'}`;
   }
@@ -200,7 +200,10 @@ export function mount(root) {
     on('net', renderLink),
     on('stats', renderScore),
     on('session', renderResume),
-    on('prefs', ({ k }) => { if (k === 'code' || k === 'mode') { seg.setValue(prefs.get('mode')); renderMode(); } }),
+    on('prefs', ({ k }) => {
+      if (k === 'code' || k === 'mode') { seg.setValue(prefs.get('mode')); renderMode(); }
+      if (k === 'nicks') nav('#/lobby', { replace: true, vt: false });
+    }),
   ];
   return () => { offs.forEach((f) => f()); clearTimeout(bubbleT); };
 }

@@ -26,7 +26,7 @@ export function mount(root) {
     <div data-slot="seg"></div>
     <div class="chips"><button class="chip" aria-pressed="true">Tiere</button><button class="chip">Essen</button><button class="chip">${icon('dice')} Zufall</button><button class="chip">Liebe</button></div>
     <div class="panel stack"><span class="label">Eingabe</span><input class="field" placeholder="Dein Wort …"><p class="hint bad">Nur Buchstaben, bitte.</p>
-      <div class="row wrap"><span class="badge jos"><span class="dot on"></span>Josefine ist online</span><span class="badge joh">Johann</span><span class="badge"><span class="dot wait"></span>Warte …</span></div></div>
+      <div class="row wrap"><span class="badge jos"><span class="dot on"></span>Baby ist online</span><span class="badge joh">Johann</span><span class="badge"><span class="dot wait"></span>Warte …</span></div></div>
     <div class="note">${icon('info')}<span>Ein Hinweis in ruhigem Ton, damit man weiß, was als Nächstes passiert.</span></div>
     <div class="row wrap" data-slot="masc"></div>
     <div class="row wrap">

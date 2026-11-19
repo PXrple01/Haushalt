@@ -40,11 +40,12 @@ const DEF = {
   mode: 'couch',      // couch = Nebeneinander, remote = Weit weg
   code: '',           // gemeinsamer Code für Weit weg
   themeFor: { jos: 'baby', joh: 'lila' },
+  nicks: { jos: 'Baby', joh: 'Johann' }, // Anzeigenamen in der App
 };
 export const prefs = {
   all() {
     const p = get('prefs', {}) || {};
-    return { ...DEF, ...p, themeFor: { ...DEF.themeFor, ...(p.themeFor || {}) } };
+    return { ...DEF, ...p, themeFor: { ...DEF.themeFor, ...(p.themeFor || {}) }, nicks: { ...DEF.nicks, ...(p.nicks || {}) } };
   },
   get(k) { return this.all()[k]; },
   set(k, v) {

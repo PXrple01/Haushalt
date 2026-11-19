@@ -2,6 +2,9 @@
 import { h } from '../core/dom.js';
 import { icon } from '../art/icons.js';
 import { me, prefs } from '../core/store.js';
+import { nameOf } from '../core/util.js';
+import { miniHalf } from '../art/heart.js';
+import { esc } from '../core/dom.js';
 import { switchTheme, themeOf } from '../core/theme.js';
 import { sheet, segmented, toast, confirmBox } from '../core/ui.js';
 import { sfx } from '../core/sound.js';
@@ -19,6 +22,12 @@ export function openSettings() {
     </div>
     <div class="set-group"><h3>Bewegung</h3><div data-slot="motion"></div></div>
     <div class="set-group">
+      <h3>Spitznamen in der App</h3>
+      <label class="nick-row"><span class="nick-half" aria-hidden="true">${miniHalf('jos')}</span><input class="field" data-nick="jos" maxlength="20" autocomplete="off" aria-label="Spitzname für die pinke Herzhälfte" value="${esc(nameOf('jos'))}"></label>
+      <label class="nick-row"><span class="nick-half" aria-hidden="true">${miniHalf('joh')}</span><input class="field" data-nick="joh" maxlength="20" autocomplete="off" aria-label="Spitzname für die lila Herzhälfte" value="${esc(nameOf('joh'))}"></label>
+      <p class="hint">Gilt für dieses Handy. Auf „Wer spielt?“ stehen immer die echten Namen.</p>
+    </div>
+    <div class="set-group">
       <h3>Code für „Weit weg“</h3>
       <div class="row"><input class="field grow" data-slot="code" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" placeholder="z. B. einhorn42">
       <button class="btn" type="button" data-a="code">Speichern</button></div>
@@ -28,7 +37,7 @@ export function openSettings() {
       <button class="btn block" type="button" data-a="who">${icon('users')}<span>Person wechseln</span></button>
       <button class="btn quiet block" type="button" data-a="reset">${icon('trash')}<span>Duell-Bilanz zurücksetzen</span></button>
     </div>
-    <p class="ver">Kicherkiste 1.0 – gemacht für Josefine und Johann</p>`;
+    <p class="ver">Kicherkiste 1.0 – gemacht für ${esc(nameOf('jos'))} und ${esc(nameOf('joh'))}</p>`;
   body.querySelector('[data-slot="code"]').value = prefs.get('code') || '';
 
   const themeSeg = segmented({
@@ -49,6 +58,13 @@ export function openSettings() {
   }));
 
   body.addEventListener('change', (e) => {
+    const nk = e.target.dataset.nick;
+    if (nk) {
+      prefs.set('nicks', { ...prefs.get('nicks'), [nk]: e.target.value.trim() });
+      e.target.value = nameOf(nk);
+      toast('Spitzname gespeichert.', { icon: 'check' });
+      return;
+    }
     const k = e.target.dataset.k;
     if (!k) return;
     prefs.set(k, e.target.checked);
@@ -65,7 +81,7 @@ export function openSettings() {
       prefs.set('code', v);
       toast(v ? 'Code gespeichert.' : 'Code gelöscht.', { icon: 'check' });
     } else if (a === 'reset') {
-      const ok = await confirmBox({ title: 'Bilanz zurücksetzen?', text: `Alle Siege von Josefine und Johann werden auf 0 gesetzt – auch auf dem anderen Handy, sobald ihr verbunden seid.`, ok: 'Zurücksetzen', danger: true });
+      const ok = await confirmBox({ title: 'Bilanz zurücksetzen?', text: `Alle Siege von ${nameOf('jos')} und ${nameOf('joh')} werden auf 0 gesetzt – auch auf dem anderen Handy, sobald ihr verbunden seid.`, ok: 'Zurücksetzen', danger: true });
       if (ok) { resetStats(); toast('Bilanz steht wieder auf 0:0.', { icon: 'check' }); }
     }
   });

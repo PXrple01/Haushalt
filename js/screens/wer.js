@@ -18,7 +18,7 @@ export function mount(root) {
   const title = 'Wer spielt?';
   s.innerHTML = `
     <div class="wer-logo">${logo()}</div>
-    <h1 class="wer-title" id="wer-title" aria-label="${title}">${[...title].map((c) => `<span class="ch" aria-hidden="true">${c === ' ' ? '&nbsp;' : c}</span>`).join('')}</h1>
+    <h1 class="wer-title" id="wer-title" aria-label="${title}">${[...title].map((c) => (c === ' ' ? '<span class="ch sp" aria-hidden="true"> </span>' : `<span class="ch" aria-hidden="true">${c}</span>`)).join('')}</h1>
     <div class="wer-stage">
       <div class="wer-glow"></div>
       <svg class="wer-heart" viewBox="${HEART.view}" aria-hidden="false">

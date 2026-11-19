@@ -115,6 +115,7 @@
   text-shadow: 0 6px 0 rgba(59, 20, 82, .28);
 }
 .wer-title .ch { display: inline-block; }
+.wer-title .ch.sp { width: .34em; }
 .wer-stage { position: relative; width: min(82vw, 360px, 46vh); aspect-ratio: 240 / 220; margin-top: 4px; }
 .wer-glow {
   position: absolute; inset: -18%; border-radius: 50%;
@@ -181,16 +182,16 @@
   -webkit-tap-highlight-color: transparent;
 }
 .toy:active { transform: scale(.97) rotate(var(--rot, 0deg)); }
-.toy .t-title { font-family: var(--font-display); font-size: var(--fs-l); line-height: 1.1; }
-.toy .t-sub { margin-top: 4px; font-size: var(--fs-xs); font-weight: 700; line-height: 1.35; opacity: .85; }
+.toy .t-title { display: block; font-family: var(--font-display); font-size: var(--fs-l); line-height: 1.1; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: anywhere; }
+.toy .t-sub { display: block; margin-top: 4px; font-size: var(--fs-xs); font-weight: 700; line-height: 1.35; opacity: .85; }
 .toy .t-art { pointer-events: none; }
 
 /* Galgenmännchen = Heftseite (volle Breite) */
 .toy.hang { grid-column: 1 / -1; min-height: 150px; flex-direction: row; align-items: center; gap: 14px; padding: 18px 18px 18px 16px; }
-.toy.hang .t-art { width: 104px; height: 112px; flex: none; }
+.toy.hang .t-art { width: 86px; height: 94px; flex: none; }
 .toy.hang .t-art path, .toy.hang .t-art circle { fill: none; stroke: var(--toy-line); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
 .toy.hang .t-text { flex: 1 1 auto; min-width: 0; }
-.toy.hang .t-title { font-size: var(--fs-xl); }
+.toy.hang .t-title { font-size: clamp(1.25rem, 6vw, 1.625rem); }
 .toy.hang .t-sub { font-size: var(--fs-s); }
 .toy.hang .t-blanks { margin-top: 10px; display: flex; gap: 6px; }
 .toy.hang .t-blanks i { width: 18px; height: 4px; border-radius: 3px; background: var(--toy-line); opacity: .55; }
@@ -236,13 +237,13 @@
 :where([data-theme="baby"]) .toy.num {
   --toy-ink: #2F4A3E;
   border-radius: 14px;
-  -webkit-mask: radial-gradient(circle at 0 58%, transparent 11px, #000 11.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 58%, transparent 11px, #000 11.5px) right / 51% 100% no-repeat;
-  mask: radial-gradient(circle at 0 58%, transparent 11px, #000 11.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 58%, transparent 11px, #000 11.5px) right / 51% 100% no-repeat;
+  -webkit-mask: radial-gradient(circle at 0 40%, transparent 11px, #000 11.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 40%, transparent 11px, #000 11.5px) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle at 0 40%, transparent 11px, #000 11.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 40%, transparent 11px, #000 11.5px) right / 51% 100% no-repeat;
   background: linear-gradient(160deg, #C9F5E3, #A8EDD4);
   filter: drop-shadow(0 4px 0 rgba(47, 74, 62, .14)) drop-shadow(0 12px 16px rgba(47, 120, 90, .2));
 }
 :where([data-theme="baby"]) .toy.num::after {
-  content: ""; position: absolute; left: 14px; right: 14px; top: 58%; border-top: 2.5px dashed rgba(47, 74, 62, .35);
+  content: ""; position: absolute; left: 14px; right: 14px; top: 40%; border-top: 2.5px dashed rgba(47, 74, 62, .35);
 }
 :where([data-theme="baby"]) .toy.num .t-big { color: #E8418F; text-shadow: 0 2px 0 #fff; }
 
@@ -274,11 +275,11 @@
 :where([data-theme="lila"]) .toy.num {
   --toy-ink: #2A1300;
   background: linear-gradient(160deg, #FFE39A, #FFC94D);
-  -webkit-mask: radial-gradient(circle at 0 58%, transparent 11px, #000 11.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 58%, transparent 11px, #000 11.5px) right / 51% 100% no-repeat;
-  mask: radial-gradient(circle at 0 58%, transparent 11px, #000 11.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 58%, transparent 11px, #000 11.5px) right / 51% 100% no-repeat;
+  -webkit-mask: radial-gradient(circle at 0 40%, transparent 11px, #000 11.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 40%, transparent 11px, #000 11.5px) right / 51% 100% no-repeat;
+  mask: radial-gradient(circle at 0 40%, transparent 11px, #000 11.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 40%, transparent 11px, #000 11.5px) right / 51% 100% no-repeat;
   filter: drop-shadow(0 0 16px rgba(255, 211, 110, .45));
 }
-:where([data-theme="lila"]) .toy.num::after { content: ""; position: absolute; left: 14px; right: 14px; top: 58%; border-top: 2.5px dashed rgba(42, 19, 0, .35); }
+:where([data-theme="lila"]) .toy.num::after { content: ""; position: absolute; left: 14px; right: 14px; top: 40%; border-top: 2.5px dashed rgba(42, 19, 0, .35); }
 :where([data-theme="lila"]) .toy.num .t-big { font-size: 3.2rem; color: #6233E0; }
 :where([data-theme="lila"]) .toy .t-title { font-size: var(--fs-xl); letter-spacing: .015em; }
 :where([data-theme="lila"]) .toy.who .t-title { font-family: var(--font-hand); font-size: 2.1rem; letter-spacing: 0; }
@@ -308,3 +309,7 @@
 .set-group h3 { font-size: var(--fs-s); font-weight: 800; color: var(--ink-soft); margin-bottom: 4px; }
 .set-row { display: flex; gap: 10px; align-items: center; }
 .ver { text-align: center; font-size: var(--fs-xs); color: var(--ink-faint); padding-top: 8px; }
+.nick-row { display: flex; align-items: center; gap: 12px; }
+.nick-half { width: 28px; height: 36px; flex: none; display: grid; place-items: center; }
+.nick-half svg { width: 26px; height: 34px; }
+.nick-row .field { min-height: 50px; font-size: var(--fs-m); }

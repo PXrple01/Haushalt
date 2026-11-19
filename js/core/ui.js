@@ -135,11 +135,11 @@ export function confirmBox({ title, text = '', ok = 'Ja', cancel = 'Abbrechen', 
 export function handoff({ to, title, text, button, kicker } = {}) {
   return new Promise((resolve) => {
     const p = PLAYERS[to] || PLAYERS.jos;
-    const d = h('div', { class: `handoff ${to}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title || `Gib das Handy an ${p.name}` });
+    const d = h('div', { class: `handoff ${to}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': title || `Gib das Handy an ${nameOf(to)}` });
     d.innerHTML = `
       ${mascot(p.theme, 'hide', 'mascot')}
       <p class="h-kicker">${esc(kicker || 'Handy weitergeben')}</p>
-      <h2 class="h-title">${esc(title || `Gib das Handy an ${p.name}`)}</h2>
+      <h2 class="h-title">${esc(title || `Gib das Handy an ${nameOf(to)}`)}</h2>
       ${text ? `<p class="h-text">${esc(text)}</p>` : ''}`;
     const b = h('button', { class: 'btn primary big', type: 'button' }, button || `Ich bin ${nameOf(to)} – los!`);
     d.append(b);
