@@ -1,5 +1,5 @@
 // Theme (Baby/Lila) und „Bewegung reduzieren“ anwenden – mit kreisförmigem Übergang beim Wechsel.
-import { prefs, me, on } from './store.js';
+import { prefs, me, on, emit } from './store.js';
 import { buildScene } from './scene.js';
 
 const root = document.documentElement;
@@ -25,9 +25,11 @@ function setMeta(theme) {
 
 // Theme sofort setzen (ohne Übergang)
 export function setTheme(theme) {
+  const changed = root.dataset.theme !== theme;
   root.dataset.theme = theme;
   setMeta(theme);
   buildScene(theme);
+  if (changed) emit('theme', theme);
 }
 
 // Theme mit kreisförmigem Übergang ab Punkt (x, y) wechseln

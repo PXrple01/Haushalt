@@ -142,7 +142,7 @@
 .wer-name:active { transform: scale(.95); }
 .wer-name:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 .wer-hint { font-weight: 800; font-size: var(--fs-s); color: #fff; -webkit-text-stroke: 4px #3B1452; paint-order: stroke fill; opacity: 0; }
-.wer-skip { position: absolute; inset: 0; z-index: 0; }
+
 
 /* =====================================================================
    Lobby
