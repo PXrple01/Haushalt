@@ -54,6 +54,7 @@ export function play(root, sid) {
   let timer = null;
   let backupT = 0;
   const offs = [];
+  let alive = true; // nach dem Verlassen keine Übergaben/Ereignisse mehr aus wartendem Code
   const iAct = (r = st.r) => !remote || actorOf(st, r) === p;
 
   function setView(v, node) {
@@ -101,6 +102,7 @@ export function play(root, sid) {
         main.replaceChildren();
         await countdown();
         busy = false;
+        if (!alive) return;
         addEvent(sid, 'go', { r: st.r });
       }
     });
@@ -208,6 +210,7 @@ export function play(root, sid) {
     if (!remote && handed !== st.r) {
       busy = true;
       await transition('curtain', () => main.replaceChildren(), { title: `Runde ${st.r + 1} von ${st.total}`, sub: `${nameOf(actor)} stellt dar` });
+      if (!alive) return;
       await handoff({ to: actor, kicker: 'Pantomime', title: `${nameOf(actor)} stellt dar`, text: `${nameOf(other(actor))}, nicht aufs Handy schauen!`, button: `Ich bin ${nameOf(actor)} – zeig mir den Begriff` });
       handed = st.r;
       busy = false;
@@ -227,7 +230,7 @@ export function play(root, sid) {
     }
     if (st.phase === 'end' && prev.phase !== 'end') {
       if (st.aborted) { pendingResult = null; if (st.abortBy !== p) toast(`${nameOf(st.abortBy)} hat die Partie beendet.`, { key: 'game', icon: 'flag' }); }
-      else setTimeout(() => finale(sid, { winner: st.winner, iWon: st.winner === p, couch: !remote }), 1800);
+      else setTimeout(() => { if (location.hash === '#/spiel/' + sid) finale(sid, { winner: st.winner, iWon: st.winner === p, couch: !remote }); }, 1800);
     }
     const R = st.rounds[st.r];
     // Neuer Begriff (gewürfelt) → Karte neu
@@ -248,5 +251,5 @@ export function play(root, sid) {
   if (st.phase === 'end') { markCelebrated(sid); renderEnd(); }
   else decide();
 
-  return () => { shellOff(); offs.forEach((f) => f()); timer?.stop?.(); clearTimeout(backupT); };
+  return () => { alive = false; shellOff(); offs.forEach((f) => f()); timer?.stop?.(); clearTimeout(backupT); };
 }

@@ -109,6 +109,7 @@ export function play(root, sid) {
   let busy = false;
   let timer = null, canvas = null, hintT = 0, backupT = 0;
   const offs = [];
+  let alive = true; // nach dem Verlassen keine Übergaben/Ereignisse mehr aus wartendem Code
   const iAct = (r = st.r) => !remote || actorOf(st, r) === p;
 
   function setView(v, node) {
@@ -150,6 +151,7 @@ export function play(root, sid) {
         main.replaceChildren();
         await countdown();
         busy = false;
+        if (!alive) return;
         addEvent(sid, 'go', { r: st.r });
       }
     });
@@ -238,11 +240,18 @@ export function play(root, sid) {
       box.append(got, row);
     } else {
       // Weit weg: raten
+      let lastLvl = -1;
       const updateInfo = () => {
         const live = st.rounds[st.r];
         if (!live || live.status !== 'live') return;
         const frac = (Date.now() - live.startT) / (st.dur * 1000);
+        const lvl = frac >= .75 ? 2 : frac >= .5 ? 1 : 0;
+        if (lvl === lastLvl) return;
+        const before = new Set([...info.querySelectorAll('.bl')].map((b, i) => (b.classList.contains('on') ? i : -1)));
         info.innerHTML = `<b>${esc(nameOf(actor))} kritzelt</b><span class="blanks" aria-label="Tipp: ${live.term.length} Zeichen">${blanks(live.term, frac)}</span>`;
+        if (lastLvl >= 0) info.querySelectorAll('.bl').forEach((b, i) => { if (b.classList.contains('on') && !before.has(i)) { b.classList.add('flip'); b.style.animationDelay = `${(i % 6) * 60}ms`; } });
+        if (lastLvl >= 0 && lvl > lastLvl) sfx.sparkle();
+        lastLvl = lvl;
       };
       updateInfo();
       hintT = setInterval(updateInfo, 1000);
@@ -271,11 +280,18 @@ export function play(root, sid) {
     });
   }
 
+  let guessCount = -1, guessR = -1;
   function renderGuesses() {
     const el = main.querySelector('.guesses');
     const R = st.rounds[st.r];
     if (!el || !R) return;
-    el.innerHTML = R.guesses.filter((g) => !g.ok).slice(-8).map((g) => `<span class="chip wrong">${esc(g.g)}</span>`).join('');
+    if (st.r !== guessR) { guessR = st.r; guessCount = -1; }
+    const wrong = R.guesses.filter((g) => !g.ok);
+    el.innerHTML = wrong.slice(-8).map((g) => `<span class="chip wrong">${esc(g.g)}</span>`).join('');
+    if (guessCount >= 0 && wrong.length > guessCount && motionOK()) {
+      el.lastElementChild?.animate([{ transform: 'scale(.3) rotate(-8deg)', opacity: 0 }, { transform: 'scale(1.12) rotate(3deg)', opacity: 1, offset: .6 }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    }
+    guessCount = wrong.length;
   }
 
   // ---------- Ergebnis ----------
@@ -358,6 +374,7 @@ export function play(root, sid) {
     if (!remote && handed !== st.r) {
       busy = true;
       await transition('page', () => main.replaceChildren(), { title: `Runde ${st.r + 1} von ${st.total}`, sub: `${nameOf(actor)} kritzelt` });
+      if (!alive) return;
       await handoff({ to: actor, kicker: 'Kritzelspiel', title: `${nameOf(actor)} kritzelt`, text: `${nameOf(other(actor))}, nicht aufs Handy schauen!`, button: `Ich bin ${nameOf(actor)} – zeig mir den Begriff` });
       handed = st.r;
       busy = false;
@@ -376,7 +393,7 @@ export function play(root, sid) {
     }
     if (st.phase === 'end' && prev.phase !== 'end') {
       if (st.aborted) { pendingResult = null; if (st.abortBy !== p) toast(`${nameOf(st.abortBy)} hat die Partie beendet.`, { key: 'game', icon: 'flag' }); }
-      else setTimeout(() => finale(sid, { winner: st.winner, iWon: st.winner === p, couch: !remote }), 1800);
+      else setTimeout(() => { if (location.hash === '#/spiel/' + sid) finale(sid, { winner: st.winner, iWon: st.winner === p, couch: !remote }); }, 1800);
     }
     const R = st.rounds[st.r];
     if (view === 'pick' && R && prev.rounds[st.r] && R.term !== prev.rounds[st.r].term) { renderPick(); return; }
@@ -410,6 +427,6 @@ export function play(root, sid) {
   if (st.phase === 'end') { markCelebrated(sid); renderEnd(); }
   else decide();
 
-  return () => { shellOff(); offs.forEach((f) => f()); timer?.stop?.(); canvas?.destroy?.(); clearInterval(hintT); clearTimeout(backupT); };
+  return () => { alive = false; shellOff(); offs.forEach((f) => f()); timer?.stop?.(); canvas?.destroy?.(); clearInterval(hintT); clearTimeout(backupT); };
 }
 

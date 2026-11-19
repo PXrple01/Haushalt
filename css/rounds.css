@@ -211,3 +211,25 @@
 .art canvas { border-radius: 10px; background: #FFFDF8; }
 .art-t { font-weight: 800; font-size: var(--fs-xs); text-align: center; }
 .art-by { font-size: var(--fs-xs); color: var(--ink-soft); }
+
+/* Rückblick am Ende: Zeilen erscheinen nacheinander */
+.recap li { animation: kk-recap .45s cubic-bezier(.22, 1, .36, 1) backwards; }
+@keyframes kk-recap { from { opacity: 0; transform: translateY(8px); } }
+.recap li:nth-child(1) { animation-delay: 0.32s; }
+.recap li:nth-child(2) { animation-delay: 0.39s; }
+.recap li:nth-child(3) { animation-delay: 0.46s; }
+.recap li:nth-child(4) { animation-delay: 0.53s; }
+.recap li:nth-child(5) { animation-delay: 0.60s; }
+.recap li:nth-child(6) { animation-delay: 0.67s; }
+.recap li:nth-child(7) { animation-delay: 0.74s; }
+.recap li:nth-child(8) { animation-delay: 0.81s; }
+.recap li:nth-child(9) { animation-delay: 0.88s; }
+.recap li:nth-child(10) { animation-delay: 0.95s; }
+.recap li:nth-child(11) { animation-delay: 1.02s; }
+.recap li:nth-child(12) { animation-delay: 1.09s; }
+.recap li:nth-child(13) { animation-delay: 1.16s; }
+.recap li:nth-child(14) { animation-delay: 1.23s; }
+
+/* Kritzelspiel: neu aufgedeckter Buchstabe dreht sich um */
+.bl.flip { animation: kk-blflip .6s cubic-bezier(.34, 1.56, .64, 1) backwards; }
+@keyframes kk-blflip { from { transform: perspective(200px) rotateX(-110deg); opacity: 0; } }

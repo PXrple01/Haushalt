@@ -2,6 +2,7 @@
 // Jedes Modul exportiert mount(root, ...params) und gibt optional eine Aufräum-Funktion zurück.
 import { me } from './store.js';
 import { motionOK } from './theme.js';
+import { clearOverlays } from './ui.js';
 
 const ROUTES = [
   { re: /^#\/wer$/, load: () => import('../screens/wer.js') },
@@ -45,6 +46,7 @@ async function render(o = {}) {
   const swap = async () => {
     try { current?.(); } catch (e) { console.error(e); }
     current = null;
+    clearOverlays();
     app.replaceChildren();
     let res = null;
     try { res = await mod.mount(app, ...params); } catch (e) { console.error(e); }

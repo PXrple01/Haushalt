@@ -7,7 +7,7 @@
 .game { gap: 12px; }
 .g-top { display: flex; align-items: center; gap: 10px; min-height: 56px; }
 .g-head { flex: 1 1 auto; min-width: 0; text-align: center; }
-.g-title { font-family: var(--font-display); font-size: var(--fs-l); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-title { font-family: var(--font-display); font-size: min(var(--fs-l), 5.3vw); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 :where([data-theme="lila"]) .g-title { font-size: var(--fs-xl); letter-spacing: .015em; }
 .g-sub { display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 2px; font-size: var(--fs-xs); font-weight: 800; color: var(--ink-soft); }
 .g-sub .ic { width: 15px; height: 15px; }

@@ -406,3 +406,10 @@
   border-radius: 4px; background: linear-gradient(160deg, #101A44, #0B0F2C); border: 2px solid #3E7BFF;
   box-shadow: 6px 6px 0 #2B4FD9, 0 0 30px rgba(71, 229, 255, .25);
 }
+
+/* Escape-Karte in der Lobby: ab und zu wandert ein Lichtstreif darüber */
+.toy.escape { isolation: isolate; }
+.toy.escape::after { content: ""; position: absolute; top: -30%; bottom: -30%; left: -45%; width: 30%; z-index: 2; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .45), transparent); opacity: 0; transform: skewX(-20deg); animation: kk-glint 7s ease-in-out 1.8s infinite; }
+:where([data-theme="lila"]) .toy.escape::after { background: linear-gradient(100deg, transparent, rgba(125, 243, 255, .3), transparent); }
+@keyframes kk-glint { 0% { opacity: 0; transform: skewX(-20deg) translateX(0); } 3% { opacity: 1; } 15% { opacity: 0; transform: skewX(-20deg) translateX(620%); } 100% { opacity: 0; transform: skewX(-20deg) translateX(620%); } }
+html[data-motion="reduced"] .toy.escape::after { display: none; }

@@ -96,6 +96,25 @@ export function setup(root) {
     </div>`;
   body.querySelectorAll('.es-tcard').forEach((b) => paint(b, themeById(b.dataset.theme)));
 
+  // Karten schweben ein, sobald sie ins Bild scrollen (gestaffelt, wenn mehrere gleichzeitig kommen)
+  const grid = body.querySelector('.es-themes');
+  let io = null;
+  if (motionOK() && 'IntersectionObserver' in window) {
+    grid.classList.add('es-reveal');
+    io = new IntersectionObserver((entries) => {
+      let k = 0;
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        const card = en.target;
+        card.style.transitionDelay = `${k++ * 90}ms`;
+        card.classList.add('in');
+        setTimeout(() => { card.style.transitionDelay = ''; }, 1400); // danach reagiert die Karte sofort aufs Antippen
+        io.unobserve(card);
+      }
+    }, { rootMargin: '0px 0px -8% 0px', threshold: .12 });
+    grid.querySelectorAll('.es-tcard').forEach((c) => io.observe(c));
+  }
+
   const linkEl = body.querySelector('[data-slot="link"]');
   function renderLink() {
     const code = prefs.get('code');
@@ -127,10 +146,32 @@ export function setup(root) {
     if (!b) return;
     sfx.pop(); haptic(10);
     b.classList.remove('press'); void b.offsetWidth; b.classList.add('press');
-    openTheme(themeById(b.dataset.theme));
+    setTimeout(() => b.classList.remove('press'), 500);
+    const th = themeById(b.dataset.theme);
+    // Wo möglich: das Bild der Karte fliegt ins Detailblatt (View Transition), sonst normales Hochschieben
+    const art = b.querySelector('.es-tc-art');
+    if (!document.startViewTransition || !motionOK()) { openTheme(th); return; }
+    art.style.viewTransitionName = 'es-hero';
+    let hero = null, sheetEl = null;
+    let vt;
+    try {
+      vt = document.startViewTransition(() => {
+        art.style.viewTransitionName = '';
+        const sh = openTheme(th, { vt: true });
+        hero = sh.el.querySelector('.es-dh');
+        sheetEl = sh.el;
+        hero.style.viewTransitionName = 'es-hero';
+        sheetEl.style.viewTransitionName = 'es-sheet';
+      });
+    } catch { art.style.viewTransitionName = ''; openTheme(th); return; }
+    vt.finished.finally(() => {
+      art.style.viewTransitionName = '';
+      if (hero) hero.style.viewTransitionName = '';
+      if (sheetEl) sheetEl.style.viewTransitionName = '';
+    });
   });
 
-  function openTheme(th) {
+  function openTheme(th, { vt = false } = {}) {
     let diff = 'normal';
     let first = me.get();
     const box = h('div', { class: 'es-detail' });
@@ -150,6 +191,7 @@ export function setup(root) {
     }));
     box.querySelector('[data-slot="first"]').append(whoSeg({ label: 'Wer ist zuerst an den Händen?', value: first, random: true, onChange: (v) => { first = v; } }));
     const sh = sheet({ body: box, cls: 'es-sheet', label: th.title });
+    if (vt) sh.wrap.classList.add('vt'); // eigenes Hochschieben aus – das übernimmt der Übergang
     box.querySelector('.es-start').addEventListener('click', () => {
       if (!prefs.get('code')) {
         sh.close(true);
@@ -163,8 +205,9 @@ export function setup(root) {
       sh.close(true);
       nav('#/spiel/' + id, { replace: true });
     });
+    return sh;
   }
-  return () => { cleanup(); offNet(); };
+  return () => { cleanup(); offNet(); io?.disconnect(); };
 }
 
 // =====================================================================
@@ -228,14 +271,14 @@ export function play(root, sid) {
     if (key === 'intro' || key === 'setup') { mountIntro(); return; }
     if (key.startsWith('room:')) {
       const r = st.room;
-      const swap = () => mountRoom(prev !== '' && last);
+      const swap = () => { if (alive) mountRoom(prev !== '' && last); };
       if (prev) await doors(`Raum ${r + 1} von ${st.rooms.length}`, st.rooms[r].name, swap);
       else swap();
       return;
     }
     if (key === 'end') {
       if (prev.startsWith('room:') && st.won && last) await winMoment();
-      mountEnd(!!prev);
+      if (alive) mountEnd(!!prev);
     }
   }
   // Letzter Raum gelöst: erst die Löse-Animation zeigen, dann das Finale
@@ -395,6 +438,10 @@ export function play(root, sid) {
     announce(`Raum ${r + 1}: ${rm.name}. ${role === 'hands' ? 'Du bist an den Händen.' : 'Du hast das Wissen.'}`);
     if (withFx && motionOK()) {
       view.querySelectorAll('.es-hud, .es-rolecard, .es-roomcard, .es-puzzle').forEach((x, i) => x.animate([{ opacity: 0, transform: 'translateY(18px)' }, { opacity: 1, transform: 'none' }], { duration: 480, delay: 120 + i * 90, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'backwards' }));
+      if (r > 0) {
+        view.querySelector('.es-rolecard').classList.add('swap');            // Rollentausch: Abzeichen dreht sich um
+        view.querySelectorAll('.es-track li')[r - 1]?.classList.add('just'); // gerade geschaffter Raum bekommt seinen Haken
+      }
     }
   }
   function destroyPuzzle() { try { puzzle?.destroy(); } catch (e) { console.error(e); } puzzle = null; }
@@ -429,6 +476,7 @@ export function play(root, sid) {
     const n = st.hintsUsed[r] || 0;
     if (!n) { box.replaceChildren(); return; }
     const list = hintsFor(rm.kind, rm.spec, rm.skin, st.rs[r]).slice(0, n);
+    box.classList.toggle('first', isNew && n === 1);
     box.innerHTML = `<h3 class="es-hints-h">${icon('bulb')}<span>Tipps</span></h3><ol>${list.map((t, i) => `<li class="${isNew && i === n - 1 ? 'new' : ''}"><b>${i + 1}</b><span>${esc(t)}</span></li>`).join('')}</ol>`;
     if (isNew) {
       sfx.sparkle();
@@ -534,10 +582,11 @@ export function play(root, sid) {
 
   // ---------- Finale ----------
   async function winMoment() {
-    if (!motionOK()) return;
+    if (!motionOK() || !alive) return;
     sfx.unlock();
     flash('#fff', .7);
     await sleep(240);
+    if (!alive) return;
     celebrate();
     sfx.win();
     haptic([30, 50, 30, 50, 90]);
@@ -587,6 +636,22 @@ export function play(root, sid) {
       else if (a === 'home') nav('#/lobby');
     });
     if (!animated || !motionOK()) { view.classList.add('still'); return; }
+    // Statistik zählt hoch (Zeit in Sekunden, sonst ganze Zahlen)
+    view.querySelectorAll('.es-stats dd').forEach((dd, i) => {
+      const txt = dd.textContent;
+      const m = txt.match(/^(\d+):(\d\d)$/), frac = txt.match(/^(\d+)\/(\d+)$/);
+      const to = m ? +m[1] * 60 + +m[2] : frac ? +frac[1] : +txt;
+      if (!Number.isFinite(to) || to <= 0) return;
+      const show = (v) => (m ? `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}` : frac ? `${v}/${frac[2]}` : String(v));
+      dd.textContent = show(0);
+      const t0 = performance.now() + 500 + i * 120, dur = 900;
+      const step = (t) => {
+        const k = Math.max(0, Math.min(1, (t - t0) / dur));
+        dd.textContent = show(Math.round(to * (1 - Math.pow(1 - k, 3))));
+        if (k < 1 && alive) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
     if (won) {
       view.querySelectorAll('.es-star.on').forEach((s, i) => setTimeout(() => {
         const r = s.getBoundingClientRect();

@@ -108,6 +108,14 @@ export function sheet({ title, body, cls = '', onClose, label } = {}) {
 }
 export const closeSheet = () => sheetOpen?.close();
 
+// Beim Bildschirmwechsel: offene Übergaben, Dialoge und Blätter schließen – sonst liegen sie über der neuen Seite
+// (z. B. wenn man mit der Zurück-Geste aus einem Spiel geht, während „Gib das Handy an …“ angezeigt wird).
+export function clearOverlays() {
+  layer()?.querySelectorAll('.handoff, .dialog-wrap').forEach((n) => n.remove());
+  sheetOpen?.close(true);
+  document.querySelectorAll('.peek-ov, .es-doors, .po-fly, .rt-ov, .cd-ov').forEach((n) => n.remove());
+}
+
 // ---------- Bestätigen-Dialog ----------
 export function confirmBox({ title, text = '', ok = 'Ja', cancel = 'Abbrechen', danger = false } = {}) {
   return new Promise((resolve) => {

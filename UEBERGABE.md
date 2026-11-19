@@ -41,7 +41,7 @@ Stand: 19.11.2026, Version 2.0 (Cache `kicherkiste-v3`): + Pantomime, Kritzelspi
 
 ## 5. Testen
 - Server: `python3 -m http.server 5178 --bind 127.0.0.1` im Repo. Chromium + Playwright sind vorinstalliert.
-- `node tests/logic.test.mjs` (Spiellogik inkl. Escape: alle Rätsel lösbar und gleich auf beiden Geräten), `node tests/smoke.mjs [bilder]` (alle Bildschirme, beide Themes, 340/390/1280 px, ruhige Bewegung), `node tests/fern-galgenmaennchen.mjs`, `node tests/fern-werbinich-zahl.mjs`, `node tests/couch-werbinich-zahl.mjs`, `node tests/fern-herzchen.mjs`, `node tests/fern-pantomime.mjs`.
+- `node tests/logic.test.mjs` (Spiellogik inkl. Escape: alle Rätsel lösbar und gleich auf beiden Geräten), `node tests/smoke.mjs [bilder]` (alle Bildschirme, beide Themes, 340/390/1280 px, ruhige Bewegung), `node tests/fern-galgenmaennchen.mjs`, `node tests/fern-werbinich-zahl.mjs`, `node tests/couch-werbinich-zahl.mjs`, `node tests/fern-herzchen.mjs`, `node tests/fern-pantomime.mjs`, `node tests/fern-kritzelspiel.mjs`, `node tests/couch-neue-spiele.mjs [bilder] [breite]` (Kritzelspiel, Pantomime, Herzchen versenken auf einem Handy, mit Neuladen).
 - Escape: `node tests/fern-escape.mjs [bilder] [geschichte] [stufe]` spielt eine Geschichte komplett über die Oberfläche durch (mit Fehlern und Tipp, `RUHIG=1` für reduzierte Bewegung); `node tests/fern-escape-zeit.mjs` prüft Zeit um, Weiterspielen, Aufgeben, Beenden.
 - Zwei Geräte lokal: `?net=local&ns=a` und `?net=local&ns=b` in **einem** Browser-Kontext (BroadcastChannel).
 - Die echte WebSocket-Verbindung zu Supabase ist in der Cloud-Sandbox nicht testbar (Proxy blockt WebSockets). REST-Broadcast mit dem Schlüssel liefert 202 → Realtime ist freigeschaltet.
@@ -53,6 +53,8 @@ Stand: 19.11.2026, Version 2.0 (Cache `kicherkiste-v3`): + Pantomime, Kritzelspi
 - Updates in den Spielansichten laufen über eine Warteschlange (`schedule`), verglichen wird mit dem zuletzt angezeigten Stand (`shown`).
 - `navigator.vibrate` erst nach der ersten Berührung (sonst Konsolen-Warnung).
 - Neue Dateien → `tests/update-sw.mjs` laufen lassen, sonst fehlen sie offline.
+- Overlays (Übergabe, Dialoge, Blätter, Vorhang, Countdown, Escape-Türen) räumt der Router bei jedem Bildschirmwechsel weg (`clearOverlays` in `ui.js`). Wartender Code in Spielansichten prüft `alive`, damit nach dem Verlassen nichts mehr auftaucht.
+- View Transitions: Namen (`view-transition-name`) nie doppelt vergeben – sonst bricht der Übergang ab. Escape setzt `es-hero`/`es-sheet` nur für die Dauer des Karten-Übergangs.
 
 ## 7. Ideen für später
 - Weitere Spiele (z. B. „Wer kennt wen besser?“), weitere Escape-Geschichten (neues Objekt in `themes.js` mit 4 Räumen genügt) oder neue Rätsel-Arten (in `puzzles.js` + `rooms.js`).

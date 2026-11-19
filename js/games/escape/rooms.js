@@ -97,7 +97,7 @@ function lockHands(c) {
   };
 }
 function table(t) {
-  return `<ul class="bk-table">${LOCK_COLS.map((col) => `<li><span class="bk-gem">${gem(col)}</span><span class="bk-col">${esc(colName(col))}</span><span class="bk-arrow" aria-hidden="true">→</span><span class="bk-sym">${symbol(t[col], 'currentColor')}</span><span class="bk-symname">${esc(symName(t[col]))}</span></li>`).join('')}</ul>`;
+  return `<ul class="bk-table">${LOCK_COLS.map((col, n) => `<li style="--n:${n}"><span class="bk-gem">${gem(col)}</span><span class="bk-col">${esc(colName(col))}</span><span class="bk-arrow" aria-hidden="true">→</span><span class="bk-sym">${symbol(t[col], 'currentColor')}</span><span class="bk-symname">${esc(symName(t[col]))}</span></li>`).join('')}</ul>`;
 }
 function lockBook(c) {
   const { spec, skin } = c;
@@ -189,7 +189,7 @@ function wiresBook(c) {
   const { skin } = c;
   const box = h('div', { class: 'pz book wr-book' });
   const secs = [4, 5, 6].map((k) => `<section class="wr-sec"><h4 class="bk-sub"><span class="wr-k tnum">${k}</span><span>Bei ${k} ${esc(skin.threads)}</span></h4>
-    <ol class="wr-rules">${WIRE_RULES[k].map((r) => `<li><span class="wr-if">${esc(r.t.replace('{plate}', skin.plate))}</span><span class="wr-then">${icon('cross')}Schneide ${esc(r.then)}</span></li>`).join('')}</ol></section>`).join('');
+    <ol class="wr-rules">${WIRE_RULES[k].map((r, n) => `<li style="--n:${(k - 4) * 4 + n}"><span class="wr-if">${esc(r.t.replace('{plate}', skin.plate))}</span><span class="wr-then">${icon('cross')}Schneide ${esc(r.then)}</span></li>`).join('')}</ol></section>`).join('');
   box.innerHTML = page(skin.book, `Frag ${esc(c.partner)}: Wie viele ${esc(skin.threads)}? Welche Farbe hat Nummer 1, 2, 3 …? Und wie lautet die ${esc(skin.plate)}? Die erste passende Regel gilt.`, secs);
   c.el.append(box);
   return {};
@@ -223,7 +223,7 @@ function mazeHands(c) {
         <circle class="mz-goal" cx="${(spec.goal[0] + .5) * u}" cy="${(spec.goal[1] + .5) * u}" r="${u * .34}"/>
         <path class="mz-bumps" d=""/>
       </svg>
-      <div class="mz-me" aria-hidden="true"><i></i></div>
+      <div class="mz-layer" aria-hidden="true"><div class="mz-me"><i></i></div></div>
       <div class="mz-mist" aria-hidden="true"></div>
     </div>
     <div class="mz-pad" role="group" aria-label="Richtung">
@@ -325,6 +325,7 @@ function echoHands(c) {
   let entry = [];
   let playing = 0;
   let rs = c.rs;
+  const timers = [];
   const box = h('div', { class: 'pz ec-hands' });
   box.innerHTML = `
     <div class="ec-stage">
@@ -376,13 +377,13 @@ function echoHands(c) {
     sfx.note?.(70 + entry.length * 2); haptic(6);
     if (entry.length === spec.L) {
       const seq = entry.slice();
-      setTimeout(() => c.act({ k: 'enter', seq }), 260);
+      timers.push(setTimeout(() => c.act({ k: 'enter', seq }), 260));
     }
   });
   box.querySelector('.ec-replay').addEventListener('click', () => { sfx.tap(); playSeq(); });
   c.el.append(box);
   drawSlots();
-  const startT = setTimeout(playSeq, motionOK() ? 2100 : 600); // erst wenn die Tür offen ist
+  timers.push(setTimeout(playSeq, motionOK() ? 2100 : 600)); // erst wenn die Tür offen ist
   return {
     update(next, last, fresh) {
       rs = next;
@@ -390,23 +391,23 @@ function echoHands(c) {
       if (last.kind === 'mistake') {
         drawSlots('bad');
         shake(box.querySelector('.ec-slots'), 9);
-        setTimeout(() => { entry = []; drawSlots(); playSeq(); }, 1100);
+        timers.push(setTimeout(() => { entry = []; drawSlots(); playSeq(); }, 1100));
         status.textContent = 'Falsch – eine neue Folge kommt!';
       } else if (last.kind === 'solved') {
         drawSlots('good');
         playing++;
         box.classList.add('done');
-        Object.values(crys).forEach((e, i) => setTimeout(() => { e.classList.add('on'); sfx.note?.(72 + i * 3); }, i * 90));
+        Object.values(crys).forEach((e, i) => timers.push(setTimeout(() => { e.classList.add('on'); sfx.note?.(72 + i * 3); }, i * 90)));
       }
     },
-    destroy() { playing++; clearTimeout(startT); },
+    destroy() { playing++; timers.forEach(clearTimeout); },
   };
 }
 function echoBook(c) {
   const { spec, skin } = c;
   const box = h('div', { class: 'pz book ec-book' });
   box.innerHTML = page(skin.book, `${B(c.partner)} sieht, in welcher Reihenfolge die ${esc(skin.lights)} leuchten, und sagt dir die Farben. Du übersetzt sie in Symbole.`,
-    `<ul class="bk-table ec-legend">${ECHO_COLS.map((col) => `<li><span class="bk-crys">${crystal(col)}</span><span class="bk-col">${esc(colName(col))}</span><span class="bk-arrow" aria-hidden="true">→</span><span class="bk-sym">${symbol(spec.legend[col], 'currentColor')}</span><span class="bk-symname">${esc(symName(spec.legend[col]))}</span></li>`).join('')}</ul>`);
+    `<ul class="bk-table ec-legend">${ECHO_COLS.map((col, n) => `<li style="--n:${n}"><span class="bk-crys">${crystal(col)}</span><span class="bk-col">${esc(colName(col))}</span><span class="bk-arrow" aria-hidden="true">→</span><span class="bk-sym">${symbol(spec.legend[col], 'currentColor')}</span><span class="bk-symname">${esc(symName(spec.legend[col]))}</span></li>`).join('')}</ul>`);
   c.el.append(box);
   return {};
 }
@@ -493,7 +494,7 @@ function potionBook(c) {
   const ingOf = (id) => skin.ingredients.find((x) => x.id === id);
   const box = h('div', { class: 'pz book po-book' });
   box.innerHTML = page(skin.book, `${B(c.partner)} sagt dir, welche Farbe der Trank im ${esc(skin.pot)} hat. Dann sagst du, was hinein muss. Fertig ist er, wenn er golden leuchtet.`,
-    `<ul class="po-recipe">${spec.book.map((e) => { const x = ingOf(e.add); return `<li><span class="po-drop" style="--c:${hex(e.when)}" aria-hidden="true"></span><span class="po-when">Ist der Trank <b>${esc(lc(e.when))}</b>:</span><span class="po-add">${symbol(x.sym, x.col)}<b>${esc(x.name)}</b></span></li>`; }).join('')}</ul>`);
+    `<ul class="po-recipe">${spec.book.map((e, n) => { const x = ingOf(e.add); return `<li style="--n:${n}"><span class="po-drop" style="--c:${hex(e.when)}" aria-hidden="true"></span><span class="po-when">Ist der Trank <b>${esc(lc(e.when))}</b>:</span><span class="po-add">${symbol(x.sym, x.col)}<b>${esc(x.name)}</b></span></li>`; }).join('')}</ul>`);
   c.el.append(box);
   return {};
 }
@@ -505,6 +506,7 @@ function safeHands(c) {
   const { spec, skin } = c;
   const objOf = (id) => skin.objects.find((x) => x.id === id);
   let code = '';
+  let busy = false;
   const box = h('div', { class: 'pz sf-hands' });
   box.innerHTML = `
     <div class="sf-room" role="img" aria-label="${esc(skin.scene || 'Raum')} mit vielen Dingen">
@@ -530,15 +532,19 @@ function safeHands(c) {
     const b = e.target.closest('.sf-k');
     if (!b) return;
     const n = b.dataset.n;
-    if (n === 'back') { code = code.slice(0, -1); draw(); sfx.tap(); return; }
+    if (n === 'back') { if (busy) return; code = code.slice(0, -1); draw(); sfx.tap(); return; }
     if (n === 'ok') {
+      if (busy) return;
       if (code.length < spec.len) { shake(box.querySelector('.sf-display'), 5); return; }
+      busy = true;
       sfx.click(); haptic(12);
       c.act({ k: 'open', code });
+      setTimeout(() => { busy = false; }, 1000);
       return;
     }
-    if (code.length >= spec.len) return;
+    if (busy || code.length >= spec.len) return;
     code += n; draw(); sfx.tick(); haptic(5);
+    if (motionOK()) ds[code.length - 1].animate([{ transform: 'translateY(6px) scale(.6)', opacity: .3 }, { transform: 'translateY(-2px) scale(1.12)', opacity: 1, offset: .6 }, { transform: 'none' }], { duration: 280, easing: 'ease-out' });
   });
   c.el.append(box);
   draw();
@@ -561,7 +567,7 @@ function safeBook(c) {
   const box = h('div', { class: 'pz book sf-book' });
   box.innerHTML = page(skin.book, `${B(c.partner)} sieht den Raum und kann die Dinge zählen. Frag nach den Zahlen und rechne. Bei zwei Ziffern zählt nur die letzte.`, `
     <div class="sf-legend">${spec.objs.map((id) => { const x = objOf(id); return `<span>${symbol(x.sym, x.col)}${esc(x.pl)}</span>`; }).join('')}</div>
-    <ol class="sf-lines">${spec.lines.map((l, i) => `<li><span class="sf-n">${i + 1}. Ziffer</span><span class="sf-f">${esc(l.text)}</span><input class="sf-in tnum" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Notiz für Ziffer ${i + 1}"></li>`).join('')}</ol>`);
+    <ol class="sf-lines">${spec.lines.map((l, i) => `<li style="--n:${i + 1}"><span class="sf-n">${i + 1}. Ziffer</span><span class="sf-f">${esc(l.text)}</span><input class="sf-in tnum" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Notiz für Ziffer ${i + 1}"></li>`).join('')}</ol>`);
   c.el.append(box);
   return {};
 }
@@ -575,7 +581,7 @@ function lineupHands(c) {
   const struck = new Set();
   const box = h('div', { class: 'pz lu-hands' });
   box.innerHTML = `
-    <div class="lu-stage">${spec.people.map((pp, i) => `<button class="lu-fig" type="button" data-i="${i}" aria-label="Figur ${i + 1}: ${esc(lc(pp.c))}, ${esc(skin.accessories.find((a) => a.id === pp.a)?.name || '')}, ${pp.d}">
+    <div class="lu-stage">${spec.people.map((pp, i) => `<button class="lu-fig" type="button" data-i="${i}" aria-label="Figur ${i + 1}: ${esc(lc(pp.c))}, ${esc(skin.accessories.find((a) => a.id === pp.a)?.name || '')}, ${pp.d} ${esc(pp.d === 1 ? (skin.dots?.one || 'Punkt') : (skin.dots?.many || 'Punkte'))}">
       <span class="lu-in" style="--i:${i}">${figure(skin.figure, pp)}</span><span class="lu-n">${i + 1}</span></button>`).join('')}</div>
     <div class="row lu-acts">
       <button class="btn lu-strike" type="button" disabled>${icon('eyeoff')}<span>Streichen</span></button>
@@ -647,7 +653,7 @@ function lineupBook(c) {
       <div class="lu-sil">${silhouette(skin.figure)}<span>?</span></div>
       <p class="lu-wanted">Gesucht:<b>${esc(skin.target)}</b></p>
     </div>
-    <ul class="lu-clues">${spec.clues.map((t) => `<li><button class="lu-clue" type="button" aria-pressed="false"><span class="lu-check">${icon('check')}</span><span>${esc(skin.target)} ${esc(t)}.</span></button></li>`).join('')}</ul>`);
+    <ul class="lu-clues">${spec.clues.map((t, n) => `<li style="--n:${n}"><button class="lu-clue" type="button" aria-pressed="false"><span class="lu-check">${icon('check')}</span><span>${esc(skin.target)} ${esc(t)}.</span></button></li>`).join('')}</ul>`);
   box.querySelector('.lu-clues').addEventListener('click', (e) => {
     const b = e.target.closest('.lu-clue');
     if (!b) return;
