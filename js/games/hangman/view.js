@@ -9,10 +9,9 @@ import { burst, trail, shake } from '../../core/fx.js';
 import { sfx, haptic } from '../../core/sound.js';
 import { nav } from '../../core/router.js';
 import { createSession, addEvent, getSession } from '../../core/sync.js';
-import { netState } from '../../core/net.js';
 import { reduce, LEVELS, PARTS, partsShown, isLetter, enc } from './logic.js';
 import { WORD_CATS, WORD_LEVELS, wordItems } from '../../data/words.js';
-import { shell, whoSeg, radioCards, secretPicker, resultCard, finale, markCelebrated, reactionBar, onReactions, peekButton, waitCard, youOr } from '../common.js';
+import { shell, partnerNote, whoSeg, radioCards, secretPicker, resultCard, finale, markCelebrated, reactionBar, onReactions, peekButton, waitCard } from '../common.js';
 
 const RULES = [
   'Eine Person versteckt ein Wort, die andere rät Buchstabe für Buchstabe.',
@@ -88,12 +87,7 @@ export function setup(root) {
     onChange: (v) => { lives = v; },
   }));
   renderHint();
-  if (mode === 'remote') {
-    const n = netState();
-    if (!(n.status === 'online' && n.partner)) {
-      body.querySelector('[data-slot="note"]').innerHTML = `<p class="note">${icon('info')}<span>${nameOf(other(p))} ist gerade nicht online. Die Einladung kommt an, sobald ${other(p) === 'jos' ? 'sie' : 'er'} die Kicherkiste öffnet.</span></p>`;
-    }
-  }
+  body.querySelector('[data-slot="note"]').innerHTML = partnerNote(mode);
   body.querySelector('[data-a="start"]').addEventListener('click', () => {
     sfx.pop(); haptic(12);
     const id = createSession('hangman', mode, { setter, lives });

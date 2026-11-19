@@ -6,7 +6,7 @@ import { mascot } from '../art/mascots.js';
 import { miniHalf } from '../art/heart.js';
 import { me, on, prefs } from '../core/store.js';
 import { nameOf, other, pick, rnd } from '../core/util.js';
-import { segmented, sheet, confirmBox, toast } from '../core/ui.js';
+import { segmented, sheet, confirmBox } from '../core/ui.js';
 import { currentTheme, motionOK } from '../core/theme.js';
 import { burst, celebrate, stamp } from '../core/fx.js';
 import { sfx, haptic } from '../core/sound.js';
@@ -326,6 +326,15 @@ export function waitCard(title, sub = '') {
   const el = h('div', { class: 'wait-card panel', role: 'status' });
   el.innerHTML = `${mascot(currentTheme(), 'idle', 'wait-masc')}<p class="wait-title">${esc(title)}<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></p>${sub ? `<p class="soft small">${esc(sub)}</p>` : ''}`;
   return el;
+}
+
+// Hinweis im Fern-Modus, wenn das andere Handy gerade nicht verbunden ist
+export function partnerNote(mode) {
+  if (mode !== 'remote') return '';
+  const n = netState();
+  if (n.status === 'online' && n.partner) return '';
+  const q = other(me.get());
+  return `<p class="note">${icon('info')}<span>${esc(nameOf(q))} ist gerade nicht online. Die Einladung kommt an, sobald ${q === 'jos' ? 'sie' : 'er'} die Kicherkiste öffnet.</span></p>`;
 }
 
 // Rollen-Text: „du“ oder Name

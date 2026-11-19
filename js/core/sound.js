@@ -93,5 +93,6 @@ export const sfx = {
 // Vibration (nur Android-Browser; iPhone ignoriert das)
 export function haptic(pattern = 12) {
   if (!prefs.get('haptics')) return;
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return; // erst nach der ersten Berührung
   try { navigator.vibrate?.(pattern); } catch { /* egal */ }
 }

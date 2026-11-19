@@ -12,7 +12,7 @@ import { createSession, addEvent, getSession, sendFx } from '../../core/sync.js'
 import { reduce, MIN, MAX } from './logic.js';
 import { enc } from '../secret.js';
 import { CARDS, cardById, excludedBy } from '../../data/questions.js';
-import { shell, whoSeg, resolveWho, turnBanner, answerRow, logView, resultCard, finale, markCelebrated, waitCard, onReactions } from '../common.js';
+import { shell, partnerNote, whoSeg, resolveWho, turnBanner, answerRow, logView, resultCard, finale, markCelebrated, waitCard, onReactions } from '../common.js';
 
 const RULES = [
   'Jeder denkt sich eine Zahl von 1 bis 100 aus.',
@@ -40,6 +40,7 @@ export function setup(root) {
         ? 'Jeder wählt auf seinem Handy eine Zahl von 1 bis 100. Fragen tippt ihr oder schickt eine Ideen-Karte.'
         : 'Jeder wählt heimlich eine Zahl von 1 bis 100. Dann fragt ihr abwechselnd laut – das Handy zählt mit.'}</p>
       <section class="setup-sec stack"><h2 class="setup-h">Wer fragt zuerst?</h2><div data-slot="first"></div></section>
+      ${partnerNote(mode)}
       <button class="btn primary big block" type="button" data-a="start">${icon('sparkle')}<span>Los geht’s</span></button>
     </div>`;
   body.querySelector('[data-slot="first"]').append(whoSeg({ label: 'Wer fragt zuerst?', value: first, random: true, onChange: (v) => { first = v; } }));

@@ -16,6 +16,7 @@ Läuft im Browser, lässt sich wie eine App auf den Home-Bildschirm legen und wi
 | Modi | **Nebeneinander** (ein Handy, Fragen werden gesprochen) und **Weit weg** (zwei Handys, live verbunden) |
 | Live-Verbindung | Supabase Realtime der Watchlist-Cloud: nur Live-Nachrichten (Broadcast + Presence), **keine Datenbank, nichts wird gespeichert** |
 | Zahl erraten | Zahlen von **1 bis 100** |
+| Namen | Josefine heißt in der App **„Baby“** – der echte Name steht nur auf „Wer spielt?“ (Spitznamen im Zahnrad-Menü änderbar) |
 | Technik | Reines HTML/CSS/JavaScript (ES-Module), kein Build-Schritt. Einzige Bibliothek: Supabase realtime-js (gebündelt in `vendor/`). Schriften lokal. |
 
 ---
@@ -122,14 +123,14 @@ tests/                Playwright-Tests (nicht Teil der App)
 
 - [x] **0 – Aufräumen:** `main` geleert, alter Pull Request geschlossen. *Offen für den Nutzer:* Branches `haushaltsbuch` und `julipod` auf GitHub löschen.
 - [x] **Entscheidungen:** Name, Zahlenbereich, Supabase-Mitbenutzung.
-- [ ] **1 – Fundament & Design-System:** Ordner, `index.html`, Design-Tokens, beide Themes mit Hintergrund-Szenen, Komponenten (Knöpfe, Umschalter, Chips, Blätter, Meldungen, Übergabe-Bildschirm), Partikel/Konfetti, Töne, Schriften, App-Symbol, PWA. Prüf-Seite `#/dev` für Screenshots.
-- [ ] **2 – „Wer spielt?“ + Lobby:** Puzzle-Herz-Animation (hereinfliegen, einrasten, Herzschlag, teilen), Auswahl verwandelt die App ins Theme. Lobby mit Begrüßung, Modus-Schalter, drei Spielzeug-Karten, Duell-Bilanz, Einstellungen.
-- [ ] **3 – Modi + Live-Verbindung:** Code-Eingabe, Verbindungsstatus, Presence, Einladungen, Ereignis-Abgleich, Wiederverbinden, Doppelt-gewählt-Warnung, lokaler Test-Transport.
-- [ ] **4 – Galgenmännchen**
-- [ ] **5 – Wer bin ich?**
-- [ ] **6 – Zahl erraten**
-- [ ] **7 – Feinschliff:** Duell-Bilanz, Töne/Vibration-Schalter, Barrierefreiheit (Kontrast, Fokus, Screenreader-Ansagen), Texte, Fehlerzustände, Desktop-Ansicht.
-- [ ] **8 – Testen:** Playwright: alle Abläufe, beide Themes, beide Modi, zwei Geräte, 340/390 px + Desktop, keine Konsolenfehler, kein seitliches Scrollen. Screenshots kritisch ansehen.
+- [x] **1 – Fundament & Design-System:** Ordner, `index.html`, Design-Tokens, beide Themes mit Hintergrund-Szenen, Komponenten (Knöpfe, Umschalter, Chips, Blätter, Meldungen, Übergabe-Bildschirm), Partikel/Konfetti, Töne, Schriften, App-Symbol, PWA. Prüf-Seite `#/dev` für Screenshots.
+- [x] **2 – „Wer spielt?“ + Lobby:** Puzzle-Herz-Animation (hereinfliegen, einrasten, Herzschlag, teilen), Auswahl verwandelt die App ins Theme. Lobby mit Begrüßung, Modus-Schalter, drei Spielzeug-Karten, Duell-Bilanz, Einstellungen.
+- [x] **3 – Modi + Live-Verbindung:** Code-Eingabe, Verbindungsstatus, Presence, Einladungen, Ereignis-Abgleich, Wiederverbinden, Doppelt-gewählt-Warnung, lokaler Test-Transport.
+- [x] **4 – Galgenmännchen**
+- [x] **5 – Wer bin ich?**
+- [x] **6 – Zahl erraten**
+- [x] **7 – Feinschliff:** Duell-Bilanz, Töne/Vibration-Schalter, Barrierefreiheit (Kontrast, Fokus, Screenreader-Ansagen), Texte, Fehlerzustände, Desktop-Ansicht.
+- [x] **8 – Testen:** Playwright: alle Abläufe, beide Themes, beide Modi, zwei Geräte, 340/390 px + Desktop, keine Konsolenfehler, kein seitliches Scrollen. Screenshots kritisch ansehen.
 - [ ] **9 – Veröffentlichen:** auf `main` pushen, GitHub Pages einschalten lassen, Deployment prüfen, Link + Kurzanleitung an den Nutzer. `UEBERGABE.md` für spätere Sitzungen schreiben.
 
 ## Test-Checkliste (vor jeder Veröffentlichung)

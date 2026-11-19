@@ -313,3 +313,4 @@
 .nick-half { width: 28px; height: 36px; flex: none; display: grid; place-items: center; }
 .nick-half svg { width: 26px; height: 34px; }
 .nick-row .field { min-height: 50px; font-size: var(--fs-m); }
+:where([data-theme="lila"]) .who-chip svg path { stroke: rgba(255, 255, 255, .9); stroke-width: 14; paint-order: stroke; }

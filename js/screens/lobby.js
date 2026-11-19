@@ -41,7 +41,7 @@ export function mount(root) {
 
   const s = h('section', { class: 'screen lobby stack' + (sessionStorage.getItem('kk-lobby-seen') ? '' : ' enter') });
   sessionStorage.setItem('kk-lobby-seen', '1');
-  const mk = theme === 'lila' ? 'kuro' : 'kiki';
+  let mk = theme === 'lila' ? 'kuro' : 'kiki';
   const num = rint(1, 100);
   s.innerHTML = `
     <header class="lobby-top" style="--i:0">
@@ -153,9 +153,19 @@ export function mount(root) {
   renderResume();
 
   // ---------- Aktionen ----------
-  const masc = s.querySelector('.hello .masc');
+  let masc = s.querySelector('.hello .masc');
   let bubbleT;
-  masc.addEventListener('click', () => {
+  // Design gewechselt → passendes Maskottchen (Kiki ↔ Kuro)
+  function swapMascot(t) {
+    mk = t === 'lila' ? 'kuro' : 'kiki';
+    const fresh = document.createRange().createContextualFragment(mascot(mk, 'happy')).firstElementChild;
+    masc.replaceWith(fresh);
+    masc = fresh;
+    masc.addEventListener('click', poke);
+    setTimeout(() => setMood(masc, 'idle'), 1200);
+  }
+  masc.addEventListener('click', poke);
+  function poke() {
     const r = masc.getBoundingClientRect();
     setMood(masc, 'cheer', 1400);
     burst(r.left + r.width / 2, r.top + r.height * .3, { count: 16, emoji: true });
@@ -165,7 +175,7 @@ export function mount(root) {
     s.querySelector('.hello').append(b);
     clearTimeout(bubbleT);
     bubbleT = setTimeout(() => b.remove(), 2600);
-  });
+  }
 
   s.addEventListener('click', (e) => {
     const g = e.target.closest('[data-game]');
@@ -198,6 +208,7 @@ export function mount(root) {
 
   const offs = [
     on('net', renderLink),
+    on('theme', swapMascot),
     on('stats', renderScore),
     on('session', renderResume),
     on('prefs', ({ k }) => {

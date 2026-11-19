@@ -14,7 +14,7 @@ import { createSession, addEvent, getSession, sendFx } from '../../core/sync.js'
 import { reduce } from './logic.js';
 import { enc } from '../secret.js';
 import { CHAR_CATS, charItems, QUICK_QUESTIONS, NOTE_CHIPS } from '../../data/characters.js';
-import { shell, whoSeg, resolveWho, secretPicker, turnBanner, answerRow, logView, resultCard, finale, markCelebrated, peekButton, waitCard, onReactions } from '../common.js';
+import { shell, partnerNote, whoSeg, resolveWho, secretPicker, turnBanner, answerRow, logView, resultCard, finale, markCelebrated, peekButton, waitCard, onReactions } from '../common.js';
 
 const RULES = [
   'Jeder denkt sich für den anderen eine Figur aus – echte Person, Film-, Anime- oder Märchenfigur.',
@@ -42,6 +42,7 @@ export function setup(root) {
         ? 'Jeder sucht auf seinem Handy eine Figur für den anderen aus. Fragen tippt ihr, Antworten gibt’s per Knopf.'
         : 'Jeder denkt sich für den anderen eine Figur aus. Dann fragt ihr laut – das Handy zählt mit.'}</p>
       <section class="setup-sec stack"><h2 class="setup-h">Wer fragt zuerst?</h2><div data-slot="first"></div></section>
+      ${partnerNote(mode)}
       <button class="btn primary big block" type="button" data-a="start">${icon('sparkle')}<span>Los geht’s</span></button>
     </div>`;
   body.querySelector('[data-slot="first"]').append(whoSeg({ label: 'Wer fragt zuerst?', value: first, random: true, onChange: (v) => { first = v; } }));
