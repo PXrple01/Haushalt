@@ -263,7 +263,7 @@
 :where([data-theme="lila"]) .sheet { background: linear-gradient(180deg, #24124F, #1A0D3D); border-top: 1.5px solid var(--line-strong); box-shadow: 0 -10px 40px rgba(0, 0, 0, .5), 0 -1px 24px rgba(124, 77, 255, .35); }
 
 /* ---------------- Dialog (Bestätigen) ---------------- */
-.dialog-wrap { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 24px; }
+.dialog-wrap { position: fixed; inset: 0; z-index: 59; display: grid; place-items: center; padding: 24px; }
 .dialog-wrap .sheet-backdrop { animation: kk-fade var(--dur-2) var(--ease-out); }
 .dialog {
   position: relative; width: 100%; max-width: 380px;
