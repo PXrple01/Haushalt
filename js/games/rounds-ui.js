@@ -65,7 +65,7 @@ export function scoreBar() {
   el.innerHTML = ['jos', 'joh'].map((q) => `<div class="sb ${q}" data-p="${q}"><span class="sb-half">${miniHalf(q)}</span><span class="sb-name">${esc(nameOf(q))}</span><b class="sb-pts tnum">0</b></div>`).join('<div class="sb-mid"></div>');
   const shown = { jos: 0, joh: 0 };
   el.set = (st, { animate = true } = {}) => {
-    el.querySelector('.sb-mid').textContent = st.phase === 'end' ? 'Ende' : `Runde ${Math.min(st.r + 1, st.total)} von ${st.total}`;
+    el.querySelector('.sb-mid').innerHTML = st.phase === 'end' ? '<b>Ende</b>' : `Runde<b>${Math.min(st.r + 1, st.total)}/${st.total}</b>`;
     const actor = st.phase === 'play' ? (st.r % 2 === 0 ? st.first : other(st.first)) : null;
     for (const q of ['jos', 'joh']) {
       const chip = el.querySelector(`.sb.${q}`);

@@ -3,14 +3,16 @@ import * as hangman from './hangman/logic.js';
 import * as whoami from './whoami/logic.js';
 import * as number from './number/logic.js';
 import * as mime from './mime/logic.js';
+import * as draw from './draw/logic.js';
 
-export const LOGIC = { hangman, whoami, number, mime };
+export const LOGIC = { hangman, whoami, number, mime, draw };
 
 export const VIEW = {
   hangman: () => import('./hangman/view.js'),
   whoami: () => import('./whoami/view.js'),
   number: () => import('./number/view.js'),
   mime: () => import('./mime/view.js'),
+  draw: () => import('./draw/view.js'),
 };
 
 // Spielstand einer gespeicherten Partie berechnen
