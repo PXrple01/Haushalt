@@ -138,3 +138,48 @@ tests/                Playwright-Tests (nicht Teil der App)
 - Beide Themes auf jedem Bildschirm, „Bewegung reduzieren“ aus/an.
 - Jedes Spiel: Nebeneinander komplett durchspielen (Gewinn + Verlust), Weit weg mit zwei Geräten inkl. Neuladen mitten im Spiel.
 - Umlaute/ß im Galgenmännchen, Eingabeprüfung, Rückgängig beim Zahlen-Brett.
+
+---
+
+# Erweiterung 2 – Vier neue Spiele (Auftrag vom 19.11.2026)
+
+Wunsch: schönes Design, sensationelle Animationen. **Escape-Abenteuer** sehr aufwendig mit vielen auswählbaren Geschichten. Montagsmaler heißt **„Kritzelspiel“**.
+
+## Neue Spiele
+
+### Pantomime (`mime`)
+- Rundenspiel: abwechselnd stellt einer dar, der andere rät laut. Einstellungen: Runden je Person (3/5/7), Zeit (60/90/120 s), Kategorien, Stufe.
+- Ablauf: Übergabe → Begriff groß (3D-Karte, „Anderer Begriff“) → „Verstecken & los“ → 3-2-1 → großer Ring-Timer mit Sanduhr (letzte 10 s pulsiert) → „Erraten!“ / „Zeit um“.
+- Punkte: Darsteller 3/2/1 je nach Tempo (Drittel der Zeit), Rater 1. Ereignisse: `setup`, `term {r,w,cat}`, `go {r}`, `got {r,ms}`, `miss {r}`, `abort`.
+- Weit weg (mit Videoanruf): Begriff nur auf dem Handy des Darstellers, der Rater sieht Timer und Punkte.
+
+### Kritzelspiel (`draw`)
+- Wie Pantomime, nur wird gezeichnet. Leinwand (Koordinaten 0–1000), Farben je Theme, 3 Pinselgrößen, Radierer, Rückgängig, Leeren.
+- Striche als Ereignisse `stroke {r,c,s,p:[x,y,…]}` (vereinfacht), Live-Vorschau per `fx ink`. Raten: Nebeneinander laut + „Erraten!“, Weit weg per Eingabe (automatisch geprüft, `guess {r,g}`).
+- Buchstaben-Hinweise bei 50 % und 75 % der Zeit, Zeitraffer der Zeichnung am Rundenende, Kunstbuch (lokal gespeichert).
+
+### Herzchen versenken Deluxe (`ships`)
+- 8×8-Feld, Figuren: Einhorn (4), Wolke (3), Katze (3), Herzchen (2), Sternschnuppe (2). Ziehen + Antippen zum Drehen, „Zufällig“, keine Überlappung.
+- Treffer = nochmal schießen. Spezialschuss einmal pro Spiel: 3×3 (Baby: „Einhorn-Bombe“, Lila: „Sternschnuppen-Bombe“).
+- Animationen: Geschoss im Bogen, Treffer funkeln, Wasserspritzer + Welle, jede Figur hat eigene Versenkt-Animation, Schockwelle bei der Bombe.
+- Ereignisse: `setup {first}`, `fleet {p,f}` (verschleiert), `shot {x,y,bomb}`, `abort`. Nebeneinander: Platzieren mit Übergabe, Schießen ohne Übergabe (Zielfeld ist nicht geheim).
+
+### Escape-Abenteuer (`escape`) – zusammen statt gegeneinander
+- **Zwei Handys** (Live-Verbindung über den Code, auch wenn man nebeneinander sitzt). Jeder sieht etwas anderes: pro Raum ist einer an den **Händen** (bedient Schloss/Kessel/…), der andere hat das **Wissen** (Buch, Karte, Regeln). Rollen wechseln jeden Raum.
+- Rätsel werden aus einem Seed (`mulberry32`) erzeugt → beide Geräte berechnen dasselbe, nichts Geheimes muss verschickt werden.
+- Stufen: Gemütlich (ohne Zeit), Normal (25 min), Knifflig (15 min, schwerere Rätsel). Fehler = 20 s Strafe, Tipp = 60 s (3 Stufen je Raum). Zeit um → „Weiterspielen ohne Zeit“.
+- Bewertung 1–3 Sterne, Rekorde je Geschichte. Ereignisse: `setup {theme,diff,seed,first}`, `ready {p}`, `act {r,…}`, `hint {r}`, `cont`, `giveup`.
+- **7 Rätsel-Arten:** Symbol-Schloss (Farb-Steine → Symbol-Tabelle), Zauberfäden (Regelbuch, richtigen Faden schneiden), Nebel-Labyrinth (Karte vs. Nebel), Kristall-Echo (Lichtfolge + Legende → Tasten), Trank-Kessel (Farbe → Zutat → neue Farbe), Tresor-Rechnung (Gegenstände zählen → Formeln → Code), Aufstellung (Steckbrief → richtige Figur).
+- **7 Geschichten** (je 4 Räume, Intro/Outro, eigene Farben, Szenen-Grafik, Rätsel-Skins): Flucht aus dem Regenbogenschloss · Neon-Nacht in Neo-Tokio · Gefangen im Lebkuchenhaus · Der Palast der Meerjungfrau · Mission Mondbasis · Die Spukvilla von Tante Gruselda · Der Schatz der Piratenkatze.
+
+## Lobby
+- Escape als große Abenteuer-Karte oben, darunter die Spielzeug-Karten: Galgenmännchen (breit), Wer bin ich? + Zahl erraten, Kritzelspiel (Skizzenblock) + Pantomime (Theatervorhang), Herzchen versenken (breit, Mini-Gitter).
+
+## Etappen
+- [ ] **10 – Plan + Grundlagen** (Register, Router, Validierung, Lobby-Karten)
+- [ ] **11 – Pantomime**
+- [ ] **12 – Kritzelspiel**
+- [ ] **13 – Herzchen versenken Deluxe**
+- [ ] **14 – Escape-Motor + 7 Rätsel-Arten**
+- [ ] **15 – Escape-Geschichten (7 Themes)**
+- [ ] **16 – Tests, Feinschliff, Veröffentlichen**
