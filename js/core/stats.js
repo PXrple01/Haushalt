@@ -29,6 +29,13 @@ export function mergeRecords(remote = [], remoteResetAt = 0) {
   return changed;
 }
 
+// Partie wieder offen (z. B. nach „Rückgängig“) → Eintrag entfernen
+export function removeRecord(id) {
+  const list = get('stats', []) || [];
+  const next = list.filter((r) => r.id !== id);
+  if (next.length !== list.length) { set('stats', next); emit('stats'); }
+}
+
 export function statsPayload() {
   return { records: records().slice(-200), resetAt: get('statsReset', 0) };
 }

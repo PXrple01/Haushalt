@@ -216,7 +216,7 @@ export function logView(entries, { mine, empty = 'Noch keine Fragen.' } = {}) {
   ul.innerHTML = entries.map((e) => {
     const side = mine ? (e.by === mine ? 'me' : 'them') : e.by;
     const q = e.guess != null ? `Ist es die ${e.guess}?` : (e.q || `Frage ${e.n}`);
-    return `<li class="ql ${side} ${e.by}"><span class="ql-q"><span class="ql-n">${esc(nameOf(e.by))}s ${e.n}. Frage</span>${esc(q)}</span><span class="ql-a ${A_CLS[e.a] || ''}">${esc(A_LABEL[e.a] || e.a)}</span></li>`;
+    return `<li class="ql ${side} p-${e.by}"><span class="ql-q"><span class="ql-n">${esc(nameOf(e.by))}s ${e.n}. Frage</span>${esc(q)}</span><span class="ql-a ${A_CLS[e.a] || ''}">${esc(A_LABEL[e.a] || e.a)}</span></li>`;
   }).join('');
   return ul;
 }

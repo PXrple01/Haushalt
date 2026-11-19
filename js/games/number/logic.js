@@ -26,8 +26,11 @@ export function reduce(meta, evs) {
       st.winner = a < b ? 'jos' : b < a ? 'joh' : 'draw';
     }
   };
+  // „Rückgängig“ (nur Nebeneinander): ein undo-Ereignis hebt ein früheres Ereignis auf
+  const undone = new Set(meta.mode === 'couch' ? evs.filter((e) => e.ty === 'undo' && e.d?.id).map((e) => e.d.id) : []);
   for (const e of evs) {
     const d = e.d || {};
+    if (e.ty === 'undo' || undone.has(e.id)) continue;
     if (st.phase === 'end') break;
     switch (e.ty) {
       case 'setup':

@@ -154,7 +154,7 @@ export function play(root, sid) {
     go.innerHTML = `${icon('lock')}<span>Wort verstecken</span>`;
     go.addEventListener('click', () => {
       const v = picker.value();
-      if (!v.ok) { toast(v.msg || 'Bitte ein Wort wählen.', { icon: 'info' }); picker.focusOwn?.(); return; }
+      if (!v.ok) { toast(v.msg || 'Bitte ein Wort wählen.', { key: 'game', icon: 'info' }); picker.focusOwn?.(); return; }
       const word = cleanWord(v.text).word;
       sfx.pop(); haptic(14);
       addEvent(sid, 'word', { w: enc(word, sid), hint: hintInput.value.trim(), cat: v.cat || '' });
@@ -413,7 +413,7 @@ export function play(root, sid) {
         await handoff({ to: cur.guesser, title: `Gib das Handy an ${nameOf(cur.guesser)}`, text: `Das Wort ist versteckt. ${nameOf(cur.guesser)} rät jetzt.`, kicker: 'Wort ist versteckt' });
         busy = false;
       } else if (cur.setter === p) {
-        toast(`Dein Wort ist versteckt. ${nameOf(cur.guesser)} kann loslegen!`, { icon: 'lock' });
+        toast(`Dein Wort ist versteckt. ${nameOf(cur.guesser)} kann loslegen!`, { key: 'game', icon: 'lock' });
       } else {
         sfx.join();
       }
@@ -447,7 +447,7 @@ export function play(root, sid) {
       const last = cur.solves.at(-1);
       if (!last.ok) {
         sfx.bad(); haptic([20, 30, 20]); shake(board.tiles, 7);
-        toast(`„${last.w}“ war es leider nicht.`, { icon: 'cross' });
+        toast(`„${last.w}“ war es leider nicht.`, { key: 'game', icon: 'cross' });
       }
     }
     // Teile nachzeichnen
@@ -475,7 +475,7 @@ export function play(root, sid) {
         if (!cur.aborted) finale(sid, { winner: cur.winner, iWon: cur.winner === p, couch: !remote });
         renderResult();
       }, cur.aborted ? 0 : 900);
-      if (cur.aborted && cur.abortBy !== p) toast(`${nameOf(cur.abortBy)} hat die Partie beendet.`, { icon: 'flag' });
+      if (cur.aborted && cur.abortBy !== p) toast(`${nameOf(cur.abortBy)} hat die Partie beendet.`, { key: 'game', icon: 'flag' });
     }
   }
 

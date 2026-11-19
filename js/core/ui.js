@@ -20,7 +20,9 @@ export function announce(text) {
 export function toast(text, o = {}) {
   const box = document.getElementById('toasts');
   if (!box) return;
-  const t = h('div', { class: 'toast', role: 'status' });
+  // Gleicher Schlüssel → alte Meldung weg (z. B. nur eine Spiel-Rückmeldung auf einmal)
+  if (o.key) box.querySelectorAll(`.toast[data-key="${o.key}"]`).forEach((x) => x.remove());
+  const t = h('div', { class: 'toast', role: 'status', dataset: o.key ? { key: o.key } : undefined });
   t.innerHTML = `${o.icon ? icon(o.icon) : ''}<span>${esc(text)}</span>`;
   if (o.action) {
     const b = h('button', { type: 'button' }, o.action.label);
@@ -28,7 +30,7 @@ export function toast(text, o = {}) {
     t.append(b);
   }
   box.prepend(t);
-  while (box.children.length > 3) box.lastElementChild.remove();
+  while (box.children.length > 2) box.lastElementChild.remove();
   let gone = false;
   function close() {
     if (gone) return;

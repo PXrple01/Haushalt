@@ -151,4 +151,18 @@ test('Zahl erraten Fern: nur mit offener Frage antworten', () => {
   assert.equal(st.counts.joh, 1); assert.equal(st.turn, 'jos'); assert.equal(st.log[0].card, 'even');
 });
 
+test('Rückgängig (Nebeneinander) hebt eine Antwort auf', () => {
+  const m = meta('whoami');
+  const evs = [ev('jos', 'setup', { first: 'jos' }), ev('jos', 'char', { for: 'joh', name: enc('A', m.id) }), ev('jos', 'char', { for: 'jos', name: enc('B', m.id) })];
+  const wrong = ev('jos', 'answer', { a: 'nein' });
+  evs.push(wrong);
+  let st = WA.reduce(m, evs);
+  assert.equal(st.turn, 'joh');
+  evs.push(ev('jos', 'undo', { id: wrong.id }));
+  st = WA.reduce(m, evs);
+  assert.equal(st.turn, 'jos'); assert.equal(st.counts.jos, 0);
+  const mr = meta('whoami', 'remote');
+  assert.equal(WA.reduce(mr, [ev('jos', 'setup', { first: 'jos' }), ev('jos', 'undo', { id: 'x' })]).phase, 'setup');
+});
+
 console.log(`\n${ok} Prüfungen bestanden.`);

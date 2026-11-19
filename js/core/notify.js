@@ -5,7 +5,7 @@ import { nameOf } from './util.js';
 import { getSession } from './sync.js';
 import { LOGIC, stateOf } from '../games/registry.js';
 import { gameTitle } from '../games/info.js';
-import { addRecord } from './stats.js';
+import { addRecord, removeRecord } from './stats.js';
 import { sheet, toast } from './ui.js';
 import { mascot } from '../art/mascots.js';
 import { currentTheme } from './theme.js';
@@ -20,7 +20,7 @@ function recordIfEnded(s) {
   const st = stateOf(s);
   if (st && st.phase === 'end' && !st.aborted && st.winner) {
     addRecord({ id: s.meta.id, game: s.meta.game, winner: st.winner, ts: st.endedAt || Date.now(), mode: s.meta.mode });
-  }
+  } else if (st && st.phase !== 'end' && s.meta.mode === 'couch') removeRecord(s.meta.id);
   return st;
 }
 
