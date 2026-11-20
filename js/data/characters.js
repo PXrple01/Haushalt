@@ -1,5 +1,7 @@
 // Figurenpool für „Wer bin ich?“ (jede Figur nur einmal).
 
+import { MORE_CHAR_CATS, MORE_CHARS } from './characters-more.js';
+
 export const CHAR_CATS = [
   { id: 'all', label: 'Alles' },
   { id: 'disney', label: 'Disney & Pixar' },
@@ -23,8 +25,19 @@ const RAW = {
   tiere: 'Giraffe, Pinguin, Faultier, Krake, Flamingo, Elefant, Löwe, Hai, Delfin, Koala, Panda, Eule, Igel, Fuchs, Waschbär, Erdmännchen, Alpaka, Kamel, Nashorn, Krokodil, Chamäleon, Biene, Schmetterling, Schnecke, Ameise, Marienkäfer, Papagei, Pfau, Storch, Kuh, Schwein, Huhn, Pferd, Esel, Hamster, Goldfisch, Schildkröte, Frosch, Einhorn, Drache',
 };
 
-export const CHARS = Object.entries(RAW).flatMap(([cat, list]) =>
-  list.split(',').map((s) => s.trim()).filter(Boolean).map((text) => ({ text, cat })));
+CHAR_CATS.push(...MORE_CHAR_CATS);
+
+// Grundpool + Erweiterung; jede Figur nur einmal (Groß/Klein egal)
+const ALL = { ...RAW };
+for (const [cat, list] of Object.entries(MORE_CHARS)) ALL[cat] = ALL[cat] ? `${ALL[cat]}, ${list}` : list;
+const seen = new Set();
+export const CHARS = Object.entries(ALL).flatMap(([cat, list]) =>
+  list.split(',').map((s) => s.trim()).filter(Boolean).filter((t) => {
+    const k = t.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).map((text) => ({ text, cat })));
 
 export function charItems(cat) {
   return cat === 'all' ? CHARS : CHARS.filter((c) => c.cat === cat);
@@ -37,7 +50,18 @@ export const QUICK_QUESTIONS = [
   'Bin ich ein Tier?', 'Habe ich Superkräfte?', 'Kann ich zaubern?', 'Kann ich fliegen?', 'Bin ich ein Bösewicht?',
   'Bin ich von Disney?', 'Bin ich aus einem Märchen?', 'Mache ich Musik?', 'Mache ich Sport?', 'Bin ich ein Kind?',
   'Bin ich in Deutschland bekannt?', 'Trage ich etwas auf dem Kopf?', 'Bin ich gelb?',
+  'Bin ich älter als 30?', 'Bin ich schon über 100 Jahre bekannt?', 'Komme ich aus Amerika?', 'Komme ich aus Japan?', 'Komme ich aus Europa?',
+  'Bin ich ein Held?', 'Habe ich einen besten Freund, der immer dabei ist?', 'Bin ich verheiratet?', 'Habe ich Kinder?', 'Bin ich berühmt fürs Singen?',
+  'Bin ich Sportler oder Sportlerin?', 'Bin ich Schauspieler oder Schauspielerin?', 'Bin ich eine Prinzessin oder ein Prinz?', 'Bin ich ein König oder eine Königin?',
+  'Kann ich sprechen?', 'Kann ich schwimmen?', 'Lebe ich im Wasser?', 'Lebe ich im Wald?', 'Lebe ich in einem Schloss?', 'Lebe ich im Weltall?',
+  'Habe ich Fell?', 'Habe ich Flügel?', 'Habe ich einen Schwanz?', 'Bin ich größer als ein Mensch?', 'Bin ich kleiner als eine Katze?',
+  'Bin ich grün?', 'Bin ich blau?', 'Bin ich rot?', 'Trage ich eine Maske?', 'Trage ich einen Umhang?', 'Habe ich eine Waffe?', 'Habe ich einen Zauberstab?',
+  'Bin ich ein Roboter oder eine Maschine?', 'Bin ich etwas zum Essen?', 'Bin ich ein Gegenstand?', 'Gibt es mich als Spielzeug?', 'Bin ich aus einem Buch?',
+  'Bin ich aus einer Zeichentrickserie?', 'Bin ich aus einem Superheldenfilm?', 'Bin ich aus Star Wars?', 'Bin ich aus Harry Potter?', 'Bin ich ein Pokémon?',
+  'Bin ich aus Nintendo-Spielen?', 'Bin ich aus der Geschichte?', 'Habe ich etwas erfunden?', 'Bin ich auf Social Media bekannt?', 'Bin ich lustig?',
+  'Bin ich gruselig?', 'Bin ich niedlich?', 'Bin ich klug?', 'Bin ich stark?', 'Bin ich schnell?', 'Habe ich einen Spitznamen?', 'Ist mein Name zweiteilig?',
 ];
 
 // Merkzettel (Nebeneinander): antippen = ✓, nochmal = ✗, nochmal = leer
-export const NOTE_CHIPS = ['Mensch', 'Tier', 'echt', 'erfunden', 'weiblich', 'männlich', 'lebt', 'Kind', 'Film', 'Serie', 'Anime', 'Spiel', 'Märchen', 'Disney', 'Musik', 'Sport', 'Superkraft', 'Bösewicht'];
+export const NOTE_CHIPS = ['Mensch', 'Tier', 'echt', 'erfunden', 'weiblich', 'männlich', 'lebt', 'Kind', 'Film', 'Serie', 'Anime', 'Spiel', 'Märchen', 'Disney', 'Musik', 'Sport', 'Superkraft', 'Bösewicht',
+  'Held', 'berühmt', 'deutsch', 'Amerika', 'Japan', 'Geschichte', 'Buch', 'Essen', 'Gegenstand', 'Fell', 'Flügel', 'fliegt', 'zaubert', 'Kostüm', 'Hut', 'lustig', 'gruselig', 'niedlich'];

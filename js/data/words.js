@@ -1,6 +1,8 @@
 // Wortpool fürs Galgenmännchen. Schwierigkeit ergibt sich aus der Länge (ohne Leerzeichen/Bindestriche):
 // leicht ≤ 6 Buchstaben, mittel 7–9, schwer ≥ 10 (oder mehrere Wörter).
 
+import { MORE_CATS, MORE, MORE_NEW } from './words-more.js';
+
 export const WORD_CATS = [
   { id: 'all', label: 'Alles' },
   { id: 'liebe', label: 'Liebe & wir zwei' },
@@ -41,8 +43,19 @@ const levelOf = (w) => {
   return n <= 6 ? 'leicht' : 'mittel';
 };
 
-export const WORDS = Object.entries(RAW).flatMap(([cat, list]) =>
-  list.split(',').map((s) => s.trim()).filter(Boolean).map((text) => ({ text, cat, level: levelOf(text) })));
+WORD_CATS.push(...MORE_CATS);
+
+// Grundpool + Erweiterung zusammenführen; jedes Wort nur einmal (Groß/Klein egal)
+const ALL = { ...RAW };
+for (const [cat, list] of Object.entries({ ...MORE, ...MORE_NEW })) ALL[cat] = ALL[cat] ? `${ALL[cat]}, ${list}` : list;
+const seen = new Set();
+export const WORDS = Object.entries(ALL).flatMap(([cat, list]) =>
+  list.split(',').map((s) => s.trim()).filter(Boolean).filter((t) => {
+    const k = t.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).map((text) => ({ text, cat, level: levelOf(text) })));
 
 // Für den Pool-Wähler: Liste nach Kategorie und Schwierigkeit
 export function wordItems(cat, level) {

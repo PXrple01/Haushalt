@@ -11,7 +11,7 @@ import { nav } from '../../core/router.js';
 import { createSession, addEvent, getSession, sendFx } from '../../core/sync.js';
 import { reduce, MIN, MAX } from './logic.js';
 import { enc } from '../secret.js';
-import { CARDS, cardById, excludedBy } from '../../data/questions.js';
+import { CARDS, CARD_CATS, cardById, excludedBy } from '../../data/questions.js';
 import { shell, partnerNote, whoSeg, resolveWho, turnBanner, answerRow, logView, resultCard, finale, markCelebrated, waitCard, onReactions } from '../common.js';
 
 const RULES = [
@@ -277,11 +277,29 @@ export function play(root, sid) {
   }
 
   // Fragen-Ideen (Kartenstapel)
+  let ideaCat = 'alle';
   function openIdeas() {
     const list = h('div', { class: 'ideas' });
-    list.innerHTML = CARDS.map((c) => `<button class="idea" type="button" data-id="${c.id}"><span class="i-e" aria-hidden="true">${c.e}</span><span class="i-q">${esc(c.q)}</span>${c.test ? `<span class="i-auto" title="Streicht danach automatisch">${icon('sparkle')}</span>` : ''}</button>`).join('');
-    const intro = h('p', { class: 'soft small' }, remote ? 'Antippen schickt die Frage ab.' : 'Antippen, laut vorlesen, Antwort festhalten. Mit ✨ streicht die App danach automatisch.');
-    const body_ = h('div', { class: 'stack' }, intro, list);
+    // Schon gestellte Karten dieser Partie (werden ausgegraut, bleiben aber wählbar)
+    const used = new Set((getSession(sid)?.evs || []).map((e) => e.d?.card).filter(Boolean));
+    const chips = h('div', { class: 'chips scroll idea-cats', role: 'group', 'aria-label': 'Fragen filtern' });
+    chips.innerHTML = [...CARD_CATS, { id: 'zufall', label: '🎲 Überrasch mich' }].map((c) => `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${c.id === ideaCat}">${esc(c.label)}</button>`).join('');
+    const draw = () => {
+      let cards = ideaCat === 'alle' || ideaCat === 'zufall' ? CARDS.slice() : CARDS.filter((c) => c.cat === ideaCat);
+      if (ideaCat === 'zufall') cards = cards.filter((c) => !used.has(c.id)).sort(() => Math.random() - .5).slice(0, 6);
+      list.innerHTML = cards.map((c, i) => `<button class="idea${used.has(c.id) ? ' used' : ''}" type="button" data-id="${c.id}" style="--i:${Math.min(i, 12)}"><span class="i-e" aria-hidden="true">${c.e}</span><span class="i-q">${esc(c.q)}</span>${c.test ? `<span class="i-auto" title="Streicht danach automatisch">${icon('sparkle')}</span>` : ''}</button>`).join('');
+      chips.querySelectorAll('.chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cat === ideaCat)));
+    };
+    chips.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-cat]');
+      if (!b) return;
+      ideaCat = b.dataset.cat;
+      sfx.tap();
+      draw();
+    });
+    draw();
+    const intro = h('p', { class: 'soft small' }, `${CARDS.length} Fragen. ${remote ? 'Antippen schickt die Frage ab.' : 'Antippen, laut vorlesen, Antwort festhalten.'} Mit ✨ streicht die App danach automatisch.`);
+    const body_ = h('div', { class: 'stack' }, intro, chips, list);
     const sh = sheet({ title: 'Fragen-Ideen', body: body_ });
     list.addEventListener('click', (e) => {
       const b = e.target.closest('[data-id]');

@@ -1,7 +1,7 @@
 // Offline-Start für die Kicherkiste.
 // Immer zuerst aus dem Netz laden (neue Versionen kommen sofort an). Ohne Netz startet die zuletzt gespeicherte Version.
 // Die Dateiliste wird mit `node tests/update-sw.mjs` neu erzeugt (Version hochzählen bei jeder Veröffentlichung).
-const CACHE = 'kicherkiste-v4';
+const CACHE = 'kicherkiste-v5';
 const FILES = [
   "./",
   "./index.html",
@@ -32,9 +32,13 @@ const FILES = [
   "./js/core/theme.js",
   "./js/core/ui.js",
   "./js/core/util.js",
+  "./js/data/characters-more.js",
   "./js/data/characters.js",
+  "./js/data/questions-more.js",
   "./js/data/questions.js",
+  "./js/data/terms-more.js",
   "./js/data/terms.js",
+  "./js/data/words-more.js",
   "./js/data/words.js",
   "./js/games/common.js",
   "./js/games/draw/canvas.js",

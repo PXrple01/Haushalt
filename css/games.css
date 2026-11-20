@@ -452,3 +452,10 @@
 .i-auto .ic { width: 18px; height: 18px; color: var(--accent-ink); }
 :where([data-theme="baby"]) .idea { border: 2px solid #fff; box-shadow: 0 2px 0 var(--line-strong); }
 :where([data-theme="lila"]) .idea { border-radius: var(--r-s); background: rgba(34, 17, 70, .8); border: 1px solid var(--line); }
+
+/* Zahl erraten: Fragen-Ideen mit Filter */
+.idea-cats { margin-bottom: 2px; }
+.idea { animation: kk-idea .35s var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 25ms); }
+@keyframes kk-idea { from { opacity: 0; transform: translateY(8px); } }
+.idea.used { opacity: .5; }
+.idea.used .i-q::after { content: " · schon gefragt"; font-weight: 600; font-size: var(--fs-xs); color: var(--ink-faint); }

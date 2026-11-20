@@ -5,7 +5,9 @@ Spiele für zwei – mit Baby-Design (Einhorn Kiki) und Lila-Design (Katze Kuro)
 - **Escape-Abenteuer** – zusammen statt gegeneinander: 7 Geschichten (z. B. „Flucht aus dem Regenbogenschloss“), je 4 Räume. Einer ist an den **Händen**, der andere hat das **Wissen** – nur wer redet, kommt raus. Braucht zwei Handys.
 - **Galgenmännchen**, **Wer bin ich?**, **Zahl erraten** (1–100)
 - **Kritzelspiel** (einer zeichnet, einer rät) und **Pantomime** (einer stellt dar, einer rät)
-- **Herzchen versenken** – Einhörner, Wolken und Katzen verstecken und finden, mit Einhorn-Bombe
+- **Herzchen versenken** – Einhörner, Wolken und Katzen verstecken und finden, mit Einhorn-Bombe. Wahlweise **kurvig**: Regenbogen-Bogen, Seeschlange (S) und Raupe (L) – kniffliger!
+
+Riesige Pools: rund 4000 Galgenmännchen-Wörter, 2300 Figuren für „Wer bin ich?“, je über 1100 Begriffe für Pantomime und Kritzelspiel und 159 Fragen-Ideen für „Zahl erraten“ – jeweils in vielen Kategorien.
 
 **Spielen:** https://pxrple01.github.io/Haushalt/
 

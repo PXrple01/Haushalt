@@ -1,3 +1,5 @@
+import { MORE_TERMS } from './terms-more.js';
+
 // Begriffe für Pantomime und Kritzelspiel. Pro Kategorie eine Grundstufe; „!“ vor einem Begriff = schwer, „~“ = leicht.
 
 const POOL = {
@@ -26,6 +28,13 @@ const POOL = {
   },
 };
 
+// Erweiterung einhängen: bestehende Kategorien ergänzen, neue anhängen
+for (const game of Object.keys(MORE_TERMS)) {
+  const P = POOL[game], M = MORE_TERMS[game];
+  for (const c of P.cats) if (M.add[c.id]) c.list += `, ${M.add[c.id]}`;
+  P.cats.push(...M.cats);
+}
+
 const parse = (list, base) => list.split(',').map((s) => s.trim()).filter(Boolean).map((t) => {
   if (t.startsWith('!')) return { text: t.slice(1).trim(), level: 'schwer' };
   if (t.startsWith('~')) return { text: t.slice(1).trim(), level: 'leicht' };
@@ -37,8 +46,18 @@ export function termCats(game) {
 }
 
 // Begriffe für Kategorien (Liste von IDs oder ['all']) und Stufe ('leicht' | 'mittel' | 'schwer' | 'alle')
+// Alle Begriffe eines Spiels (jeder nur einmal, Groß/Klein egal) – einmal berechnet
+const cacheAll = {};
+function allOf(game) {
+  if (cacheAll[game]) return cacheAll[game];
+  const seen = new Set();
+  cacheAll[game] = POOL[game].cats.flatMap((c) => parse(c.list, c.level).map((x) => ({ ...x, cat: c.id, catLabel: c.label })))
+    .filter((x) => { const k = x.text.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+  return cacheAll[game];
+}
+
 export function termItems(game, cats = ['all'], level = 'alle') {
-  const all = POOL[game].cats.flatMap((c) => parse(c.list, c.level).map((x) => ({ ...x, cat: c.id, catLabel: c.label })));
+  const all = allOf(game);
   let list = cats.includes('all') ? all : all.filter((x) => cats.includes(x.cat));
   if (!list.length) list = all;
   if (level && level !== 'alle') {

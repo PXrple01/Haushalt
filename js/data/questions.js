@@ -1,5 +1,7 @@
 // Fragen-Ideen für „Zahl erraten“ (1–100).
 // test(n) = true heißt: Für die Zahl n wäre die Antwort „Ja“. Karten ohne test sind reine Inspiration (kein Auto-Streichen).
+import { MORE_CARDS, BASE_CAT, CARD_CATS } from './questions-more.js';
+
 const isPrime = (n) => { if (n < 2) return false; for (let i = 2; i * i <= n; i++) if (n % i === 0) return false; return true; };
 const digits = (n) => String(n).split('').map(Number);
 
@@ -40,6 +42,12 @@ export const CARDS = [
   { id: 'lieblings', e: '⭐', q: 'Ist das deine Lieblingszahl?' },
   { id: 'song', e: '🎵', q: 'Kommt die Zahl in einem bekannten Songtitel vor?' },
 ];
+
+// Erweiterung: viele weitere Karten + Kategorien zum Filtern
+for (const c of CARDS) c.cat = BASE_CAT[c.id] || 'rechnen';
+const have = new Set(CARDS.map((c) => c.id));
+for (const c of MORE_CARDS) if (!have.has(c.id)) { CARDS.push(c); have.add(c.id); }
+export { CARD_CATS };
 
 export const cardById = (id) => CARDS.find((c) => c.id === id) || null;
 

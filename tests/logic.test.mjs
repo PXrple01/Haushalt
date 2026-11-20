@@ -12,6 +12,10 @@ import { SYMBOLS, COLORS } from '../js/games/escape/symbols.js';
 import { makeRng } from '../js/games/escape/rng.js';
 import { enc } from '../js/games/secret.js';
 import { cleanWord, nameMatch } from '../js/core/util.js';
+import { WORDS, WORD_CATS, wordItems } from '../js/data/words.js';
+import { CHARS, CHAR_CATS, QUICK_QUESTIONS } from '../js/data/characters.js';
+import { termItems, termCats } from '../js/data/terms.js';
+import { CARDS } from '../js/data/questions.js';
 
 let n = 0;
 const ev = (by, ty, d = {}) => ({ id: 'e' + (++n), n, by, t: n, ty, d });
@@ -317,6 +321,31 @@ test('Herzchen versenken kurvig: Ausrichtungen, Zufallsflotte, Treffer und Sieg'
   for (const pc of fh) for (const [x, y] of SH.cellsOf(pc)) evs.push(ev('jos', 'shot', { x, y }));
   st = SH.reduce(m, evs);
   assert.equal(st.phase, 'end'); assert.equal(st.winner, 'jos'); assert.equal(st.sunk.jos.length, 5); assert.equal(st.hitsBy.jos, 19);
+});
+
+test('Pools: groß, gültig, ohne Dopplungen', () => {
+  assert.ok(WORDS.length > 3500, `Wörter: ${WORDS.length}`);
+  for (const w of WORDS) { const c = cleanWord(w.text); assert.ok(!c.bad.length && c.letters >= 3, `ungültiges Wort: ${w.text}`); }
+  assert.equal(new Set(WORDS.map((w) => w.text.toLowerCase())).size, WORDS.length);
+  for (const c of WORD_CATS.filter((x) => x.id !== 'all')) assert.ok(wordItems(c.id).length >= 50, `zu wenig Wörter in ${c.id}`);
+  assert.ok(CHARS.length > 2000, `Figuren: ${CHARS.length}`);
+  assert.equal(new Set(CHARS.map((c) => c.text.toLowerCase())).size, CHARS.length);
+  for (const c of CHAR_CATS.filter((x) => x.id !== 'all')) assert.ok(CHARS.filter((x) => x.cat === c.id).length >= 50, `zu wenig Figuren in ${c.id}`);
+  assert.ok(QUICK_QUESTIONS.length >= 60);
+  for (const g of ['mime', 'draw']) {
+    const all = termItems(g);
+    assert.ok(all.length > 1000, `${g}: ${all.length}`);
+    assert.equal(new Set(all.map((x) => x.text.toLowerCase())).size, all.length);
+    assert.ok(all.every((x) => x.text && !/[!~]/.test(x.text) && ['leicht', 'mittel', 'schwer'].includes(x.level)));
+    for (const c of termCats(g).filter((x) => x.id !== 'all')) assert.ok(termItems(g, [c.id]).length >= 20, `${g}/${c.id}`);
+  }
+  assert.ok(CARDS.length >= 150);
+  assert.equal(new Set(CARDS.map((c) => c.id)).size, CARDS.length);
+  for (const c of CARDS.filter((x) => x.test)) {
+    let yes = 0;
+    for (let n = 1; n <= 100; n++) { const r = c.test(n); assert.equal(typeof r, 'boolean', c.id); if (r) yes++; }
+    assert.ok(yes > 0 && yes < 100, `Karte ${c.id} streicht nichts`);
+  }
 });
 
 console.log(`\n${ok} Prüfungen bestanden.`);
