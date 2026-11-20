@@ -7,7 +7,7 @@ import { clearOverlays } from './ui.js';
 const ROUTES = [
   { re: /^#\/wer$/, load: () => import('../screens/wer.js') },
   { re: /^#\/lobby$/, load: () => import('../screens/lobby.js') },
-  { re: /^#\/neu\/(hangman|whoami|number|mime|draw|ships|escape)$/, load: () => import('../screens/setup.js') },
+  { re: /^#\/neu\/(hangman|whoami|number|mime|draw|ships|escape|krimi)$/, load: () => import('../screens/setup.js') },
   { re: /^#\/spiel\/([a-z0-9]+)$/, load: () => import('../screens/game.js') },
   { re: /^#\/dev$/, load: () => import('../screens/dev.js') },
 ];

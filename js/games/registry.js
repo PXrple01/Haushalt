@@ -6,8 +6,9 @@ import * as mime from './mime/logic.js';
 import * as draw from './draw/logic.js';
 import * as ships from './ships/logic.js';
 import * as escape from './escape/logic.js';
+import * as krimi from './krimi/logic.js';
 
-export const LOGIC = { hangman, whoami, number, mime, draw, ships, escape };
+export const LOGIC = { hangman, whoami, number, mime, draw, ships, escape, krimi };
 
 export const VIEW = {
   hangman: () => import('./hangman/view.js'),
@@ -17,6 +18,7 @@ export const VIEW = {
   draw: () => import('./draw/view.js'),
   ships: () => import('./ships/view.js'),
   escape: () => import('./escape/view.js'),
+  krimi: () => import('./krimi/view.js'),
 };
 
 // Spielstand einer gespeicherten Partie berechnen

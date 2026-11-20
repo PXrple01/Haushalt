@@ -173,7 +173,7 @@ Wunsch: schönes Design, sensationelle Animationen. **Escape-Abenteuer** sehr au
 - **7 Geschichten** (je 4 Räume, Intro/Outro, eigene Farben, Szenen-Grafik, Rätsel-Skins): Flucht aus dem Regenbogenschloss · Neon-Nacht in Neo-Tokio · Gefangen im Lebkuchenhaus · Der Palast der Meerjungfrau · Mission Mondbasis · Die Spukvilla von Tante Gruselda · Der Schatz der Piratenkatze.
 
 ## Lobby
-- Escape als große Abenteuer-Karte oben, darunter die Spielzeug-Karten: Galgenmännchen (breit), Wer bin ich? + Zahl erraten, Kritzelspiel (Skizzenblock) + Pantomime (Theatervorhang), Herzchen versenken (breit, Mini-Gitter).
+- Escape als große Abenteuer-Karte oben, darunter die düstere Krimi-Karte (Lupe, Fingerabdruck, Blutstropfen), darunter die Spielzeug-Karten: Galgenmännchen (breit), Wer bin ich? + Zahl erraten, Kritzelspiel (Skizzenblock) + Pantomime (Theatervorhang), Herzchen versenken (breit, Mini-Gitter).
 
 ## Etappen
 - [x] **10 – Plan + Grundlagen** (Register, Router, Validierung, Lobby-Karten)
@@ -183,3 +183,4 @@ Wunsch: schönes Design, sensationelle Animationen. **Escape-Abenteuer** sehr au
 - [x] **14 – Escape-Motor + 7 Rätsel-Arten**
 - [x] **15 – Escape-Geschichten (7 Themes)**
 - [x] **16 – Tests, Feinschliff, Veröffentlichen**
+- [x] **17 – Krimi für zwei** („Blutnacht im Hotel Edelweiß“: Fall-Daten, Logik mit gemeinsamer Uhr, getrennte Akten, Tafel mit roten Fäden, Verhöre mit Bluff und Zange, Werkzeuge, gemeinsame Anklage, Auflösung mit Rekonstruktion, Tests)

@@ -76,6 +76,19 @@ export function mount(root) {
         <path class="d-spark s2" d="M14 36 l1.8 -5 1.8 5 5 1.8 -5 1.8 -1.8 5 -1.8 -5 -5 -1.8 z"/>
       </svg>
     </button>
+    <button class="toy krimi" type="button" data-game="krimi" style="--i:3">
+      <span class="t-text">
+        <span class="t-badge">Neu – ein Fall für zwei Handys</span>
+        <span class="t-title">${GAMES.krimi.title}</span>
+        <span class="t-sub">Blutnacht im Hotel Edelweiß. Lang, schwer, ab 16.</span>
+      </span>
+      <svg class="t-art lens" viewBox="0 0 120 130" aria-hidden="true">
+        <g class="k-drops"><circle cx="30" cy="102" r="7"/><circle cx="46" cy="114" r="3.4"/><circle cx="18" cy="118" r="2.6"/><circle cx="58" cy="100" r="2"/></g>
+        <path class="k-print" d="M70 30a14 14 0 0 1 28 0v12M76 30a8 8 0 0 1 16 0v18M84 30v22M64 42v-10a20 20 0 0 1 40 0v6"/>
+        <circle class="k-glass" cx="52" cy="58" r="30"/><circle class="k-shine" cx="52" cy="58" r="22"/>
+        <path class="k-handle" d="M74 80l26 26"/>
+      </svg>
+    </button>
     <div class="toys" style="--i:4">
       <button class="toy hang" type="button" data-game="hangman">
         <svg class="t-art" viewBox="0 0 100 110" aria-hidden="true">

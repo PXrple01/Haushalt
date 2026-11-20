@@ -113,7 +113,7 @@ export const closeSheet = () => sheetOpen?.close();
 export function clearOverlays() {
   layer()?.querySelectorAll('.handoff, .dialog-wrap').forEach((n) => n.remove());
   sheetOpen?.close(true);
-  document.querySelectorAll('.peek-ov, .es-doors, .po-fly, .rt-ov, .cd-ov').forEach((n) => n.remove());
+  document.querySelectorAll('.peek-ov, .es-doors, .po-fly, .rt-ov, .cd-ov, .kr-news, .kr-fly, .kr-trans').forEach((n) => n.remove());
 }
 
 // ---------- Bestätigen-Dialog ----------

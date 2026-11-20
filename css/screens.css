@@ -413,3 +413,24 @@
 :where([data-theme="lila"]) .toy.escape::after { background: linear-gradient(100deg, transparent, rgba(125, 243, 255, .3), transparent); }
 @keyframes kk-glint { 0% { opacity: 0; transform: skewX(-20deg) translateX(0); } 3% { opacity: 1; } 15% { opacity: 0; transform: skewX(-20deg) translateX(620%); } 100% { opacity: 0; transform: skewX(-20deg) translateX(620%); } }
 html[data-motion="reduced"] .toy.escape::after { display: none; }
+
+/* Krimi für zwei: Lupe, Fingerabdruck, Blutstropfen – immer düster */
+.toy.krimi { flex-direction: row; align-items: center; gap: 12px; min-height: 168px; padding: 20px 14px 20px 20px; overflow: hidden; margin-top: 2px; isolation: isolate;
+  border-radius: 22px; border: 1px solid rgba(255, 255, 255, .08); color: #f3ece0;
+  background: radial-gradient(circle at 82% 70%, rgba(193, 18, 31, .45), transparent 48%), radial-gradient(circle at 10% 0%, rgba(201, 162, 77, .18), transparent 40%), linear-gradient(150deg, #1d1412 0%, #0d0909 70%); box-shadow: 0 14px 30px rgba(30, 0, 0, .35); }
+.toy.krimi .t-text { flex: 1 1 auto; min-width: 0; }
+.toy.krimi .t-title { font-family: "Anton", Impact, sans-serif; font-weight: 400; letter-spacing: .02em; text-transform: uppercase; font-size: clamp(1.5rem, 7vw, 2.05rem); color: #fff; text-shadow: 0 0 22px rgba(193, 18, 31, .55); }
+.toy.krimi .t-sub { font-size: var(--fs-s); margin-top: 6px; color: rgba(243, 236, 224, .75); font-family: "Courier New", Courier, monospace; }
+.toy.krimi .t-badge { background: #8a0f14; color: #fff; }
+.toy.krimi .lens { width: 104px; height: 112px; flex: none; overflow: visible; }
+.lens .k-glass { fill: rgba(255, 255, 255, .06); stroke: #c9a24d; stroke-width: 6; }
+.lens .k-shine { fill: none; stroke: rgba(255, 255, 255, .25); stroke-width: 2; stroke-dasharray: 18 120; transform-box: fill-box; transform-origin: center; animation: kr-shine 4s linear infinite; }
+@keyframes kr-shine { to { transform: rotate(360deg); } }
+.lens .k-handle { stroke: #6b4a2b; stroke-width: 11; stroke-linecap: round; }
+.lens .k-print { fill: none; stroke: rgba(243, 236, 224, .4); stroke-width: 2.2; stroke-linecap: round; }
+.lens .k-drops circle { fill: #b3121b; }
+.lens .k-drops circle:first-child { animation: kr-dropb 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes kr-dropb { 50% { transform: scale(1.12); } }
+.toy.krimi:active .lens { transform: scale(.97); }
+.toy.krimi::after { content: ""; position: absolute; top: -30%; bottom: -30%; left: -45%; width: 30%; z-index: 2; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(201, 162, 77, .22), transparent); opacity: 0; transform: skewX(-20deg); animation: kk-glint 7s ease-in-out 3.6s infinite; }
+html[data-motion="reduced"] .toy.krimi::after, html[data-motion="reduced"] .lens .k-shine, html[data-motion="reduced"] .lens .k-drops circle { animation: none !important; }

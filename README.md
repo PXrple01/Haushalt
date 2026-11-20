@@ -2,6 +2,7 @@
 
 Spiele für zwei – mit Baby-Design (Einhorn Kiki) und Lila-Design (Katze Kuro):
 
+- **Krimi für zwei** – „Blutnacht im Hotel Edelweiß“: ein eingeschneites Berghotel, ein Toter im Weinkeller, acht Verdächtige. Jeder hat seine **eigene Akte**, die Uhr läuft für beide von 23 bis 6 Uhr. Durchsuchen, verhören, Beweise vorhalten, funken, rote Fäden ziehen – und am Ende **gemeinsam** die Anklage unterschreiben. Lang, schwer und blutig (ab 16). Braucht zwei Handys.
 - **Escape-Abenteuer** – zusammen statt gegeneinander: 7 Geschichten (z. B. „Flucht aus dem Regenbogenschloss“), je 4 Räume. Einer ist an den **Händen**, der andere hat das **Wissen** – nur wer redet, kommt raus. Braucht zwei Handys.
 - **Galgenmännchen**, **Wer bin ich?**, **Zahl erraten** (1–100)
 - **Kritzelspiel** (einer zeichnet, einer rät) und **Pantomime** (einer stellt dar, einer rät)
@@ -28,6 +29,15 @@ Danach startet die Kicherkiste wie eine App – im Modus „Nebeneinander“ sog
 - Auf beiden Handys denselben Code eingeben (Weit weg), dann eine Geschichte antippen und **Abenteuer starten**. Das andere Handy bekommt eine Einladung.
 - Stufen: **Gemütlich** (ohne Zeit), **Normal** (25 Minuten), **Knifflig** (15 Minuten, schwerere Rätsel). Fehler kosten 20 Sekunden, ein Tipp 1 Minute.
 - Die Rätsel werden jedes Mal neu gemischt – jede Geschichte kann man immer wieder spielen. Am Ende gibt es bis zu 3 Sterne und einen Rekord pro Geschichte.
+
+## Krimi für zwei in Kürze
+- Auf beiden Handys denselben Code eingeben (Weit weg), **Krimi für zwei** antippen, Schwierigkeit und Spurensicherung wählen, **Ermittlung beginnen**. Das andere Handy bekommt eine Einladung.
+- **Eine Uhr für beide:** 23 bis 6 Uhr (Chefinspektoren: ab 23:30). Laufen, Durchsuchen, Verhören, Funken und Tipps kosten Minuten – egal, wer es macht. Wer die **Spurensicherung** ist, durchsucht schneller; der andere verhört schneller.
+- **Getrennte Akten:** Was du findest, sieht nur dein Handy. Erzählt euch alles – oder hängt Spuren an die gemeinsame **Ermittlungstafel** (Nadeln sind begrenzt). Zwei passende Spuren mit einem **roten Faden** verbinden ergibt eine **Erkenntnis**.
+- **Verhöre:** Fragen stellen, Beweise vorhalten, Fingerabdrücke nehmen. Zwei Personen gleichzeitig getrennt verhören oder eine zu zweit – dann geht manchmal mehr.
+- **Werkzeuge:** Funk an die Gerichtsmedizin (Antwort nach 30 Minuten), verschlüsseltes Tagebuch, Tresor, Bleistift-Durchdruck, Fingerabdruck-Vergleich, Schachprotokoll.
+- Die Nacht ist nicht vorbei: Um 1 Uhr kann ein zweiter Mord passieren – wenn ihr nicht schneller seid.
+- Am Ende: 13 Fragen in der **Anklageschrift**, beide unterschreiben, dann Punkte, Rang, Auflösung und eine Rekonstruktion der Nacht auf dem Grundriss.
 
 ## Gut zu wissen
 - Für „Weit weg“ nutzt die Kicherkiste dieselbe Cloud wie eure Watchlist – aber **nur für Live-Nachrichten**, es wird dort nichts gespeichert.

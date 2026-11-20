@@ -72,6 +72,10 @@ async function tour({ p, w, h, reduced = false }) {
   await page.click('.es-tcard[data-theme="meer"]'); await W(900);
   await check(page, errors, `${tag}-escape-geschichte`);
   await page.keyboard.press('Escape'); await W(400);
+  // Krimi für zwei: Fall-Auswahl
+  await page.click('[data-a="back"]'); await W(900);
+  await page.click('[data-game="krimi"]'); await W(1400);
+  await check(page, errors, `${tag}-krimi-setup`);
   await ctx.close();
 }
 

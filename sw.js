@@ -1,7 +1,7 @@
 // Offline-Start für die Kicherkiste.
 // Immer zuerst aus dem Netz laden (neue Versionen kommen sofort an). Ohne Netz startet die zuletzt gespeicherte Version.
 // Die Dateiliste wird mit `node tests/update-sw.mjs` neu erzeugt (Version hochzählen bei jeder Veröffentlichung).
-const CACHE = 'kicherkiste-v5';
+const CACHE = 'kicherkiste-v6';
 const FILES = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const FILES = [
   "./css/escape.css",
   "./css/fonts.css",
   "./css/games.css",
+  "./css/krimi.css",
   "./css/rounds.css",
   "./css/scene.css",
   "./css/screens.css",
@@ -55,6 +56,14 @@ const FILES = [
   "./js/games/hangman/logic.js",
   "./js/games/hangman/view.js",
   "./js/games/info.js",
+  "./js/games/krimi/art.js",
+  "./js/games/krimi/fall-orte.js",
+  "./js/games/krimi/fall-personen.js",
+  "./js/games/krimi/fall-spuren.js",
+  "./js/games/krimi/fall.js",
+  "./js/games/krimi/logic.js",
+  "./js/games/krimi/tools.js",
+  "./js/games/krimi/view.js",
   "./js/games/mime/logic.js",
   "./js/games/mime/view.js",
   "./js/games/number/logic.js",

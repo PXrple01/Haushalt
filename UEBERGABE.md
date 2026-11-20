@@ -1,9 +1,9 @@
 # Übergabe für spätere Sitzungen – Kicherkiste
 
-Stand: 19.11.2026, Version 2.0 (Cache `kicherkiste-v3`): + Pantomime, Kritzelspiel, Herzchen versenken, Escape-Abenteuer. Bauplan mit Design-System und Etappen: `PLAN.md`.
+Stand: 20.11.2026, Version 3.0: + Krimi für zwei (vorher: Pantomime, Kritzelspiel, Herzchen versenken, Escape-Abenteuer, riesige Pools). Cache-Version steht in `sw.js`. Bauplan mit Design-System und Etappen: `PLAN.md`.
 
 ## 1. Was das Projekt ist
-- Private PWA mit sieben Spielen für Johann (`joh`) und Josefine (`jos`), Sprache Deutsch: `hangman`, `whoami`, `number`, `mime` (Pantomime), `draw` (Kritzelspiel – nicht „Montagsmaler“ nennen!), `ships` (Herzchen versenken), `escape` (Escape-Abenteuer, kooperativ).
+- Private PWA mit acht Spielen für Johann (`joh`) und Josefine (`jos`), Sprache Deutsch: `hangman`, `whoami`, `number`, `mime` (Pantomime), `draw` (Kritzelspiel – nicht „Montagsmaler“ nennen!), `ships` (Herzchen versenken), `escape` (Escape-Abenteuer, kooperativ), `krimi` (Krimi für zwei, kooperativ, ab 16).
 - **Anzeigename von Josefine ist „Baby“** (Wunsch des Nutzers). Echte Namen nur auf „Wer spielt?“ (`realName`), überall sonst `nameOf()` (Spitznamen, in den Einstellungen änderbar, `prefs.nicks`).
 - Themes: `baby` (Cutecore-Stickerbuch, Einhorn **Kiki**) und `lila` (Neon-Nacht mit Manga-Akzenten, Katze **Kuro**). Standard je Person, umschaltbar.
 - Modi: `couch` (Nebeneinander, ein Gerät, Übergabe-Bildschirme) und `remote` (Weit weg, zwei Geräte live).
@@ -39,10 +39,18 @@ Stand: 19.11.2026, Version 2.0 (Cache `kicherkiste-v3`): + Pantomime, Kritzelspi
 - `logic.js`: Ereignisse `setup {theme,diff,seed,first}`, `ready`, `act {r,k,…}`, `hint {r,n}` (n verhindert Doppel-Tipps), `next {r}`, `cont`, `giveup`, `abort`. Zeit: `elapsed()` (Pause zwischen Räumen), Strafen 20 s/5 s/60 s, `timeUp()`, `starsOf()`.
 - Oberfläche: `view.js` (Auswahl, Intro mit Schreibmaschine, Tür-Übergang, „Raum geschafft“, Zeit um, Finale, Rekorde `escapeRecords`), `rooms.js` (je Art Hände- und Wissen-Ansicht), `art.js` (Szenen, Figuren), `symbols.js` (30 Symbole, 9 Farben), Stil `css/escape.css`.
 
+## 4c. Krimi für zwei (`js/games/krimi/`)
+- Immer **zwei Handys**. Fall „Blutnacht im Hotel Edelweiß“ als Daten: `fall-orte.js` (4 Stockwerke, 23 Räume, 61 Fundstellen mit Bedingungen/Varianten, Grundriss-Rechtecke), `fall-spuren.js` (~180 Spuren: Spuren, Dokumente, Gegenstände, Aussagen, Funk-Antworten, Erkenntnisse, Fingerabdruck-Karten), `fall-personen.js` (8 Verdächtige: erstes Gespräch, Fragen, „Vorhalten“-Reaktionen, Fingerabdruck-Muster), `fall.js` (Einleitung, Ereignisse der Nacht, Erkenntnis-Kombinationen, Tipps, Anklagefragen, Ränge, Epiloge, Rekonstruktion, Chiffre/Tresor/Schachprotokoll). **Lösung:** Dr. Theodor Wendt (Skalpell, 21:52, Kerzen-Zeitzünder für das Klirren um 22:31, Rache für Elisabeth/Maries Erbe).
+- Uhr = Minuten seit Mitternacht des 5. Jänner (23:00 = 1380, 06:00 = 1800), **eine Uhr für beide**: jede Handlung kostet Minuten, Spezialist ×1, sonst ×1,5 (`costFor`). Ereignisse der Nacht feuern minutengenau in `spend()` (00:05 Erpresserbrief, 00:21 Sauna, 00:30 Skistock, 01:00 Mord an Emil – oder nicht, 01:50 Fund, 03:00 Sturm vorbei, 03:30 Flucht, 05:00 Funk). Emil wird gerettet durch Vorhalten von Spiegel/Dienstbuch/Treppe/Durchdruck vor 1 Uhr oder Anwesenheit im Spa um 1 Uhr.
+- Bedingungen (`test` in `logic.js`): `after/before`, `f/f2/nf/nf2` (Merker), `has/nhas/hasAny` (eigene Akte), `team…` (einer von beiden), `split` (Partner verhört Person X → Bluff), `together` (beide verhören dieselbe Person → „Zange“).
+- Ereignisse: `setup {diff, spuren}`, `ready`, `go`, `search`, `talk`, `leave`, `ask`, `show`, `prints`, `radio`, `safe`, `cipher`, `rub`, `fp`, `pin/unpin/pmove`, `thread/unthread`, `hint {n}`, `aset {q,v}` (gemeinsame Anklageschrift, löscht Unterschriften), `sign {v}` (v = Formular-Version), `unsign`, `abort`. Der Zustand hat einen `feed` (ein Eintrag je Handlung/Ereignis) – die Oberfläche spielt nur neue Einträge ab (Fund-Blatt, Einblendungen, Laufband, Kosten).
+- Oberfläche: `view.js` (Karte mit Grundriss, Akte, Tafel mit Ziehen/Fäden, Verhöre, Anklage, Einblendungen, Auflösung mit Rekonstruktion), `tools.js` (Chiffre Vigenère mit Schlüssel LISL, Tresor 120304, Durchdruck-Leinwand, Fingerabdruck-Vergleich, Schachprotokoll), `art.js` (Noir-Porträts, Symbole, Grundriss, Fingerabdrücke, Blutspritzer, Hotel im Sturm), Stil `css/krimi.css` (Variablen `--kr-*` auf `:root`, damit Blätter außerhalb des Spiels sie auch haben; Knöpfe im Krimi bewusst ohne Theme-Form). Lokales (Tab, Stockwerk, gesehene Spuren) in `kr_<sid>`, Bestwert in `krimiRecords`.
+
 ## 5. Testen
 - Server: `python3 -m http.server 5178 --bind 127.0.0.1` im Repo. Chromium + Playwright sind vorinstalliert.
 - `node tests/logic.test.mjs` (Spiellogik inkl. Escape: alle Rätsel lösbar und gleich auf beiden Geräten), `node tests/smoke.mjs [bilder]` (alle Bildschirme, beide Themes, 340/390/1280 px, ruhige Bewegung), `node tests/fern-galgenmaennchen.mjs`, `node tests/fern-werbinich-zahl.mjs`, `node tests/couch-werbinich-zahl.mjs`, `node tests/fern-herzchen.mjs`, `node tests/fern-pantomime.mjs`, `node tests/fern-kritzelspiel.mjs`, `node tests/couch-neue-spiele.mjs [bilder] [breite]` (Kritzelspiel, Pantomime, Herzchen versenken auf einem Handy, mit Neuladen).
 - Escape: `node tests/fern-escape.mjs [bilder] [geschichte] [stufe]` spielt eine Geschichte komplett über die Oberfläche durch (mit Fehlern und Tipp, `RUHIG=1` für reduzierte Bewegung); `node tests/fern-escape-zeit.mjs` prüft Zeit um, Weiterspielen, Aufgeben, Beenden.
+- Krimi: `node tests/fern-krimi.mjs [bilder]` (zwei Handys: Start, Durchsuchen, getrennte Akten, Bluff, Faden → Erkenntnis, Chiffre, Tresor, zweiter Mord, gemeinsame Anklage, Auflösung; `RUHIG=1`, `BREITE`/`HOEHE`). Die Fall-Daten prüft `tests/logic.test.mjs` (alle Verweise gültig, jede Spur erreichbar, Emil-Pfade, Bluff, Zange, Wertung).
 - Zwei Geräte lokal: `?net=local&ns=a` und `?net=local&ns=b` in **einem** Browser-Kontext (BroadcastChannel).
 - Die echte WebSocket-Verbindung zu Supabase ist in der Cloud-Sandbox nicht testbar (Proxy blockt WebSockets). REST-Broadcast mit dem Schlüssel liefert 202 → Realtime ist freigeschaltet.
 - Prüf-Seite `#/dev` zeigt alle Bausteine und Maskottchen-Stimmungen.
@@ -53,10 +61,11 @@ Stand: 19.11.2026, Version 2.0 (Cache `kicherkiste-v3`): + Pantomime, Kritzelspi
 - Updates in den Spielansichten laufen über eine Warteschlange (`schedule`), verglichen wird mit dem zuletzt angezeigten Stand (`shown`).
 - `navigator.vibrate` erst nach der ersten Berührung (sonst Konsolen-Warnung).
 - Neue Dateien → `tests/update-sw.mjs` laufen lassen, sonst fehlen sie offline.
-- Overlays (Übergabe, Dialoge, Blätter, Vorhang, Countdown, Escape-Türen) räumt der Router bei jedem Bildschirmwechsel weg (`clearOverlays` in `ui.js`). Wartender Code in Spielansichten prüft `alive`, damit nach dem Verlassen nichts mehr auftaucht.
+- Overlays (Übergabe, Dialoge, Blätter, Vorhang, Countdown, Escape-Türen, Krimi-Einblendungen) räumt der Router bei jedem Bildschirmwechsel weg (`clearOverlays` in `ui.js`). Wartender Code in Spielansichten prüft `alive`, damit nach dem Verlassen nichts mehr auftaucht.
 - View Transitions: Namen (`view-transition-name`) nie doppelt vergeben – sonst bricht der Übergang ab. Escape setzt `es-hero`/`es-sheet` nur für die Dauer des Karten-Übergangs.
 
 ## 7. Ideen für später
+- Weitere Krimi-Fälle: `CASE` in `fall.js` hat dieselbe Form – ein zweiter Fall bräuchte nur eigene Daten-Dateien und eine Auswahl im Setup.
 - Weitere Spiele (z. B. „Wer kennt wen besser?“), weitere Escape-Geschichten (neues Objekt in `themes.js` mit 4 Räumen genügt) oder neue Rätsel-Arten (in `puzzles.js` + `rooms.js`).
 - Eigene Wörter/Figuren-Listen speichern, Lieblingswörter.
 - Bilanz-Verlauf mit Grafik, Abzeichen.

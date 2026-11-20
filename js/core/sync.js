@@ -10,6 +10,7 @@ const KEY = 'sessions';
 let db = get(KEY, {}) || {};
 let clock = get('clock', 0) || 0;
 const MAX_SESSIONS = 30;
+const SYNC_CHUNK = 120; // Ereignisse pro Abgleich-Nachricht
 
 const cmp = (a, b) => a.n - b.n || (a.by < b.by ? -1 : a.by > b.by ? 1 : 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
@@ -25,7 +26,7 @@ function save() {
 }
 
 const PIDS = ['jos', 'joh'];
-const GAMES = ['hangman', 'whoami', 'number', 'mime', 'draw', 'ships', 'escape'];
+const GAMES = ['hangman', 'whoami', 'number', 'mime', 'draw', 'ships', 'escape', 'krimi'];
 function validEvent(e) {
   return e && typeof e.id === 'string' && e.id.length <= 24 && Number.isFinite(e.n) && PIDS.includes(e.by)
     && typeof e.ty === 'string' && e.ty.length <= 24 && e.d && typeof e.d === 'object' && JSON.stringify(e.d).length < 4000;
@@ -104,7 +105,9 @@ onMsg('hello', (m) => {
   if (d.stats) mergeRecords(d.stats.records || [], d.stats.resetAt || 0);
   const theirs = d.s || {};
   for (const x of recentRemote()) {
-    if ((theirs[x.meta.id] ?? -1) < x.evs.length) send('sync', { meta: x.meta, evs: x.evs });
+    if ((theirs[x.meta.id] ?? -1) >= x.evs.length) continue;
+    // Lange Partien (z. B. Krimi) in Häppchen schicken – sonst wird eine einzelne Nachricht zu groß
+    for (let i = 0; i < x.evs.length; i += SYNC_CHUNK) send('sync', { meta: x.meta, evs: x.evs.slice(i, i + SYNC_CHUNK) });
   }
   if (!d.reply) hello(true);
 });

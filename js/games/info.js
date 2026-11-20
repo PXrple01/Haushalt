@@ -7,5 +7,6 @@ export const GAMES = {
   draw: { id: 'draw', title: 'Kritzelspiel', sub: 'Einer kritzelt, der andere rät.' },
   ships: { id: 'ships', title: 'Herzchen versenken', sub: 'Versteckt Einhörner, Wolken und Katzen – und findet die des anderen.' },
   escape: { id: 'escape', title: 'Escape-Abenteuer', sub: 'Befreit euch gemeinsam – jeder sieht etwas anderes.', coop: true },
+  krimi: { id: 'krimi', title: 'Krimi für zwei', sub: 'Ein blutiger Fall, zwei Handys, eine lange Nacht.', coop: true },
 };
 export const gameTitle = (id) => GAMES[id]?.title ?? 'Spiel';

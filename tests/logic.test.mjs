@@ -6,6 +6,7 @@ import * as NU from '../js/games/number/logic.js';
 import * as SH from '../js/games/ships/logic.js';
 import * as MI from '../js/games/mime/logic.js';
 import * as ES from '../js/games/escape/logic.js';
+import * as KR from '../js/games/krimi/logic.js';
 import { PUZZLES, hintsFor, wireAnswer } from '../js/games/escape/puzzles.js';
 import { THEMES } from '../js/games/escape/themes.js';
 import { SYMBOLS, COLORS } from '../js/games/escape/symbols.js';
@@ -346,6 +347,113 @@ test('Pools: groß, gültig, ohne Dopplungen', () => {
     for (let n = 1; n <= 100; n++) { const r = c.test(n); assert.equal(typeof r, 'boolean', c.id); if (r) yes++; }
     assert.ok(yes > 0 && yes < 100, `Karte ${c.id} streicht nichts`);
   }
+});
+
+// ---------------- Krimi für zwei ----------------
+test('Krimi: alle Verweise im Fall sind gültig und jede Spur ist erreichbar', () => {
+  const C = KR.CASE;
+  const known = (id, where) => assert.ok(C.clues[id], `unbekannte Spur ${id} (${where})`);
+  const reach = new Set();
+  for (const [rid, r] of Object.entries(C.rooms)) {
+    assert.ok(C.floors.some((f) => f.id === r.floor), rid);
+    for (const sp of r.spots) {
+      (sp.g || []).forEach((g) => { known(g, rid); reach.add(g); });
+      (sp.v || []).forEach((v) => v.g.forEach((g) => { known(g, rid); reach.add(g); }));
+    }
+  }
+  const cond = (w, where) => {
+    if (!w) return;
+    for (const k of ['has', 'nhas', 'teamHas', 'teamNot', 'teamNot2']) if (w[k]) known(w[k], where);
+    for (const k of ['hasAny', 'teamAny', 'teamAny2', 'teamNotAny']) (w[k] || []).forEach((x) => known(x, where));
+  };
+  for (const [pid, pe] of Object.entries(C.people)) {
+    assert.ok(C.clues['fp_' + pid], 'Fingerabdruck ' + pid);
+    reach.add('fp_' + pid);
+    pe.intro.g.forEach((g) => { known(g, pid); reach.add(g); });
+    for (const t of pe.topics) { (t.g || []).forEach((g) => { known(g, pid); reach.add(g); }); cond(t.w, pid); }
+    for (const sh of pe.show) { sh.c.forEach((g) => known(g, pid)); (sh.g || []).forEach((g) => { known(g, pid); reach.add(g); }); cond(sh.w, pid); }
+  }
+  for (const [id, c] of Object.entries(C.clues)) { if (c.r) { known(c.r, id); reach.add(c.r); } assert.ok(C.kinds[c.k], id); }
+  for (const cb of C.combos) { cb.a.concat(cb.b, [cb.g]).forEach((x) => known(x, 'Erkenntnis')); reach.add(cb.g); }
+  for (const h of C.hints) cond(h.w, 'Tipp ' + h.id);
+  for (const r of C.recon) assert.ok(C.rooms[r.room], r.room);
+  ['tagebuch_klar', 'testament', 'foto_et', 'erpressung', 'fp_treffer', 'a_emil_aussage', 'a_emil_erpressung', 'dienstbuch_seite'].forEach((x) => reach.add(x));
+  for (const id of Object.keys(C.clues)) assert.ok(reach.has(id), 'nicht erreichbar: ' + id);
+  for (const q of C.questions) assert.ok(q.multi ? q.ok.every((x) => q.opts.some((o) => o.id === x)) : q.opts.some((o) => o.id === q.ok), q.id);
+  assert.ok(Object.keys(C.clues).length > 150);
+});
+
+function krimi(steps, diff = 'normal') {
+  const m = meta('krimi', 'remote');
+  const evs = [ev('jos', 'setup', { diff, spuren: 'jos' }), ev('jos', 'ready'), ev('joh', 'ready')];
+  for (const s of steps) evs.push(ev(...s));
+  return KR.reduce(m, evs);
+}
+test('Krimi: Uhr, getrennte Akten, Schlösser und Fachgebiete', () => {
+  let st = krimi([]);
+  assert.equal(st.phase, 'play');
+  assert.equal(KR.fmtClock(st.clock), '23:00');
+  st = krimi([['jos', 'go', { room: 'weinkeller' }], ['jos', 'search', { room: 'weinkeller', spot: 'leiche' }], ['joh', 'go', { room: 'buero' }]]);
+  assert.equal(st.clock, 1380 + 2 + 15);
+  assert.ok(KR.has(st, 'jos', 'schluessel') && !KR.has(st, 'joh', 'leiche'));
+  assert.equal(st.pos.joh, 'rezeption', 'Büro ohne Schlüssel zu');
+  st = krimi([['joh', 'go', { room: 'weinkeller' }], ['joh', 'search', { room: 'weinkeller', spot: 'leiche' }]]);
+  assert.equal(st.clock, 1380 + 2 + 23, 'Verhör-Spezialist durchsucht langsamer');
+  st = krimi([['jos', 'go', { room: 'weinkeller' }], ['jos', 'search', { room: 'weinkeller', spot: 'unter' }]]);
+  assert.ok(!KR.has(st, 'jos', 'uhr'), 'erst die Leiche untersuchen');
+  st = krimi([['jos', 'go', { room: 'weinkeller' }], ['jos', 'search', { room: 'weinkeller', spot: 'boden' }], ['jos', 'search', { room: 'weinkeller', spot: 'boden' }]]);
+  assert.equal(st.clock, 1380 + 2 + 10, 'dieselbe Stelle nicht doppelt bezahlen');
+  st = krimi([['jos', 'go', { room: 'weinkeller' }], ['jos', 'search', { room: 'weinkeller', spot: 'leiche' }], ['jos', 'go', { room: 'buero' }], ['jos', 'go', { room: 'rezeption' }], ['joh', 'go', { room: 'buero' }]]);
+  assert.equal(st.pos.joh, 'buero', 'einmal aufgesperrt bleibt offen');
+  st = krimi([['jos', 'go', { room: 'hinterhof' }]]);
+  assert.equal(st.pos.jos, 'rezeption', 'Hinterhof erst nach dem Sturm');
+});
+test('Krimi: Emil retten – oder er stirbt um 1 Uhr', () => {
+  let st = krimi([['joh', 'go', { room: 'personalgang' }], ['joh', 'search', { room: 'personalgang', spot: 'spiegel' }], ['joh', 'go', { room: 'portiersloge' }], ['joh', 'talk', { who: 'emil' }], ['joh', 'show', { who: 'emil', clue: 'spiegel' }]]);
+  assert.ok(st.flags.emilSaved && KR.has(st, 'joh', 'a_emil_aussage'));
+  // Warten: zwischen Keller und Erdgeschoss hin und her (je 2 Minuten)
+  const wait = (min) => Array.from({ length: Math.ceil(min / 2) }, (_, i) => ['jos', 'go', { room: i % 2 ? 'rezeption' : 'heizraum' }]);
+  st = krimi(wait(130));
+  assert.ok(st.flags.emilDead && !st.flags.emilFound && st.flags.note);
+  st = krimi([...wait(180), ['joh', 'go', { room: 'portiersloge' }], ['joh', 'talk', { who: 'emil' }]]);
+  assert.ok(st.flags.emilFound, 'Greta findet ihn um 01:50');
+  assert.equal(st.with.joh, null, 'mit Toten redet man nicht');
+  st = krimi([['joh', 'go', { room: 'spa' }], ...wait(125)]);
+  assert.ok(st.flags.emilSaved && st.flags.falle && KR.has(st, 'joh', 'a_emil_erpressung'), 'Anwesenheit im Spa rettet Emil');
+});
+test('Krimi: Bluff, Zange, Funk, Werkzeuge, Erkenntnisse', () => {
+  let st = krimi([['jos', 'go', { room: 'kaminzimmer' }], ['joh', 'go', { room: 'kaminzimmer' }], ['jos', 'talk', { who: 'viktoria' }], ['joh', 'talk', { who: 'lukas' }], ['jos', 'ask', { who: 'viktoria', topic: 'bluff' }], ['joh', 'ask', { who: 'lukas', topic: 'bluff' }]]);
+  assert.ok(KR.has(st, 'jos', 'a_viktoria_wahr') && KR.has(st, 'joh', 'a_lukas_wahr'));
+  st = krimi([['jos', 'go', { room: 'kaminzimmer' }], ['jos', 'talk', { who: 'viktoria' }], ['jos', 'ask', { who: 'viktoria', topic: 'bluff' }]]);
+  assert.ok(!KR.has(st, 'jos', 'a_viktoria_wahr'), 'Bluff nur, wenn der Partner Lukas verhört');
+  st = krimi([['jos', 'go', { room: 'weinkeller' }], ['jos', 'search', { room: 'weinkeller', spot: 'scherben' }], ['jos', 'radio', { clue: 'scherben' }]]);
+  assert.ok(!KR.has(st, 'jos', 'x_scherben'));
+  st = krimi([['jos', 'go', { room: 'weinkeller' }], ['jos', 'search', { room: 'weinkeller', spot: 'scherben' }], ['jos', 'radio', { clue: 'scherben' }], ['jos', 'search', { room: 'weinkeller', spot: 'boden' }], ['jos', 'search', { room: 'weinkeller', spot: 'leiche' }], ['jos', 'search', { room: 'weinkeller', spot: 'wunde' }]]);
+  assert.ok(KR.has(st, 'jos', 'x_scherben'), 'Funk-Antwort nach 30 Minuten');
+  st = krimi([['jos', 'go', { room: 'weinkeller' }], ['jos', 'search', { room: 'weinkeller', spot: 'leiche' }], ['jos', 'go', { room: 'buero' }], ['jos', 'search', { room: 'buero', spot: 'schreibtisch' }], ['jos', 'search', { room: 'buero', spot: 'tresor' }], ['jos', 'safe', { code: '111111' }], ['jos', 'cipher', { key: 'Elisabeth' }], ['jos', 'cipher', { key: 'lisl' }], ['jos', 'safe', { code: '120304' }]]);
+  assert.ok(KR.has(st, 'jos', 'tagebuch_klar') && KR.has(st, 'jos', 'testament') && KR.has(st, 'jos', 'foto_et'));
+  st = krimi([['jos', 'go', { room: 'bibliothek' }], ['jos', 'search', { room: 'bibliothek', spot: 'schach' }], ['joh', 'go', { room: 'kaminzimmer' }], ['joh', 'talk', { who: 'wendt' }],
+    ['jos', 'pin', { clue: 'schachprotokoll', x: .2, y: .2 }], ['joh', 'pin', { clue: 'a_wendt_alibi', x: .7, y: .3 }], ['joh', 'pin', { clue: 'leiche', x: .5, y: .5 }], ['jos', 'thread', { a: 'a_wendt_alibi', b: 'schachprotokoll' }]]);
+  assert.ok(KR.has(st, 'jos', 'c_luecke') && KR.has(st, 'joh', 'c_luecke'), 'Erkenntnis für beide');
+  assert.equal(Object.keys(st.pins).length, 2, 'nur eigene Spuren anpinnen');
+});
+test('Krimi: Anklage nur gemeinsam, Wertung und Ränge', () => {
+  const answers = { taeter: 'wendt', waffe: 'skalpell', zeit: 'b', trick: 'kerze', motiv: 'rache', abdruck: 'wendt', versteck: 'schnee', emil_sah: 'wendt', luegner: ['lukas', 'viktoria'], vater: 'wendt', lawine: 'konrad', sophie: 'presse' };
+  const steps = Object.entries(answers).map(([q, v]) => ['jos', 'aset', { q, v }]);
+  let st = krimi(steps);
+  const v = st.formV;
+  st = krimi([...steps, ['jos', 'sign', { v }]]);
+  assert.equal(st.phase, 'play', 'eine Unterschrift reicht nicht');
+  st = krimi([...steps, ['jos', 'sign', { v }], ['joh', 'aset', { q: 'motiv', v: 'erbe' }], ['joh', 'sign', { v: v + 1 }]]);
+  assert.equal(st.phase, 'play', 'Änderung löscht Unterschriften');
+  st = krimi([...steps, ['jos', 'sign', { v }], ['joh', 'sign', { v }]]);
+  assert.equal(st.phase, 'end');
+  assert.equal(st.result.base, st.result.max);
+  assert.equal(st.result.rank.id, 'meister');
+  st = krimi([...steps, ['joh', 'aset', { q: 'taeter', v: 'marie' }], ['jos', 'sign', { v: v + 1 }], ['joh', 'sign', { v: v + 1 }]]);
+  assert.equal(st.result.culprit, false);
+  assert.equal(st.result.rank.id, 'falsch');
+  assert.equal(KR.label(st), 'Falscher Täter');
 });
 
 console.log(`\n${ok} Prüfungen bestanden.`);
