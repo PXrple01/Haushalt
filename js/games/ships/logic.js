@@ -1,23 +1,86 @@
 // Herzchen versenken – reine Spiellogik.
-// 8×8-Meer, fünf Figuren. Abwechselnd schießen, bei Treffer nochmal. Einmal pro Spiel ein Spezialschuss (3×3).
-// Ereignisse: setup {first} · fleet {p, f} (verschleiert) · shot {x, y, bomb} · abort
+// 8×8-Meer. Zwei Flotten: „Klassisch“ (gerade Figuren) und „Kurvig“ (Regenbogen-Bogen, Seeschlange in S-Form, Raupe in L-Form).
+// Abwechselnd schießen, bei Treffer nochmal. Einmal pro Spiel ein Spezialschuss (3×3).
+// Ereignisse: setup {first, fleet} · fleet {p, f} (verschleiert) · shot {x, y, bomb} · abort
+// Eine Figur auf dem Meer: { id, x, y, o } – (x, y) = linke obere Ecke, o = Ausrichtung (Index in orientsOf(id)).
+// Ältere Partien speichern { dir: 'h' | 'v' } – wird als o = 0 / 1 gelesen.
 import { nameOf, other } from '../../core/util.js';
 import { dec } from '../secret.js';
 
 export const N = 8;
-export const FLEET = [
-  { id: 'einhorn', len: 4, name: 'Einhorn' },
-  { id: 'wolke', len: 3, name: 'Wolke' },
-  { id: 'katze', len: 3, name: 'Katze' },
-  { id: 'herz', len: 2, name: 'Herzchen' },
-  { id: 'stern', len: 2, name: 'Sternschnuppe' },
-];
-export const pieceInfo = (id) => FLEET.find((f) => f.id === id);
-export const TOTAL_CELLS = FLEET.reduce((a, f) => a + f.len, 0);
+
+// Grundform jeder Figur (Felder in der Grundausrichtung)
+const SHAPES = {
+  einhorn: [[0, 0], [1, 0], [2, 0], [3, 0]],
+  wolke: [[0, 0], [1, 0], [2, 0]],
+  katze: [[0, 0], [1, 0], [2, 0]],
+  herz: [[0, 0], [1, 0]],
+  stern: [[0, 0], [1, 0]],
+  regenbogen: [[0, 1], [0, 0], [1, 0], [2, 0], [2, 1]], // Bogen ∩
+  schlange: [[0, 0], [1, 0], [1, 1], [2, 1]],           // S-Kurve
+  raupe: [[0, 0], [1, 0], [2, 0], [2, 1]],              // L-Form
+};
+export const PIECES = {
+  einhorn: { id: 'einhorn', name: 'Einhorn' },
+  wolke: { id: 'wolke', name: 'Wolke' },
+  katze: { id: 'katze', name: 'Katze' },
+  herz: { id: 'herz', name: 'Herzchen' },
+  stern: { id: 'stern', name: 'Sternschnuppe' },
+  regenbogen: { id: 'regenbogen', name: 'Regenbogen', curvy: true },
+  schlange: { id: 'schlange', name: 'Seeschlange', curvy: true },
+  raupe: { id: 'raupe', name: 'Raupe', curvy: true },
+};
+for (const id of Object.keys(PIECES)) {
+  PIECES[id].len = SHAPES[id].length;
+  PIECES[id].bw = Math.max(...SHAPES[id].map((c) => c[0])) + 1;
+  PIECES[id].bh = Math.max(...SHAPES[id].map((c) => c[1])) + 1;
+}
+
+export const FLEETS = {
+  klassisch: { id: 'klassisch', title: 'Klassisch', sub: 'Gerade Figuren', ids: ['einhorn', 'wolke', 'katze', 'herz', 'stern'] },
+  kurvig: { id: 'kurvig', title: 'Kurvig', sub: 'Mit Bogen, S und L – kniffliger', ids: ['regenbogen', 'schlange', 'raupe', 'einhorn', 'herz'] },
+};
+export const fleetOf = (kind) => FLEETS[kind] || FLEETS.klassisch;
+export const fleetPieces = (kind) => fleetOf(kind).ids.map((id) => PIECES[id]);
+export const pieceInfo = (id) => PIECES[id];
+// Für ältere Aufrufer: die klassische Flotte
+export const FLEET = fleetPieces('klassisch');
+
+// ---------- Ausrichtungen: Drehen (90°-Schritte) und Spiegeln ----------
+// Jede Ausrichtung: Felder (ab 0,0), Breite/Höhe, und wie die Grafik gedreht/gespiegelt wird (rot in Grad, flip ±1).
+const ORIENTS = {};
+function orientsFor(id) {
+  if (ORIENTS[id]) return ORIENTS[id];
+  const base = SHAPES[id];
+  const out = [];
+  const seen = new Set();
+  for (const flip of [1, -1]) {
+    for (let k = 0; k < 4; k++) {
+      // erst spiegeln (x → −x), dann k-mal um 90° im Uhrzeigersinn drehen: (x, y) → (−y, x)
+      let cells = base.map(([x, y]) => [x * flip, y]);
+      for (let i = 0; i < k; i++) cells = cells.map(([x, y]) => [-y, x]);
+      const mx = Math.min(...cells.map((c) => c[0])), my = Math.min(...cells.map((c) => c[1]));
+      cells = cells.map(([x, y]) => [x - mx, y - my]).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+      const sig = cells.map((c) => c.join(',')).join(' ');
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      out.push({ cells, w: Math.max(...cells.map((c) => c[0])) + 1, h: Math.max(...cells.map((c) => c[1])) + 1, rot: k * 90, flip });
+    }
+  }
+  ORIENTS[id] = out;
+  return out;
+}
+export const orientsOf = (id) => orientsFor(id);
+// Ausrichtung einer gelegten Figur (auch alte Partien mit dir)
+export function orientOf(pc) {
+  const list = orientsFor(pc.id);
+  const o = Number.isInteger(pc.o) ? pc.o : pc.dir === 'v' ? 1 : 0;
+  return list[((o % list.length) + list.length) % list.length];
+}
+const oIndex = (pc) => (Number.isInteger(pc.o) ? pc.o : pc.dir === 'v' ? 1 : 0);
 
 export function cellsOf(pc) {
-  const f = pieceInfo(pc.id);
-  return Array.from({ length: f.len }, (_, i) => (pc.dir === 'v' ? [pc.x, pc.y + i] : [pc.x + i, pc.y]));
+  return orientOf(pc).cells.map(([x, y]) => [pc.x + x, pc.y + y]);
 }
 const key = (x, y) => y * N + x;
 
@@ -29,23 +92,30 @@ export function fits(pc, others = []) {
   return cells.every(([x, y]) => !taken.has(key(x, y)));
 }
 
-export function validFleet(f) {
-  if (!Array.isArray(f) || f.length !== FLEET.length) return false;
-  const ids = new Set(f.map((p) => p.id));
-  if (ids.size !== FLEET.length || FLEET.some((x) => !ids.has(x.id))) return false;
-  if (f.some((p) => !['h', 'v'].includes(p.dir) || !Number.isInteger(p.x) || !Number.isInteger(p.y))) return false;
+export function validFleet(f, kind = 'klassisch') {
+  const ids = fleetOf(kind).ids;
+  if (!Array.isArray(f) || f.length !== ids.length) return false;
+  const have = new Set(f.map((p) => p?.id));
+  if (have.size !== ids.length || ids.some((id) => !have.has(id))) return false;
+  for (const p of f) {
+    if (!Number.isInteger(p.x) || !Number.isInteger(p.y)) return false;
+    if (p.o != null ? !(Number.isInteger(p.o) && p.o >= 0 && p.o < orientsFor(p.id).length) : !['h', 'v'].includes(p.dir)) return false;
+  }
   return f.every((p, i) => fits(p, f.slice(0, i)));
 }
 
-export function randomFleet(rng = Math.random) {
-  for (let attempt = 0; attempt < 200; attempt++) {
+// Zufällige Flotte (rng = Zufallsfunktion 0..1)
+export function randomFleet(rng = Math.random, kind = 'klassisch') {
+  for (let attempt = 0; attempt < 300; attempt++) {
     const out = [];
     let ok = true;
-    for (const f of FLEET) {
+    for (const id of fleetOf(kind).ids) {
       let placed = false;
-      for (let t = 0; t < 100 && !placed; t++) {
-        const dir = rng() < .5 ? 'h' : 'v';
-        const pc = { id: f.id, dir, x: Math.floor(rng() * (dir === 'h' ? N - f.len + 1 : N)), y: Math.floor(rng() * (dir === 'v' ? N - f.len + 1 : N)) };
+      const list = orientsFor(id);
+      for (let t = 0; t < 120 && !placed; t++) {
+        const o = Math.floor(rng() * list.length);
+        const { w, h } = list[o];
+        const pc = { id, o, x: Math.floor(rng() * (N - w + 1)), y: Math.floor(rng() * (N - h + 1)) };
         if (fits(pc, out)) { out.push(pc); placed = true; }
       }
       if (!placed) { ok = false; break; }
@@ -68,7 +138,7 @@ export function bombCells(x, y) {
 export function reduce(meta, evs) {
   const st = {
     game: 'ships', id: meta.id, mode: meta.mode, phase: 'setup',
-    first: 'jos', turn: 'jos',
+    first: 'jos', turn: 'jos', fleetKind: 'klassisch',
     fleets: { jos: null, joh: null },
     shots: { jos: [], joh: [] },        // shots[p] = Schüsse VON p (auf das Meer des anderen)
     bombUsed: { jos: false, joh: false },
@@ -83,14 +153,15 @@ export function reduce(meta, evs) {
     switch (e.ty) {
       case 'setup':
         st.first = st.turn = d.first === 'joh' ? 'joh' : 'jos';
+        st.fleetKind = FLEETS[d.fleet] ? d.fleet : 'klassisch';
         break;
       case 'fleet': {
         if (st.phase !== 'setup') break;
         const p = meta.mode === 'remote' ? e.by : (d.p === 'joh' ? 'joh' : 'jos');
         let f = null;
         try { f = JSON.parse(dec(d.f, meta.id)); } catch { f = null; }
-        if (!validFleet(f)) break;
-        st.fleets[p] = f.map((x) => ({ id: x.id, x: x.x, y: x.y, dir: x.dir }));
+        if (!validFleet(f, st.fleetKind)) break;
+        st.fleets[p] = f.map((x) => ({ id: x.id, x: x.x, y: x.y, o: oIndex(x) }));
         if (st.fleets.jos && st.fleets.joh) { st.phase = 'play'; st.turn = st.first; }
         break;
       }
@@ -124,7 +195,7 @@ export function reduce(meta, evs) {
         }
         const anyHit = results.some((r) => r.hit);
         st.last = { kind: 'shot', by: p, bomb, aim: { x, y }, results, sunk: newlySunk, id: e.id };
-        if (st.sunk[p].length === FLEET.length) { st.phase = 'end'; st.winner = p; st.endedAt = e.t; break; }
+        if (st.sunk[p].length === foe.length) { st.phase = 'end'; st.winner = p; st.endedAt = e.t; break; }
         if (!anyHit) st.turn = other(p);
         break;
       }

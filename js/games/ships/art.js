@@ -69,9 +69,63 @@ const ART = {
     <ellipse cx="143" cy="52" rx="4.5" ry="2.8" fill="#FF8CC6" opacity=".7"/><ellipse cx="169" cy="52" rx="4.5" ry="2.8" fill="#FF8CC6" opacity=".7"/>`,
 };
 
-const LEN = { einhorn: 4, wolke: 3, katze: 3, herz: 2, stern: 2 };
+// ---------- Kurvige Figuren (Grundausrichtung, 100 Einheiten pro Feld) ----------
+const RAINBOW = ['#FF6B8B', '#FFA45C', '#FFD54D', '#7BE08F', '#5CC8FF', '#9B7BFF'];
+const arch = (d) => {
+  const L = 50 - d, T = 50 - d, R = 250 + d, r = 34 + d;
+  return `M${L} 198 V${T + r} Q${L} ${T} ${L + r} ${T} H${R - r} Q${R} ${T} ${R} ${T + r} V198`;
+};
+// Bogen: Felder (0,0) (1,0) (2,0) und darunter (0,1) (2,1)
+ART.regenbogen = `
+  <g fill="none" stroke-linecap="butt" stroke-linejoin="round">
+    ${RAINBOW.map((c, i) => `<path d="${arch(30 - i * 12)}" stroke="${c}" stroke-width="12.5"/>`).join('')}
+  </g>
+  <path d="${arch(37)}" fill="none" stroke="#fff" stroke-width="2.5" opacity=".7"/>
+  <g class="pa-cloud">
+    <path d="M14 196 A16 16 0 0 1 16 166 A22 22 0 0 1 56 156 A20 20 0 0 1 90 172 A14 14 0 0 1 86 196 Z" fill="#fff" stroke="#C9B2FF" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M214 196 A16 16 0 0 1 216 166 A22 22 0 0 1 256 156 A20 20 0 0 1 290 172 A14 14 0 0 1 286 196 Z" fill="#fff" stroke="#C9B2FF" stroke-width="3" stroke-linejoin="round"/>
+  </g>
+  <path class="pa-eye" d="M40 178 Q45 173 50 178 M60 178 Q65 173 70 178" fill="none" stroke="${PL}" stroke-width="3" stroke-linecap="round"/>
+  <path d="M50 186 Q55 190 60 186" fill="none" stroke="${PL}" stroke-width="2.6" stroke-linecap="round"/>
+  <ellipse cx="34" cy="186" rx="5" ry="3" fill="#FF9DCB" opacity=".7"/><ellipse cx="76" cy="186" rx="5" ry="3" fill="#FF9DCB" opacity=".7"/>
+  <path class="pa-spark" d="M150 26 l3 -8 3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 z M112 66 l2 -5 2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 z M190 70 l2 -5 2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 z" fill="#fff"/>`;
+
+// S-Kurve: Felder (0,0) (1,0) (1,1) (2,1) – Schwanz links oben, Kopf rechts unten
+const SNAKE = 'M12 50 H108 Q150 50 150 92 V108 Q150 150 192 150 H232';
+ART.schlange = `
+  <path d="M14 50 L-2 30 L6 50 L-2 70 Z" fill="#2FB39C" stroke="#1E6F62" stroke-width="3" stroke-linejoin="round"/>
+  <path d="${SNAKE}" fill="none" stroke="#1E6F62" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${SNAKE}" fill="none" stroke="#3FD0B4" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${SNAKE}" fill="none" stroke="#B7F5E6" stroke-width="16" stroke-linecap="round" stroke-dasharray="3 15" opacity=".95"/>
+  <path d="M60 24 l8 -12 8 12 M100 24 l8 -12 8 12 M178 124 l8 -12 8 12" fill="#FF9DCB" stroke="#E86FA8" stroke-width="2.5" stroke-linejoin="round"/>
+  <ellipse cx="256" cy="150" rx="42" ry="36" fill="#3FD0B4" stroke="#1E6F62" stroke-width="4"/>
+  <path d="M236 118 L230 100 L248 112 Z M264 114 L270 96 L278 116 Z" fill="#FFD54D" stroke="#C9971A" stroke-width="2.5" stroke-linejoin="round"/>
+  <ellipse cx="282" cy="160" rx="16" ry="12" fill="#B7F5E6"/>
+  <circle cx="286" cy="157" r="2.4" fill="#1E6F62"/>
+  <path class="pa-eye" d="M244 144 Q251 136 258 144 M262 144 Q269 136 276 144" fill="none" stroke="#163C36" stroke-width="3.6" stroke-linecap="round"/>
+  <path d="M262 168 Q270 175 278 168" fill="none" stroke="#163C36" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="240" cy="160" rx="7" ry="4" fill="#FF8CC6" opacity=".65"/>`;
+
+// L-Form: Felder (0,0) (1,0) (2,0) (2,1) – Kopf links, Schwanz unten rechts
+const RAUPE_SEG = [[96, 52], [142, 50], [188, 52], [232, 60], [252, 100], [252, 146]];
+ART.raupe = `
+  <g stroke="${PL}" stroke-width="3" stroke-linecap="round">
+    ${RAUPE_SEG.slice(0, 4).map(([x, y]) => `<path d="M${x - 8} ${y + 26} l-4 12 M${x + 8} ${y + 26} l4 12"/>`).join('')}
+  </g>
+  ${RAUPE_SEG.slice().reverse().map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i === 0 ? 26 : 31}" fill="${i % 2 ? '#8EE06A' : '#B6F07E'}" stroke="#4E9B35" stroke-width="3.5"/>`).join('')}
+  ${RAUPE_SEG.map(([x, y], i) => `<circle cx="${x - 6}" cy="${y - 10}" r="5" fill="${i % 2 ? '#FFB3D9' : '#FFE27A'}"/>`).join('')}
+  <path d="M30 22 Q20 4 8 6 M52 20 Q58 2 72 4" fill="none" stroke="${PL}" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="8" cy="6" r="6" fill="#FF6FB1"/><circle cx="72" cy="4" r="6" fill="#FF6FB1"/>
+  <circle cx="44" cy="54" r="38" fill="#B6F07E" stroke="#4E9B35" stroke-width="4"/>
+  <path class="pa-eye" d="M26 50 Q32 43 38 50 M50 50 Q56 43 62 50" fill="none" stroke="#2D4A1C" stroke-width="3.6" stroke-linecap="round"/>
+  <path d="M34 64 Q44 74 54 64" fill="none" stroke="#2D4A1C" stroke-width="3.2" stroke-linecap="round"/>
+  <ellipse cx="22" cy="64" rx="6" ry="4" fill="#FF8CC6" opacity=".7"/><ellipse cx="66" cy="64" rx="6" ry="4" fill="#FF8CC6" opacity=".7"/>`;
+
+const DIMS = { einhorn: [4, 1], wolke: [3, 1], katze: [3, 1], herz: [2, 1], stern: [2, 1], regenbogen: [3, 2], schlange: [3, 2], raupe: [3, 2] };
 
 export function pieceSVG(id) {
-  const w = LEN[id] * 100;
-  return `<svg class="pa pa-${id}" viewBox="0 -8 ${w} 108" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${ART[id]}</svg>`;
+  const [bw, bh] = DIMS[id] || [1, 1];
+  const w = bw * 100;
+  const vb = bh === 1 ? `0 -8 ${w} 108` : `0 0 ${w} ${bh * 100}`;
+  return `<svg class="pa pa-${id}" viewBox="${vb}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${ART[id]}</svg>`;
 }

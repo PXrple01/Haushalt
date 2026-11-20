@@ -43,23 +43,32 @@
 
 /* Figuren auf dem Meer */
 .sea-pieces { position: absolute; inset: 0; pointer-events: none; }
-.piece { position: absolute; left: calc(var(--x) * var(--cell)); top: calc(var(--y) * var(--cell)); width: calc(var(--len) * var(--cell)); height: var(--cell); padding: 2px; transition: left .3s var(--ease-spring), top .3s var(--ease-spring); }
-.piece.v { width: var(--cell); height: calc(var(--len) * var(--cell)); }
-.piece .pi-in { width: 100%; height: 100%; }
-.piece.v .pi-in { width: calc(var(--len) * var(--cell) - 4px); height: calc(var(--cell) - 4px); transform-origin: 0 0; transform: translateX(calc(var(--cell) - 4px)) rotate(90deg); }
+.piece { position: absolute; left: calc(var(--x) * var(--cell)); top: calc(var(--y) * var(--cell)); width: calc(var(--w) * var(--cell)); height: calc(var(--h) * var(--cell)); transition: left .3s var(--ease-spring), top .3s var(--ease-spring); }
+/* Grafik in Grundausrichtung, mittig gedreht/gespiegelt – so passt sie auf jede Lage (auch Bogen, S und L) */
+.piece .pi-in { position: absolute; left: 50%; top: 50%; width: calc(var(--bw) * var(--cell) - 4px); height: calc(var(--bh) * var(--cell) - 4px); transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scaleX(var(--flip, 1)); }
 .piece svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 2px rgba(30, 60, 100, .25)); }
 .sea.placing .piece { pointer-events: auto; cursor: grab; touch-action: none; }
 .piece.own { opacity: .96; }
 .sea.mine:not(.placing) .piece.own { opacity: .9; }
 .piece.sunk { z-index: 2; }
-.piece.sunk::after { content: ""; position: absolute; inset: 0; border-radius: 10px; box-shadow: inset 0 0 0 2px var(--sea-hit); opacity: .6; }
+.piece.sunk .pi-foot i { box-shadow: inset 0 0 0 2px var(--sea-hit); }
 .piece.ghosted { opacity: .45; filter: grayscale(.3); }
 .piece.ghost { position: fixed; z-index: 70; pointer-events: none; transition: none; opacity: .88; filter: drop-shadow(0 16px 18px rgba(30, 40, 80, .35)); transform: scale(1.08); }
-/* Liegeplatz: zeigt, welche Felder eine Figur belegt */
-.piece.own::before, .piece.sunk::before { content: ""; position: absolute; inset: 3px; border-radius: 12px; background: rgba(255, 255, 255, .5); border: 2px dashed rgba(255, 95, 168, .55); }
-:where([data-theme="lila"]) .piece.own::before, :where([data-theme="lila"]) .piece.sunk::before { background: rgba(71, 229, 255, .1); border-color: rgba(71, 229, 255, .5); border-radius: 6px; }
-.piece .pi-in { position: relative; }
-.sink-katze .pi-in { animation: kk-curl 1.6s ease-in-out 1 .4s; }
+/* Liegeplatz: jedes belegte Feld einzeln */
+.pi-foot { position: absolute; inset: 0; display: none; }
+.piece.own .pi-foot, .piece.sunk .pi-foot { display: block; }
+.pi-foot i { position: absolute; left: calc(var(--cx) * var(--cell) + 3px); top: calc(var(--cy) * var(--cell) + 3px); width: calc(var(--cell) - 6px); height: calc(var(--cell) - 6px); border-radius: 10px; background: rgba(255, 255, 255, .5); border: 2px dashed rgba(255, 95, 168, .55); }
+:where([data-theme="lila"]) .pi-foot i { background: rgba(71, 229, 255, .1); border-color: rgba(71, 229, 255, .5); border-radius: 5px; }
+.piece.ghost .pi-foot { display: block; }
+.piece.ghost .pi-foot i { background: rgba(255, 255, 255, .35); }
+.sink-katze svg { animation: kk-curl 1.6s ease-in-out 1 .4s; }
+.sink-regenbogen svg { animation: kk-shimmer 1.6s ease-in-out .2s; }
+.sink-regenbogen .pa-spark { animation: kk-twinkle 1s ease-in-out 3 .3s; transform-box: fill-box; transform-origin: center; }
+.sink-schlange svg { animation: kk-wiggle .45s ease-in-out 4 .2s; }
+.sink-raupe svg { animation: kk-crawl .5s ease-in-out 3 .2s; }
+@keyframes kk-shimmer { 30% { filter: brightness(1.35) saturate(1.3) drop-shadow(0 0 10px #FFE27A); transform: scale(1.06); } }
+@keyframes kk-wiggle { 25% { transform: translateY(-6%) rotate(-3deg); } 75% { transform: translateY(6%) rotate(3deg); } }
+@keyframes kk-crawl { 50% { transform: scaleX(.92) scaleY(1.06); } }
 .sink-wolke svg { animation: kk-greycloud 2.4s ease-out forwards .2s; }
 .sink-stern svg { animation: kk-zoomstar 1.1s cubic-bezier(.65, 0, .35, 1) .2s; }
 .sink-einhorn svg { animation: kk-gallop .5s ease-in-out 3 .2s; }
@@ -75,7 +84,9 @@
 .tray { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 64px; padding: 10px; border-radius: var(--r-l); background: var(--surface-2); }
 .tray-piece { --c: 34px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 8px; border-radius: 14px; background: var(--surface); cursor: grab; touch-action: none; transition: transform var(--dur-1); }
 .tray-piece:active { transform: scale(.96); }
-.tray-piece svg { width: calc(var(--len) * var(--c)); height: var(--c); }
+.tray-piece .tp-art { display: block; width: calc(var(--bw) * var(--c)); height: calc(var(--bh) * var(--c)); }
+.tray-piece.curvy { --c: 30px; }
+.tray-piece svg { width: 100%; height: 100%; display: block; }
 .tp-name { font-size: var(--fs-xs); font-weight: 800; color: var(--ink-soft); }
 .tray-done { align-self: center; font-weight: 800; color: var(--good); }
 .place-tools { gap: 10px; }
@@ -88,7 +99,7 @@
 .battle { --gap: 12px; }
 .fleet-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 8px 12px; border-radius: var(--r-m); background: var(--surface-2); }
 .fs-lab { width: 100%; text-align: center; font-size: var(--fs-xs); font-weight: 800; color: var(--ink-soft); }
-.fs svg { height: 26px; width: auto; transition: filter .4s, opacity .4s; }
+.fs svg { height: calc(var(--bh, 1) * 22px); width: auto; transition: filter .4s, opacity .4s; }
 .fs.gone svg { filter: grayscale(1); opacity: .35; }
 .fs.gone { position: relative; }
 .fs.gone::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 3px; border-radius: 2px; background: var(--bad); transform: rotate(-8deg); }
@@ -108,3 +119,9 @@
 .proj.big { width: 54px; height: 54px; font-size: 48px; }
 :root[data-theme="lila"] .proj { color: #FFD36E; filter: drop-shadow(0 0 10px #FFD36E); }
 :where([data-theme="lila"]) .sea::before { background: repeating-linear-gradient(165deg, transparent 0 22px, rgba(71, 229, 255, .06) 22px 24px); }
+
+/* Auswahl der Figuren (Einstellungen) */
+.fleet-art { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 3px 4px; min-height: 40px; margin-bottom: 4px; }
+.fleet-art .fa { display: block; width: calc(var(--bw) * 9px); height: calc(var(--bh) * 9px); }
+.fleet-art svg { width: 100%; height: 100%; display: block; }
+.ships-setup-cards .rcards { grid-template-columns: repeat(2, minmax(0, 1fr)); }

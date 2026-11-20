@@ -297,4 +297,26 @@ test('Escape: Zeit um → ohne Zeit weiter (1 Stern) / Aufgeben', () => {
   assert.equal(st.phase, 'end'); assert.ok(st.gaveUp); assert.equal(ES.starsOf(st), 0);
 });
 
+test('Herzchen versenken kurvig: Ausrichtungen, Zufallsflotte, Treffer und Sieg', () => {
+  assert.equal(SH.orientsOf('einhorn').length, 2);
+  assert.equal(SH.orientsOf('schlange').length, 4);
+  assert.equal(SH.orientsOf('raupe').length, 8);
+  assert.equal(SH.orientsOf('regenbogen').length, 4);
+  // alte Partien (dir) bleiben gültig
+  assert.deepEqual(SH.cellsOf({ id: 'einhorn', x: 1, y: 2, dir: 'v' }), [[1, 2], [1, 3], [1, 4], [1, 5]]);
+  // Bogen ∩ in Grundlage: Ecke unten Mitte bleibt frei
+  const bogen = SH.cellsOf({ id: 'regenbogen', x: 0, y: 0, o: 0 }).map((c) => c.join(','));
+  assert.ok(bogen.includes('0,1') && bogen.includes('2,1') && !bogen.includes('1,1'));
+  for (let i = 0; i < 200; i++) assert.ok(SH.validFleet(SH.randomFleet(Math.random, 'kurvig'), 'kurvig'));
+  assert.equal(SH.validFleet(SH.randomFleet(Math.random, 'kurvig'), 'klassisch'), false);
+  const m = meta('ships');
+  const fj = SH.randomFleet(Math.random, 'kurvig'), fh = SH.randomFleet(Math.random, 'kurvig');
+  const evs = [ev('jos', 'setup', { first: 'jos', fleet: 'kurvig' }), ev('jos', 'fleet', { p: 'jos', f: enc(JSON.stringify(fj), m.id) }), ev('jos', 'fleet', { p: 'joh', f: enc(JSON.stringify(fh), m.id) })];
+  let st = SH.reduce(m, evs);
+  assert.equal(st.phase, 'play'); assert.equal(st.fleetKind, 'kurvig');
+  for (const pc of fh) for (const [x, y] of SH.cellsOf(pc)) evs.push(ev('jos', 'shot', { x, y }));
+  st = SH.reduce(m, evs);
+  assert.equal(st.phase, 'end'); assert.equal(st.winner, 'jos'); assert.equal(st.sunk.jos.length, 5); assert.equal(st.hitsBy.jos, 19);
+});
+
 console.log(`\n${ok} Prüfungen bestanden.`);

@@ -1,7 +1,7 @@
 // Herzchen versenken – Oberfläche: Figuren ziehen/drehen, Schüsse im Bogen, Treffer, Spritzer, Versenkt-Animationen, Bombe.
 import { h, esc, centerOf } from '../../core/dom.js';
 import { icon } from '../../art/icons.js';
-import { me, on } from '../../core/store.js';
+import { me, on, get, set } from '../../core/store.js';
 import { nameOf, other, sleep } from '../../core/util.js';
 import { handoff, toast, announce } from '../../core/ui.js';
 import { motionOK, currentTheme } from '../../core/theme.js';
@@ -9,14 +9,15 @@ import { burst, ring, flash, stamp, shake, trail } from '../../core/fx.js';
 import { sfx, haptic } from '../../core/sound.js';
 import { nav } from '../../core/router.js';
 import { createSession, addEvent, getSession } from '../../core/sync.js';
-import { reduce, N, FLEET, pieceInfo, cellsOf, fits, randomFleet, bombCells } from './logic.js';
+import { reduce, N, FLEETS, fleetPieces, pieceInfo, orientsOf, orientOf, cellsOf, fits, randomFleet, bombCells } from './logic.js';
 import { enc } from '../secret.js';
 import { pieceSVG } from './art.js';
-import { shell, partnerNote, whoSeg, resolveWho, turnBanner, resultCard, finale, markCelebrated, waitCard } from '../common.js';
+import { shell, partnerNote, whoSeg, resolveWho, radioCards, turnBanner, resultCard, finale, markCelebrated, waitCard } from '../common.js';
 
 const RULES = [
-  'Jeder versteckt fünf Figuren in seinem Meer: Einhorn (4 Felder), Wolke (3), Katze (3), Herzchen (2) und Sternschnuppe (2).',
-  'Zum Platzieren ziehen, zum Drehen antippen – oder einfach „Zufällig“.',
+  'Jeder versteckt fünf Figuren in seinem Meer. Klassisch: Einhorn (4 Felder), Wolke (3), Katze (3), Herzchen (2) und Sternschnuppe (2).',
+  'Kurvig (kniffliger): Regenbogen als Bogen (5 Felder), Seeschlange in S-Form (4), Raupe in L-Form (4), Einhorn (4) und Herzchen (2). Nach dem ersten Treffer weißt du nicht, wohin die Figur weiterläuft!',
+  'Zum Platzieren ziehen, zum Drehen antippen (kurvige Figuren werden dabei auch gespiegelt) – oder einfach „Zufällig“.',
   'Abwechselnd schießt ihr aufs Meer des anderen. Bei einem Treffer darfst du nochmal.',
   'Einmal pro Spiel gibt es den Spezialschuss: Er trifft ein ganzes 3×3-Feld.',
   'Wer zuerst alle Figuren des anderen findet, gewinnt.',
@@ -25,6 +26,7 @@ const bombName = () => (currentTheme() === 'lila' ? 'Sternschnuppen-Bombe' : 'Ei
 const SUNK_LINE = {
   einhorn: 'Das Einhorn galoppiert davon!', wolke: 'Die Wolke regnet sich aus!', katze: 'Die Katze rollt sich ein – Zzz …',
   herz: 'Herzchen gefunden!', stern: 'Die Sternschnuppe saust davon!',
+  regenbogen: 'Regenbogen gefunden – du hast einen Wunsch frei!', schlange: 'Die Seeschlange taucht ab – blubb!', raupe: 'Aus der Raupe wird ein Schmetterling!',
 };
 
 // ======================================================================
@@ -32,18 +34,26 @@ export function setup(root) {
   const p = me.get();
   const { body, mode, cleanup } = shell({ root, game: 'ships', rules: RULES });
   let first = p;
+  let fleet = FLEETS[get('shipsFleet', 'kurvig')] ? get('shipsFleet', 'kurvig') : 'kurvig';
   body.innerHTML = `
     <div class="setup stack">
-      <div class="ships-hero" aria-hidden="true"><div class="sh-water"></div>${['einhorn', 'katze', 'herz'].map((id, i) => `<div class="sh-bob b${i}">${pieceSVG(id)}</div>`).join('')}</div>
+      <div class="ships-hero" aria-hidden="true"><div class="sh-water"></div>${['einhorn', 'schlange', 'herz'].map((id, i) => `<div class="sh-bob b${i}">${pieceSVG(id)}</div>`).join('')}</div>
       <p class="lead measure">Versteckt eure Figuren und findet die des anderen. Bei Treffer darfst du nochmal!</p>
+      <section class="setup-sec stack"><h2 class="setup-h">Welche Figuren?</h2><div data-slot="fleet" class="ships-setup-cards"></div></section>
       <section class="setup-sec stack"><h2 class="setup-h">Wer schießt zuerst?</h2><div data-slot="first"></div></section>
       ${partnerNote(mode)}
       <button class="btn primary big block" type="button" data-a="start">${icon('sparkle')}<span>Los geht’s</span></button>
     </div>`;
+  const fleetArt = (kind) => `<span class="fleet-art">${fleetPieces(kind).map((f) => `<span class="fa" style="--bw:${f.bw};--bh:${f.bh}">${pieceSVG(f.id)}</span>`).join('')}</span>`;
+  body.querySelector('[data-slot="fleet"]').append(radioCards({
+    label: 'Welche Figuren?', value: fleet,
+    options: Object.values(FLEETS).map((f) => ({ value: f.id, title: f.title, sub: f.sub, art: fleetArt(f.id) })),
+    onChange: (v) => { fleet = v; set('shipsFleet', v); },
+  }));
   body.querySelector('[data-slot="first"]').append(whoSeg({ label: 'Wer schießt zuerst?', value: first, random: true, onChange: (v) => { first = v; } }));
   body.querySelector('[data-a="start"]').addEventListener('click', () => {
     sfx.pop(); haptic(12);
-    const id = createSession('ships', mode, { first: resolveWho(first) });
+    const id = createSession('ships', mode, { first: resolveWho(first), fleet });
     nav('#/spiel/' + id, { replace: true });
   });
   return cleanup;
@@ -63,9 +73,12 @@ function makeSea(kind) {
 }
 function pieceEl(pc, cls = '') {
   const f = pieceInfo(pc.id);
-  const d = h('div', { class: `piece ${pc.dir} ${cls}`, dataset: { id: pc.id } });
-  d.style.setProperty('--x', pc.x); d.style.setProperty('--y', pc.y); d.style.setProperty('--len', f.len);
-  d.innerHTML = `<div class="pi-in">${pieceSVG(pc.id)}</div>`;
+  const o = orientOf(pc);
+  const d = h('div', { class: `piece ${cls}`, dataset: { id: pc.id } });
+  const vars = { '--x': pc.x, '--y': pc.y, '--w': o.w, '--h': o.h, '--bw': f.bw, '--bh': f.bh, '--rot': `${o.rot}deg`, '--flip': o.flip };
+  for (const [k, v] of Object.entries(vars)) d.style.setProperty(k, v);
+  // Liegeplatz: jedes belegte Feld einzeln (bei kurvigen Figuren bleiben die Ecken frei)
+  d.innerHTML = `<div class="pi-foot">${o.cells.map(([cx, cy]) => `<i style="--cx:${cx};--cy:${cy}"></i>`).join('')}</div><div class="pi-in">${pieceSVG(pc.id)}</div>`;
   return d;
 }
 
@@ -92,9 +105,8 @@ export function play(root, sid) {
     const placed = new Map();
     const box = h('div', { class: 'place stack' });
     box.innerHTML = `<div class="phase-head"><h2>${remote ? 'Versteck deine Figuren' : `${esc(nameOf(owner))}, versteck deine Figuren`}</h2>
-      <p class="soft">Ziehen zum Platzieren, antippen zum Drehen.</p></div>`;
+      <p class="soft">Ziehen zum Platzieren, antippen zum Drehen${st.fleetKind === 'kurvig' ? ' und Spiegeln' : ''}.</p></div>`;
     const sea = makeSea('mine placing');
-    seas.push(sea);
     const tray = h('div', { class: 'tray', 'aria-label': 'Figuren zum Platzieren' });
     const tools = h('div', { class: 'row place-tools' });
     tools.innerHTML = `<button class="btn grow" type="button" data-a="rand">${icon('dice')}<span>Zufällig</span></button><button class="btn quiet" type="button" data-a="clear">${icon('undo')}<span>Alle zurück</span></button>`;
@@ -102,8 +114,13 @@ export function play(root, sid) {
     done.innerHTML = `${icon('lock')}<span>Fertig!</span>`;
     box.append(sea, tray, tools, done);
     setBody(box);
+    seas.push(sea); // erst nach setBody merken – setBody räumt alte Meere (samt Größen-Beobachter) weg
+    sea.style.setProperty('--cell', `${sea.clientWidth / N}px`);
     const piecesLayer = sea.querySelector('.sea-pieces');
 
+    const kind = st.fleetKind;
+    const FL = fleetPieces(kind);
+    const list = () => [...placed.entries()].map(([id, v]) => ({ id, ...v }));
     function renderAll(animIds = []) {
       piecesLayer.replaceChildren(...[...placed.entries()].map(([id, v], i) => {
         const el = pieceEl({ id, ...v }, 'own');
@@ -113,40 +130,46 @@ export function play(root, sid) {
         el.addEventListener('pointerdown', (e) => startDrag(e, id, true));
         return el;
       }));
-      tray.replaceChildren(...FLEET.filter((f) => !placed.has(f.id)).map((f) => {
-        const t = h('div', { class: 'tray-piece', dataset: { id: f.id }, style: { '--len': f.len }, role: 'button', tabindex: '0', 'aria-label': `${f.name} (${f.len} Felder) platzieren` });
-        t.innerHTML = `${pieceSVG(f.id)}<span class="tp-name">${f.name} – ${f.len}</span>`;
+      tray.replaceChildren(...FL.filter((f) => !placed.has(f.id)).map((f) => {
+        const t = h('div', { class: `tray-piece${f.curvy ? ' curvy' : ''}`, dataset: { id: f.id }, style: { '--bw': f.bw, '--bh': f.bh }, role: 'button', tabindex: '0', 'aria-label': `${f.name} (${f.len} Felder) platzieren` });
+        t.innerHTML = `<span class="tp-art">${pieceSVG(f.id)}</span><span class="tp-name">${f.name} – ${f.len}</span>`;
         t.addEventListener('pointerdown', (e) => startDrag(e, f.id, false));
         t.addEventListener('keydown', (e) => {
           if (e.key !== 'Enter' && e.key !== ' ') return;
           e.preventDefault();
-          const all = [...placed.entries()].map(([id, v]) => ({ id, ...v }));
+          const all = list();
           for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-            const pc = { id: f.id, x, y, dir: 'h' };
-            if (fits(pc, all)) { placed.set(f.id, { x, y, dir: 'h' }); renderAll([f.id]); check(); return; }
+            const pc = { id: f.id, x, y, o: 0 };
+            if (fits(pc, all)) { placed.set(f.id, { x, y, o: 0 }); renderAll([f.id]); check(); return; }
           }
         });
         return t;
       }));
       if (!tray.children.length) tray.insertAdjacentHTML('beforeend', '<p class="tray-done">Alle Figuren sind versteckt!</p>');
     }
-    const check = () => { done.disabled = placed.size !== FLEET.length; };
+    const check = () => { done.disabled = placed.size !== FL.length; };
 
     // ---- Ziehen ----
     function startDrag(e, id, fromBoard) {
       if (e.button > 0) return;
       e.preventDefault();
-      const f = pieceInfo(id);
       const cell = sea.cellSize();
       const prev = fromBoard ? { ...placed.get(id) } : null;
-      let dir = prev ? prev.dir : 'h';
-      const srcRect = e.currentTarget.getBoundingClientRect();
-      let grab;
-      if (fromBoard) grab = dir === 'h' ? Math.floor((e.clientX - srcRect.left) / cell) : Math.floor((e.clientY - srcRect.top) / cell);
-      else grab = Math.min(f.len - 1, Math.floor(((e.clientX - srcRect.left) / srcRect.width) * f.len));
-      grab = Math.max(0, Math.min(f.len - 1, grab));
+      const o = prev ? prev.o : 0;
+      const ori = orientsOf(id)[o];
+      // Greifpunkt: welches Feld der Figur hält der Finger? (Ablage: anteilig über die Größe der Vorschau)
+      const src = fromBoard ? e.currentTarget : (e.currentTarget.querySelector('.tp-art') || e.currentTarget);
+      const srcRect = src.getBoundingClientRect();
+      const fx = Math.max(0, Math.min(.999, (e.clientX - srcRect.left) / srcRect.width));
+      const fy = Math.max(0, Math.min(.999, (e.clientY - srcRect.top) / srcRect.height));
+      let gx = Math.floor(fx * ori.w), gy = Math.floor(fy * ori.h);
+      // Liegt der Greifpunkt auf einem leeren Eckfeld, das nächste belegte Feld nehmen
+      if (!ori.cells.some(([cx, cy]) => cx === gx && cy === gy)) {
+        const near = ori.cells.slice().sort((a, b) => Math.hypot(a[0] - gx, a[1] - gy) - Math.hypot(b[0] - gx, b[1] - gy))[0];
+        [gx, gy] = near;
+      }
       if (fromBoard) { placed.delete(id); renderAll(); }
-      const ghost = pieceEl({ id, x: 0, y: 0, dir }, 'ghost');
+      const ghost = pieceEl({ id, x: 0, y: 0, o }, 'ghost');
       ghost.style.setProperty('--cell', `${cell}px`);
       document.body.append(ghost);
       const t0 = performance.now(), x0 = e.clientX, y0 = e.clientY;
@@ -157,14 +180,14 @@ export function play(root, sid) {
       };
       const move = (ev) => {
         if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > 6) moved = true;
-        const gx = ev.clientX - (dir === 'h' ? (grab + .5) * cell : .5 * cell);
-        const gy = ev.clientY - (dir === 'v' ? (grab + .5) * cell : .5 * cell);
-        ghost.style.left = gx + 'px'; ghost.style.top = gy + 'px';
+        const left = ev.clientX - (gx + .5) * cell;
+        const top = ev.clientY - (gy + .5) * cell;
+        ghost.style.left = left + 'px'; ghost.style.top = top + 'px';
         const r = sea.getBoundingClientRect();
-        const tx = Math.round((gx - r.left) / cell), ty = Math.round((gy - r.top) / cell);
-        const pc = { id, x: tx, y: ty, dir };
+        const tx = Math.round((left - r.left) / cell), ty = Math.round((top - r.top) / cell);
+        const pc = { id, x: tx, y: ty, o };
         const inside = ev.clientX > r.left - cell && ev.clientX < r.right + cell && ev.clientY > r.top - cell && ev.clientY < r.bottom + cell;
-        const all = [...placed.entries()].map(([pid, v]) => ({ id: pid, ...v }));
+        const all = list();
         if (inside) {
           const ok = fits(pc, all);
           target = ok ? pc : null;
@@ -177,18 +200,18 @@ export function play(root, sid) {
         window.removeEventListener('pointercancel', up);
         hl([], true);
         const tap = !moved && performance.now() - t0 < 350;
-        const all = [...placed.entries()].map(([pid, v]) => ({ id: pid, ...v }));
+        const all = list();
         if (tap && prev) {
-          // Antippen = drehen
-          const turned = { id, ...prev, dir: prev.dir === 'h' ? 'v' : 'h' };
+          // Antippen = nächste Ausrichtung (drehen, bei kurvigen Figuren auch spiegeln); notfalls etwas verschieben, damit sie aufs Meer passt
           ghost.remove();
-          if (fits(turned, all)) { placed.set(id, { x: turned.x, y: turned.y, dir: turned.dir }); sfx.flip(); haptic(8); renderAll(); spinIn(id); }
+          const turned = turn(id, prev, all);
+          if (turned) { placed.set(id, turned); sfx.flip(); haptic(8); renderAll(); spinIn(id); }
           else { placed.set(id, prev); renderAll(); shake(piecesLayer.querySelector(`.piece[data-id="${id}"]`), 6); sfx.bad(); toast('Hier ist kein Platz zum Drehen.', { key: 'game', icon: 'info' }); }
           check();
           return;
         }
         if (target) {
-          placed.set(id, { x: target.x, y: target.y, dir: target.dir });
+          placed.set(id, { x: target.x, y: target.y, o: target.o });
           ghost.remove();
           renderAll();
           const el = piecesLayer.querySelector(`.piece[data-id="${id}"]`);
@@ -209,6 +232,20 @@ export function play(root, sid) {
       window.addEventListener('pointercancel', up);
       move(e);
     }
+    // Nächste passende Ausrichtung suchen (gleiche Ecke, sonst leicht verschoben)
+    function turn(id, prev, all) {
+      const n = orientsOf(id).length;
+      for (let k = 1; k < n; k++) {
+        const o = (prev.o + k) % n;
+        const { w, h: hh } = orientsOf(id)[o];
+        const bx = Math.min(prev.x, N - w), by = Math.min(prev.y, N - hh);
+        for (const [dx, dy] of [[0, 0], [-1, 0], [0, -1], [1, 0], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]]) {
+          const pc = { id, x: bx + dx, y: by + dy, o };
+          if (fits(pc, all)) return { x: pc.x, y: pc.y, o };
+        }
+      }
+      return null;
+    }
     function spinIn(id) {
       const el = piecesLayer.querySelector(`.piece[data-id="${id}"] .pi-in`);
       if (el && motionOK()) el.animate([{ rotate: '-90deg', scale: '.8' }, { rotate: '0deg', scale: '1' }], { duration: 380, easing: 'cubic-bezier(.34,1.56,.64,1)' });
@@ -217,16 +254,16 @@ export function play(root, sid) {
     tools.addEventListener('click', (e) => {
       const a = e.target.closest('[data-a]')?.dataset.a;
       if (a === 'rand') {
-        const f = randomFleet();
+        const f = randomFleet(Math.random, kind);
         placed.clear();
-        f.forEach((pc) => placed.set(pc.id, { x: pc.x, y: pc.y, dir: pc.dir }));
+        f.forEach((pc) => placed.set(pc.id, { x: pc.x, y: pc.y, o: pc.o }));
         renderAll(f.map((x) => x.id));
         sfx.sparkle(); haptic(12); check();
       } else if (a === 'clear') { placed.clear(); renderAll(); check(); sfx.tap(); }
     });
     done.addEventListener('click', () => {
-      if (placed.size !== FLEET.length) return;
-      const fleet = [...placed.entries()].map(([id, v]) => ({ id, x: v.x, y: v.y, dir: v.dir }));
+      if (placed.size !== FL.length) return;
+      const fleet = [...placed.entries()].map(([id, v]) => ({ id, x: v.x, y: v.y, o: v.o }));
       sfx.pop(); haptic(14);
       addEvent(sid, 'fleet', { p: owner, f: enc(JSON.stringify(fleet), sid) });
     });
@@ -304,7 +341,7 @@ export function play(root, sid) {
     target.setAttribute('aria-label', `Meer von ${nameOf(foe)}`);
     if (el.mine) paintSea(el.mine, st.shots[foe], st.fleets[p], { own: true });
     // Figurenstatus des Gegners
-    el.status.innerHTML = `<span class="fs-lab">${esc(remote ? `Figuren von ${nameOf(foe)}` : `Figuren von ${nameOf(foe)}`)}</span>` + FLEET.map((f) => `<span class="fs${st.sunk[s].includes(f.id) ? ' gone' : ''}" title="${f.name}">${pieceSVG(f.id)}</span>`).join('');
+    el.status.innerHTML = `<span class="fs-lab">${esc(remote ? `Figuren von ${nameOf(foe)}` : `Figuren von ${nameOf(foe)}`)}</span>` + fleetPieces(st.fleetKind).map((f) => `<span class="fs${st.sunk[s].includes(f.id) ? ' gone' : ''}" title="${f.name}" style="--bh:${f.bh}">${pieceSVG(f.id)}</span>`).join('');
     const canBomb = !st.bombUsed[s] && myTurn;
     el.bomb.hidden = st.phase !== 'play';
     el.bomb.disabled = !canBomb;
@@ -407,6 +444,9 @@ export function play(root, sid) {
       else if (id === 'katze') { stamp('Zzz', c.x + 30, c.y - 30, { cls: lila ? 'manga' : '', ms: 1400, rot: -10 }); burst(c.x, c.y, { count: 16, shapes: ['star', 'sparkle'], speed: [80, 220] }); }
       else if (id === 'herz') { burst(c.x, c.y, { count: 28, shapes: ['heart'], colors: ['#FF5FA8', '#B79CFF', '#fff'], speed: [180, 420] }); }
       else if (id === 'stern') { for (let i = 0; i < 18; i++) setTimeout(() => trail(c.x + i * 18, c.y - i * 14, { count: 3, shapes: ['star', 'sparkle'], colors: ['#FFE27A', '#fff', '#FFB3D9'], glow: true }), i * 30); }
+      else if (id === 'regenbogen') { burst(c.x, c.y, { count: 46, colors: ['#FF6B8B', '#FFA45C', '#FFD54D', '#7BE08F', '#5CC8FF', '#9B7BFF'], speed: [200, 520], shapes: ['star', 'sparkle', 'heart'], emoji: ['🌈', '✨'], emojiRate: .12 }); ring(c.x, c.y, { color: '#FFD54D', r1: 230, width: 10 }); ring(c.x, c.y, { color: '#5CC8FF', r1: 170, width: 7 }); }
+      else if (id === 'schlange') { for (let i = 0; i < 22; i++) setTimeout(() => burst(c.x + (Math.random() - .5) * pel.offsetWidth * .7, c.y + (Math.random() - .5) * pel.offsetHeight * .5, { count: 1, angle: -Math.PI / 2, spread: .25, speed: [90, 180], gravity: -120, colors: ['#BFE8FF', '#fff', '#3FD0B4'], shapes: ['circle'], twinkle: false, size: [5, 11] }), i * 40); stamp('Blubb!', c.x + 20, c.y - 20, { cls: lila ? 'manga' : '', ms: 1100, rot: 8 }); }
+      else if (id === 'raupe') { burst(c.x, c.y, { count: 18, emoji: ['🦋'], emojiRate: .5, speed: [160, 380], shapes: ['heart', 'sparkle'], colors: ['#B6F07E', '#FFB3D9', '#FFE27A'] }); }
     }
     stamp(`${pieceInfo(id).name} versenkt!`, c.x, c.y - 40, { cls: lila ? 'manga' : '', ms: 1200, rot: -6 });
     toast(SUNK_LINE[id], { key: 'game', icon: 'sparkle' });
@@ -424,7 +464,7 @@ export function play(root, sid) {
       sad: remote && w !== p,
       lines: st.aborted ? [`${esc(nameOf(st.abortBy))} hat die Partie beendet.`] : [`${esc(nameOf(w))} hat alle Figuren gefunden – mit ${st.shots[w].length} Schüssen.`],
       rematchLabel: 'Nochmal spielen',
-      onRematch: () => { const id = createSession('ships', mode, { first: other(st.first) }); nav('#/spiel/' + id, { replace: true }); },
+      onRematch: () => { const id = createSession('ships', mode, { first: other(st.first), fleet: st.fleetKind }); nav('#/spiel/' + id, { replace: true }); },
     });
     el.box.append(card);
   }
