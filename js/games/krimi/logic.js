@@ -6,6 +6,7 @@
 // Der Spielstand enthält einen „feed“: ein Eintrag pro Handlung bzw. Ereignis der Nacht (für Animationen und Hinweise).
 import { nameOf, other } from '../../core/util.js';
 import { CASE } from './fall.js';
+import * as P2 from './puppe/logic.js';
 
 export { CASE };
 const C = CASE;
@@ -132,8 +133,13 @@ export function nextHint(st) {
   return C.hints.find((h) => !st.hints.some((x) => x.id === h.id) && test(h.w, st)) || null;
 }
 
-// ---------- Spielstand berechnen ----------
+// ---------- Spielstand berechnen (Fall 2 hat eine eigene Logik) ----------
 export function reduce(meta, evs) {
+  const s0 = evs.find((e) => e.ty === 'setup');
+  if (s0?.d?.case === 'puppe') return P2.reduce(meta, evs);
+  return reduce1(meta, evs);
+}
+function reduce1(meta, evs) {
   const st = {
     game: 'krimi', id: meta.id, mode: meta.mode, phase: 'setup', caseId: C.id,
     diff: 'normal', roles: { spuren: 'jos', verhoer: 'joh' },
@@ -513,12 +519,14 @@ export function scoreOf(st) {
 
 // ---------- für Lobby und Hinweise ----------
 export function todo(st, p) {
+  if (st.caseId === 'puppe') return P2.todo(st, p);
   if (st.phase === 'intro') return st.ready[p] ? null : 'Ermittlung beginnen';
   if (st.phase === 'play') return 'Weiterermitteln';
   if (st.phase === 'accuse') return st.sign[p] === st.formV && st.formV ? null : 'Anklage unterschreiben';
   return null;
 }
 export function label(st) {
+  if (st.caseId === 'puppe') return P2.label(st);
   if (st.phase === 'setup') return 'Wird vorbereitet';
   if (st.phase === 'intro') return `${C.short} – gleich geht’s los`;
   if (st.phase === 'play') return `${C.short} – ${fmtClock(st.clock)} Uhr`;
@@ -527,6 +535,7 @@ export function label(st) {
   return st.result?.culprit ? `Gelöst: ${st.result.rank.title}` : 'Falscher Täter';
 }
 export function endLine(st) {
+  if (st.caseId === 'puppe') return P2.endLine(st);
   if (st.aborted) return 'Die Ermittlung wurde beendet.';
   return st.result?.culprit ? `Fall gelöst – ${st.result.rank.title}!` : 'Ihr habt die falsche Person angeklagt …';
 }

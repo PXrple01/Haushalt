@@ -78,9 +78,9 @@ export function mount(root) {
     </button>
     <button class="toy krimi" type="button" data-game="krimi" style="--i:3">
       <span class="t-text">
-        <span class="t-badge">Neu – ein Fall für zwei Handys</span>
+        <span class="t-badge">Neu – zwei Fälle für zwei Handys</span>
         <span class="t-title">${GAMES.krimi.title}</span>
-        <span class="t-sub">Blutnacht im Hotel Edelweiß. Lang, schwer, ab 16.</span>
+        <span class="t-sub">»Blutnacht im Hotel Edelweiß« und »Seid ihr alle da?«. Schwer, blutig, ab 16.</span>
       </span>
       <svg class="t-art lens" viewBox="0 0 120 130" aria-hidden="true">
         <g class="k-drops"><circle cx="30" cy="102" r="7"/><circle cx="46" cy="114" r="3.4"/><circle cx="18" cy="118" r="2.6"/><circle cx="58" cy="100" r="2"/></g>

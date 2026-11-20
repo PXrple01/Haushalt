@@ -18,6 +18,10 @@ import {
 } from './logic.js';
 import { portrait, clueIcon, kIcon, planSVG, fingerprint, splat, hotelScene, watchArt, roomCenter } from './art.js';
 import { openCipher, openSafe, openRub, openFp, openChess } from './tools.js';
+import { play2, TITLE as P2TITLE, TAG as P2TAG, DIFFS as P2DIFFS } from './puppe/view.js';
+import { theaterScene } from './puppe/art.js';
+
+const PUPPE = { TITLE: P2TITLE, TAG: P2TAG, DIFFS: P2DIFFS };
 
 const C = CASE;
 const RECKEY = 'krimiRecords';
@@ -74,37 +78,81 @@ export function setup(root) {
   const { el, body, cleanup } = shell({ root, game: 'krimi', rules: C.rules, mode: 'remote' });
   el.classList.add('kr-setup-screen');
   if (prefs.get('code') && prefs.get('mode') !== 'remote') prefs.set('mode', 'remote');
+  let cas = get('krimiCase', 'edelweiss') === 'puppe' ? 'puppe' : 'edelweiss';
   let diff = 'normal';
-  let spuren = me.get();
-  const rec = (get(RECKEY, {}) || {})[C.id];
+  let who = me.get();
+  const recs = get(RECKEY, {}) || {};
+  const CASES = {
+    edelweiss: { art: () => hotelScene({ seed: 'setup' }), tag: `${C.tag} · ${C.date}`, title: C.title, time: '1–2 Stunden', kind: 'Ermittlung',
+      blurb: 'Ein eingeschneites Berghotel. Ein Toter im Weinkeller, die Kehle durchtrennt. Acht Verdächtige, sieben Stunden bis zum Morgengrauen – und jeder von euch sieht andere Spuren.' },
+    puppe: { art: () => theaterScene({ seed: 'setup' }), tag: PUPPE.TAG, title: PUPPE.TITLE, time: '45–60 Minuten', kind: 'Escape-Krimi',
+      blurb: 'Krampusnacht in Wien. Ihr wacht getrennt in einem ausgebrannten Puppentheater auf. Ein Kasperl fragt »Seid ihr alle da?« – und dann beginnt sein Stück. Fallen, Rätsel, Blut und eine Wahrheit, die schlimmer ist als jede Falle.' },
+  };
+  const FEATS = {
+    edelweiss: [
+      ['clock', 'Eine lange Nacht', 'Eure gemeinsame Uhr läuft von 23 bis 6 Uhr. Jede Handlung kostet Zeit.'],
+      ['folder', 'Getrennte Akten', 'Was du findest, sieht nur dein Handy. Redet miteinander!'],
+      ['board', 'Eine Ermittlungstafel', 'Begrenzte Nadeln, rote Fäden – und plötzliche Erkenntnisse.'],
+      ['gavel', 'Gemeinsame Anklage', '13 Fragen. Eingereicht wird erst, wenn ihr beide unterschreibt.'],
+    ],
+    puppe: [
+      ['people', 'Fünf neue Zwei-Handy-Rätsel', 'Lebende Marionette, Blutspur, Blindekuh auf der Drehbühne, Schattentheater, Drehorgel gegen das Krokodil.'],
+      ['drops', 'Blut statt Leben', 'Fehler kosten Blut. Wer wenig hat, sieht verschwommen. Ihr könnt euch Blut spenden.'],
+      ['thread', 'Entscheidungen über Leben und Tod', 'Schneidet ihr den Faden durch – oder haltet ihr ihn mit euren Händen fest?'],
+      ['gavel', 'Tribunal und mehrere Enden', 'Wer hat das Feuer gelegt? Die Antwort entscheidet, wie das Stück endet.'],
+    ],
+  };
+  const recLine = (id) => {
+    const r = recs[id];
+    if (!r) return '';
+    return id === 'puppe' ? `${'★'.repeat(r.stars || 0) || '–'} · ${esc(r.ending || '')}` : `${esc(r.rank)} · ${r.total} Punkte`;
+  };
   body.innerHTML = `
     <div class="kr-setup stack">
-      <article class="kr-case">
-        <div class="kr-case-art">${hotelScene({ seed: 'setup' })}<div class="kr-case-shade"></div>
-          <span class="kr-warn">Blutig · ab 16</span>
-          <div class="kr-case-text"><span class="kr-tag">${esc(C.tag)} · ${esc(C.date)}</span><h2 class="kr-title">${letters(C.title)}</h2></div>
-        </div>
-        <p class="kr-case-blurb">Ein eingeschneites Berghotel. Ein Toter im Weinkeller, die Kehle durchtrennt. Acht Verdächtige, sieben Stunden bis zum Morgengrauen – und jeder von euch sieht andere Spuren.</p>
-        <ul class="kr-feats">
-          <li style="--i:0">${clueIcon('clock')}<span><b>Eine lange Nacht</b>Eure gemeinsame Uhr läuft von 23 bis 6 Uhr. Jede Handlung kostet Zeit. Echte Spielzeit: 1 bis 2 Stunden.</span></li>
-          <li style="--i:1">${clueIcon('folder')}<span><b>Getrennte Akten</b>Was du findest, sieht nur dein Handy. Redet miteinander!</span></li>
-          <li style="--i:2">${clueIcon('board')}<span><b>Eine Ermittlungstafel</b>Begrenzte Nadeln, rote Fäden – und plötzliche Erkenntnisse.</span></li>
-          <li style="--i:3">${clueIcon('gavel')}<span><b>Gemeinsame Anklage</b>13 Fragen. Eingereicht wird erst, wenn ihr beide unterschreibt.</span></li>
-        </ul>
-        ${rec ? `<p class="kr-rec">${clueIcon('sign2')}<span>Euer bester Abschluss: <b>${esc(rec.rank)}</b> · ${rec.total} Punkte</span></p>` : ''}
-      </article>
-      <section class="stack kr-sec"><h3 class="setup-h">Schwierigkeit</h3><div data-slot="diff"></div></section>
-      <section class="stack kr-sec"><h3 class="setup-h">Wer übernimmt die Spurensicherung?</h3><div data-slot="role"></div>
-        <p class="hint">Die Spurensicherung durchsucht schneller, der andere verhört schneller. Machen könnt ihr beide alles.</p></section>
+      <h2 class="kr-pickh">${letters('Wählt euren Fall')}</h2>
+      <div class="kr-cases" role="radiogroup" aria-label="Fall">${['edelweiss', 'puppe'].map((id, i) => `
+        <button class="kr-case kr-casebtn${id === 'puppe' ? ' k2-casecard' : ''}" type="button" role="radio" data-case="${id}" style="--i:${i}">
+          <span class="kr-case-art">${CASES[id].art()}<span class="kr-case-shade"></span>
+            <span class="kr-warn">Blutig · ab 16</span>
+            <span class="kr-case-text"><span class="kr-tag">${esc(CASES[id].tag)}</span><span class="kr-title">${letters(CASES[id].title)}</span></span></span>
+          <span class="kr-case-meta"><b>${esc(CASES[id].kind)}</b><i>${esc(CASES[id].time)}</i>${recs[id] ? `<em>${recLine(id)}</em>` : ''}</span>
+        </button>`).join('')}</div>
+      <div data-slot="detail"></div>
       <div data-slot="link"></div>
       <button class="btn primary big block kr-start" type="button">${clueIcon('search')}<span>Ermittlung beginnen</span></button>
     </div>`;
-  body.querySelector('[data-slot="diff"]').append(radioCards({
-    label: 'Schwierigkeit', value: diff,
-    options: Object.values(C.diffs).map((d) => ({ value: d.id, title: d.title, sub: d.sub })),
-    onChange: (v) => { diff = v; },
-  }));
-  body.querySelector('[data-slot="role"]').append(whoSeg({ label: 'Spurensicherung', value: spuren, random: true, onChange: (v) => { spuren = v; } }));
+  const detail = body.querySelector('[data-slot="detail"]');
+  const renderDetail = () => {
+    body.querySelectorAll('.kr-casebtn').forEach((b) => { b.setAttribute('aria-checked', String(b.dataset.case === cas)); b.classList.toggle('on', b.dataset.case === cas); });
+    const c = CASES[cas];
+    diff = 'normal';
+    detail.innerHTML = `
+      <article class="kr-case kr-case-detail">
+        <p class="kr-case-blurb">${esc(c.blurb)}</p>
+        <ul class="kr-feats">${FEATS[cas].map(([ic, t, x], i) => `<li style="--i:${i}">${clueIcon(ic)}<span><b>${esc(t)}</b>${esc(x)}</span></li>`).join('')}</ul>
+      </article>
+      <section class="stack kr-sec"><h3 class="setup-h">Schwierigkeit</h3><div data-slot="diff"></div></section>
+      <section class="stack kr-sec"><h3 class="setup-h">${cas === 'puppe' ? 'Wer wacht in den Fäden auf?' : 'Wer übernimmt die Spurensicherung?'}</h3><div data-slot="role"></div>
+        <p class="hint">${cas === 'puppe' ? 'Diese Person hängt in der ersten Szene als Marionette – und ist danach öfter in Gefahr. Die Rollen wechseln jede Szene.' : 'Die Spurensicherung durchsucht schneller, der andere verhört schneller. Machen könnt ihr beide alles.'}</p></section>`;
+    const D = cas === 'puppe' ? PUPPE.DIFFS : C.diffs;
+    detail.querySelector('[data-slot="diff"]').append(radioCards({
+      label: 'Schwierigkeit', value: diff,
+      options: Object.values(D).map((d) => ({ value: d.id, title: d.title, sub: d.sub })),
+      onChange: (v) => { diff = v; },
+    }));
+    detail.querySelector('[data-slot="role"]').append(whoSeg({ label: cas === 'puppe' ? 'Marionette' : 'Spurensicherung', value: who, random: true, onChange: (v) => { who = v; } }));
+    body.querySelector('.kr-start span').textContent = cas === 'puppe' ? 'Das Stück beginnt' : 'Ermittlung beginnen';
+    if (motionOK()) detail.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.22,1,.36,1)' });
+  };
+  body.querySelector('.kr-cases').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-case]');
+    if (!b || b.dataset.case === cas) return;
+    cas = b.dataset.case;
+    set('krimiCase', cas);
+    sfx.pop(); haptic(10);
+    renderDetail();
+  });
+  renderDetail();
   const linkEl = body.querySelector('[data-slot="link"]');
   const renderLink = codeLink(linkEl);
   const offNet = on('net', () => { if (prefs.get('code')) renderLink(); });
@@ -116,7 +164,9 @@ export function setup(root) {
     }
     if (prefs.get('mode') !== 'remote') prefs.set('mode', 'remote');
     sfx.thunder(); haptic([20, 40, 60]);
-    const id = createSession('krimi', 'remote', { diff, spuren: resolveWho(spuren) });
+    const id = cas === 'puppe'
+      ? createSession('krimi', 'remote', { case: 'puppe', diff, first: resolveWho(who), seed: Math.random().toString(36).slice(2, 10) })
+      : createSession('krimi', 'remote', { diff, spuren: resolveWho(who) });
     nav('#/spiel/' + id, { replace: true });
   });
   return () => { cleanup(); offNet(); };
@@ -126,6 +176,8 @@ export function setup(root) {
 // Spiel
 // =====================================================================
 export function play(root, sid) {
+  const s0 = getSession(sid)?.evs.find((e) => e.ty === 'setup');
+  if (s0?.d?.case === 'puppe') return play2(root, sid);
   const p = me.get();
   const q = other(p);
   const { el, body, cleanup: shellOff } = shell({ root, game: 'krimi', sid, rules: C.rules });

@@ -17,6 +17,12 @@ const LOOK = {
   sophie: { skin: '#f1d1bc', cloth: '#c9952c', hair: '#e4c57d', bg: '#2a2833' },
   emil: { skin: '#d7af95', cloth: '#23412f', hair: '#7b6a5b', bg: '#2a3029' },
   konrad: { skin: '#cdb8ab', cloth: '#1d2027', hair: '#9b9893', bg: '#2a1414' },
+  brandl: { skin: '#e2b49a', cloth: '#2b2f3a', hair: '#d9d6d0', bg: '#2a2418' },
+  haslinger: { skin: '#d9b39a', cloth: '#3d4a3a', hair: '#8f8f8f', bg: '#20262a' },
+  gerda: { skin: '#ecc8b0', cloth: '#6b3a5a', hair: '#b9a07a', bg: '#2a1e26' },
+  tobias: { skin: '#d6b09a', cloth: '#16181c', hair: '#2a1d16', bg: '#1a1416' },
+  anton: { skin: '#d8b49b', cloth: '#3a2f26', hair: '#4a3a2c', bg: '#2a221a' },
+  marianne: { skin: '#f0cdb6', cloth: '#7a2a2a', hair: '#5a3a24', bg: '#2a1c1a' },
 };
 
 function face(L, o = {}) {
@@ -97,6 +103,46 @@ const PARTS = {
     <path d="M32 54c-2-8 1-13 4-15 1 6 0 10-1 15zM68 54c2-8-1-13-4-15-1 6 0 10 1 15z" fill="${L.hair}"/>
     <path d="M36 36c4-6 24-6 28 0" stroke="${L.hair}" stroke-width="1.4" fill="none" opacity=".6"/>
     <path d="M42.5 64.5c3-2.4 12-2.4 15 0-2 1.5-5 1.6-7.5.4-2.5 1.2-5.5 1.1-7.5-.4z" fill="#5d4c3f"/>`,
+  brandl: (L) => `
+    <path d="${SHOULDERS}" fill="${L.cloth}"/>
+    <path d="M40 88l10 12 10-12" fill="#f1f1f1"/><path d="M47 92h6l1 22h-8z" fill="#8a6a1a"/>
+    ${face(L, { mouth: 'M44 70q6-2 12 0', lip: '#7a3b33', rx: 19.5, ry: 23 })}
+    <path d="M34 66q16 20 32 0q-2 14-16 16q-14-2-16-16z" fill="#000" opacity=".12"/>
+    <path d="M33 48c-1-6 1-10 3-12M67 48c1-6-1-10-3-12" stroke="${L.hair}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M38 98q12 8 24 0" stroke="#d8b04a" stroke-width="2" fill="none"/>
+    <rect x="30" y="56" width="6" height="2" rx="1" fill="#000" opacity=".2"/>
+    <path d="M41 50h6M53 50h6" stroke="#3a2a22" stroke-width="2"/>
+    <path d="M20 112l10-6M80 106l10 6" stroke="#666" stroke-width="3"/>`,
+  haslinger: (L) => `
+    <path d="${SHOULDERS}" fill="${L.cloth}"/>
+    <path d="M40 88l10 10 10-10" fill="#dcdcd0"/><path d="M28 98h12M60 98h12" stroke="#c9a24d" stroke-width="2"/>
+    ${face(L, { mouth: 'M45 70q5-1.5 10 0', lip: '#7a3b33' })}
+    <path d="M33 44c2-12 10-16 17-16s15 4 17 16c-4-6-10-8-17-8s-13 2-17 8z" fill="${L.hair}"/>
+    <g fill="none" stroke="#2a2a2a" stroke-width="1.6"><rect x="37" y="49" width="12" height="9" rx="2"/><rect x="51" y="49" width="12" height="9" rx="2"/><path d="M49 53h2"/></g>
+    <path d="M62 60l6 6M64 58l7 3" stroke="#8a0f14" stroke-width="1.6"/>`,
+  gerda: (L) => `
+    <path d="${SHOULDERS}" fill="${L.cloth}"/>
+    <path d="M38 90q12 10 24 0" stroke="#f4f1ea" stroke-width="3" fill="none"/>
+    ${face(L, { mouth: 'M45 69q5 1 10 0', lip: '#a3504a' })}
+    <g fill="${L.hair}"><circle cx="36" cy="40" r="9"/><circle cx="46" cy="33" r="9"/><circle cx="56" cy="33" r="9"/><circle cx="65" cy="40" r="9"/><circle cx="31" cy="52" r="6"/><circle cx="69" cy="52" r="6"/></g>
+    <circle cx="33" cy="62" r="2" fill="#f4f1ea"/><circle cx="67" cy="62" r="2" fill="#f4f1ea"/>`,
+  tobias: (L) => `
+    <path d="${SHOULDERS}" fill="${L.cloth}"/>
+    <path d="M36 88q14 12 28 0l4 8q-18 14-36 0z" fill="#2a2d33"/><path d="M44 96v18M56 96v18" stroke="#9aa3ab" stroke-width="1.4"/>
+    ${face(L, { mouth: 'M45 70h10', lip: '#6e3a32', eyes: 1.1 })}
+    <path d="M38 58q5 3 10 0M52 58q5 3 10 0" stroke="#5a3a4a" stroke-width="1.4" fill="none" opacity=".7"/>
+    <g fill="#000" opacity=".22"><path d="M36 62c3 12 9 16 14 16s11-4 14-16c-2 9-7 13-14 13s-12-4-14-13z"/></g>
+    <path d="M32 50c-2-16 6-24 18-24s20 6 18 20c-6-8-12-10-18-8-6-4-14-2-18 12z" fill="${L.hair}"/>`,
+  anton: (L) => `
+    <path d="${SHOULDERS}" fill="${L.cloth}"/>
+    ${face(L, { mouth: 'M45 70q5 1.5 10 0', lip: '#6e3a32' })}
+    <path d="M36 62q14 26 28 0q0 18-14 20q-14-2-14-20z" fill="${L.hair}"/>
+    <ellipse cx="50" cy="30" rx="22" ry="8" fill="#2a2420"/><circle cx="50" cy="22" r="2.6" fill="#2a2420"/>`,
+  marianne: (L) => `
+    <path d="${SHOULDERS}" fill="${L.cloth}"/>
+    ${face(L, { mouth: 'M45 69q5 2 10 0', lip: '#a3504a' })}
+    <path d="M32 54c-2-18 6-26 18-26s20 8 18 26c-3-8-9-14-18-14s-15 6-18 14z" fill="${L.hair}"/>
+    <path d="M66 50q8 18 2 40" stroke="${L.hair}" stroke-width="8" stroke-linecap="round" fill="none"/>`,
   konrad: (L) => `
     <path d="${SHOULDERS}" fill="${L.cloth}"/>
     <path d="M40 88l10 12 10-12" fill="#ddd"/><path d="M48 92h4l1.5 26h-7z" fill="#5a1a1a"/>

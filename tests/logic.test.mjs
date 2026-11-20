@@ -456,4 +456,96 @@ test('Krimi: Anklage nur gemeinsam, Wertung und Ränge', () => {
   assert.equal(KR.label(st), 'Falscher Täter');
 });
 
+// ---------------- Krimi Fall 2: „Seid ihr alle da?“ ----------------
+import { PUZ as P2PUZ } from '../js/games/krimi/puppe/puzzles.js';
+import { SCENES as P2SCENES, whoHas as p2who } from '../js/games/krimi/puppe/logic.js';
+function puppe(steps, o = {}) {
+  const m = meta('krimi', 'remote');
+  const evs = [ev('jos', 'setup', { case: 'puppe', diff: o.diff || 'normal', first: 'jos', seed: o.seed || 'testseed' }), ev('jos', 'ready'), ev('joh', 'ready')];
+  for (const s of steps) evs.push(ev(...s));
+  return KR.reduce(m, evs);
+}
+function puppeRun(choices = {}) {
+  const m = meta('krimi', 'remote');
+  const evs = [ev('jos', 'setup', { case: 'puppe', diff: choices.diff || 'normal', first: 'jos', seed: choices.seed || 's1' }), ev('jos', 'ready'), ev('joh', 'ready')];
+  let st = KR.reduce(m, evs);
+  for (let g = 0; g < 90 && st.phase === 'play'; g++) {
+    const sc = P2SCENES[st.scene];
+    if (sc.kind === 'puzzle' && st.sub === 'play') for (const x of P2PUZ[sc.id].auto(st.specs[st.scene])) evs.push(ev(p2who(st, x.role), 'act', { s: st.scene, ...x.d }));
+    else if (sc.kind === 'puzzle' || sc.kind === 'reveal' || (sc.kind === 'faden' && st.sub === 'done')) evs.push(ev('jos', 'next', { s: st.scene }), ev('joh', 'next', { s: st.scene }));
+    else if (sc.kind === 'faden') { const v = choices[sc.guest] || 'hold'; evs.push(ev('jos', 'vote', { s: st.scene, v }), ev('joh', 'vote', { s: st.scene, v })); }
+    else if (sc.kind === 'tribunal') { const v = ['brandl', 'haslinger', 'gerda', choices.feuer || 'tobias'][st.trib.q]; evs.push(ev('jos', 'pick', { q: st.trib.q, v }), ev('joh', 'pick', { q: st.trib.q, v })); }
+    else if (sc.kind === 'finale') {
+      const f = st.fin.step;
+      if (f === 'twist' || f === 'read') evs.push(ev('jos', 'next', { s: st.scene }), ev('joh', 'next', { s: st.scene }));
+      else if (f === 'seam') evs.push(ev('joh', 'seam'));
+      else if (f === 'letter') evs.push(ev('jos', 'vote', { s: st.scene, v: choices.letter || 'lesen' }), ev('joh', 'vote', { s: st.scene, v: choices.letter || 'lesen' }));
+      else if (f === 'pull') evs.push(ev('jos', 'hold', { on: true }), ev('joh', 'hold', { on: true }), ev('jos', 'pullok'));
+    }
+    st = KR.reduce(m, evs);
+  }
+  return st;
+}
+test('Krimi 2: alle Rätsel sind für viele Seeds lösbar', () => {
+  for (let i = 0; i < 120; i++) for (const diff of ['normal', 'hart']) {
+    const r = (id) => makeRng(`${diff}:${id}:${i}`);
+    const dre = P2PUZ.drehbuehne.gen(r('d'), diff);
+    assert.ok(dre.holes.length > 5 && P2PUZ.drehbuehne.solve(dre, P2PUZ.drehbuehne.init(dre)), 'Drehbühne lösbar ' + i);
+    const bl = P2PUZ.blutspur.gen(r('b'), diff);
+    assert.ok(bl.drops.length >= 4 && !P2PUZ.blutspur.isMark(bl, bl.origin), 'Blutspur ' + i);
+    const ma = P2PUZ.marionette.gen(r('m'), diff);
+    assert.ok(ma.danger.every((x) => ma.target[x.li] !== x.lv && x.lv > 0), 'Marionette ' + i);
+    const sc = P2PUZ.schatten.gen(r('s'), diff);
+    const solved = P2PUZ.schatten.lines(sc, { rot: sc.want });
+    assert.equal(solved.length, sc.base.flat().length);
+    assert.ok(sc.want.some((w) => w), 'Schatten nicht schon gelöst');
+  }
+});
+test('Krimi 2: Fallen kosten Blut, Uhr pausiert zwischen den Szenen', () => {
+  let st = puppe([]);
+  assert.equal(st.caseId, 'puppe');
+  assert.equal(st.phase, 'play');
+  const sp = st.specs[0];
+  const bad = sp.danger[0];
+  const c = sp.map.indexOf(['lh', 'rh', 'lf', 'rf'][bad.li]);
+  st = puppe([['joh', 'act', { s: 0, k: 'set', c, v: bad.lv }]]);
+  assert.equal(st.blood.jos, 4.5, 'Sichel trifft die Marionette');
+  st = puppe([['jos', 'act', { s: 0, k: 'set', c, v: bad.lv }]]);
+  assert.equal(st.blood.jos, 5, 'nur die Rolle am Spielkreuz darf Fäden ziehen');
+  const steps = P2PUZ.marionette.auto(sp).map((x) => [x.role === 'puppe' ? 'jos' : 'joh', 'act', { s: 0, ...x.d }]);
+  st = puppe(steps);
+  assert.equal(st.sub, 'done');
+  assert.ok(!st.runT, 'Uhr steht nach dem Lösen');
+  assert.ok(st.docs.jos.includes('theaterzettel') && st.docs.joh.includes('zeitung'));
+  st = puppe([...steps, ['jos', 'next', { s: 0 }]]);
+  assert.equal(st.scene, 0, 'beide müssen weiter drücken');
+  st = puppe([...steps, ['jos', 'next', { s: 0 }], ['joh', 'next', { s: 0 }]]);
+  assert.equal(st.scene, 1);
+  assert.ok(st.runT, 'Uhr läuft im nächsten Rätsel');
+  st = puppe([...steps, ['jos', 'hint', { s: 0, n: 1 }]]);
+  assert.equal(st.blood.jos, 5, 'nach dem Lösen keine Tipps mehr');
+  st = puppe([['joh', 'hint', { s: 0, n: 1 }], ['jos', 'hint', { s: 0, n: 1 }]]);
+  assert.equal(st.blood.joh + st.blood.jos, 9.5, 'Tipp kostet einmal Blut');
+  st = puppe([['jos', 'donate']]);
+  assert.equal(st.blood.jos, 5, 'Spenden nur, wenn der andere weniger hat');
+});
+test('Krimi 2: Enden je nach Entscheidung', () => {
+  let st = puppeRun();
+  assert.equal(st.ending, 'vorhang');
+  assert.equal(st.result.stars, 3);
+  assert.equal(Object.values(st.guests).filter((g) => g === 'alive').length, 3);
+  assert.equal(KR.label(st).startsWith('Überlebt'), true);
+  st = puppeRun({ haslinger: 'cut', gerda: 'cut' });
+  assert.equal(st.guests.haslinger, 'dead');
+  assert.equal(st.result.stars, 2);
+  st = puppeRun({ feuer: 'brandl' });
+  assert.equal(st.ending, 'applaus');
+  assert.ok(Object.values(st.guests).every((g) => g === 'crushed'));
+  st = puppeRun({ letter: 'reissen' });
+  assert.equal(st.ending, 'applaus');
+  st = puppeRun({ feuer: 'anton' });
+  assert.equal(st.ending, 'blut', 'immer wieder das falsche Urteil: ihr verblutet');
+  assert.equal(st.result.stars, 0);
+});
+
 console.log(`\n${ok} Prüfungen bestanden.`);

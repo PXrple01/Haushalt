@@ -184,3 +184,4 @@ Wunsch: schönes Design, sensationelle Animationen. **Escape-Abenteuer** sehr au
 - [x] **15 – Escape-Geschichten (7 Themes)**
 - [x] **16 – Tests, Feinschliff, Veröffentlichen**
 - [x] **17 – Krimi für zwei** („Blutnacht im Hotel Edelweiß“: Fall-Daten, Logik mit gemeinsamer Uhr, getrennte Akten, Tafel mit roten Fäden, Verhöre mit Bluff und Zange, Werkzeuge, gemeinsame Anklage, Auflösung mit Rekonstruktion, Tests)
+- [x] **18 – Krimi Fall 2 „Seid ihr alle da?“** (eigener Horror-Kasperl, fünf neue Zwei-Handy-Rätsel, Blut-System, Fäden, Tribunal, Finale mit mehreren Enden, Tests)
