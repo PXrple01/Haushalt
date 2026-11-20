@@ -1,6 +1,6 @@
 # Übergabe für spätere Sitzungen – Kicherkiste
 
-Stand: 20.11.2026, Version 3.1: + Krimi-Fall 2 „Seid ihr alle da?“. Version 3.0: + Krimi für zwei (vorher: Pantomime, Kritzelspiel, Herzchen versenken, Escape-Abenteuer, riesige Pools). Cache-Version steht in `sw.js`. Bauplan mit Design-System und Etappen: `PLAN.md`.
+Stand: 20.11.2026, Version 3.2: + Schwierigkeitsstufen pro Begriff (`js/data/levels.js`). Version 3.1: + Krimi-Fall 2 „Seid ihr alle da?“. Version 3.0: + Krimi für zwei (vorher: Pantomime, Kritzelspiel, Herzchen versenken, Escape-Abenteuer, riesige Pools). Cache-Version steht in `sw.js`. Bauplan mit Design-System und Etappen: `PLAN.md`.
 
 ## 1. Was das Projekt ist
 - Private PWA mit acht Spielen für Johann (`joh`) und Josefine (`jos`), Sprache Deutsch: `hangman`, `whoami`, `number`, `mime` (Pantomime), `draw` (Kritzelspiel – nicht „Montagsmaler“ nennen!), `ships` (Herzchen versenken), `escape` (Escape-Abenteuer, kooperativ), `krimi` (Krimi für zwei, kooperativ, ab 16).
@@ -45,6 +45,12 @@ Stand: 20.11.2026, Version 3.1: + Krimi-Fall 2 „Seid ihr alle da?“. Version 
 - Bedingungen (`test` in `logic.js`): `after/before`, `f/f2/nf/nf2` (Merker), `has/nhas/hasAny` (eigene Akte), `team…` (einer von beiden), `split` (Partner verhört Person X → Bluff), `together` (beide verhören dieselbe Person → „Zange“).
 - Ereignisse: `setup {diff, spuren}`, `ready`, `go`, `search`, `talk`, `leave`, `ask`, `show`, `prints`, `radio`, `safe`, `cipher`, `rub`, `fp`, `pin/unpin/pmove`, `thread/unthread`, `hint {n}`, `aset {q,v}` (gemeinsame Anklageschrift, löscht Unterschriften), `sign {v}` (v = Formular-Version), `unsign`, `abort`. Der Zustand hat einen `feed` (ein Eintrag je Handlung/Ereignis) – die Oberfläche spielt nur neue Einträge ab (Fund-Blatt, Einblendungen, Laufband, Kosten).
 - Oberfläche: `view.js` (Karte mit Grundriss, Akte, Tafel mit Ziehen/Fäden, Verhöre, Anklage, Einblendungen, Auflösung mit Rekonstruktion), `tools.js` (Chiffre Vigenère mit Schlüssel LISL, Tresor 120304, Durchdruck-Leinwand, Fingerabdruck-Vergleich, Schachprotokoll), `art.js` (Noir-Porträts, Symbole, Grundriss, Fingerabdrücke, Blutspritzer, Hotel im Sturm), Stil `css/krimi.css` (Variablen `--kr-*` auf `:root`, damit Blätter außerhalb des Spiels sie auch haben; Knöpfe im Krimi bewusst ohne Theme-Form). Lokales (Tab, Stockwerk, gesehene Spuren) in `kr_<sid>`, Bestwert in `krimiRecords`.
+
+## 4c2. Schwierigkeitsstufen der Pools (`js/data/levels.js`)
+- Pantomime, Kritzelspiel und „Wer bin ich?“: pro Spiel und Kategorie `{ def, leicht, mittel, schwer }` (Komma-Listen). Reihenfolge: Eintrag dort → `!`/`~` im Begriff → `def` → Grundstufe der Kategorie. Neue Begriffe ohne Eintrag landen in `def`.
+- „Wer bin ich?“ hat jetzt Stufen-Knöpfe im Figuren-Wähler (`CHAR_LEVELS`, `charItems(cat, level)`).
+- Galgenmännchen: `levelOf` in `words.js` vergibt Punkte (mehrere Wörter, seltene Buchstaben J/Q/X/Y/V/ß/Umlaute, Länge, sehr kurz, viele verschiedene Buchstaben).
+- Test „Schwierigkeit“ in `tests/logic.test.mjs` prüft, dass jede Stufe gut gefüllt ist und jede Zuordnung zu einem echten Begriff passt (Tippfehler fallen auf).
 
 ## 4d. Krimi Fall 2 „Seid ihr alle da?“ (`js/games/krimi/puppe/`)
 - Eigener Fall mit eigener Logik, aber im selben Spiel `krimi`: Das `setup`-Ereignis trägt `case: 'puppe'`; `krimi/logic.js` und `krimi/view.js` leiten dann an `puppe/logic.js` bzw. `puppe/view.js` (`play2`) weiter. Fall-Auswahl im Setup (`krimiCase` lokal gemerkt), Bestwert in `krimiRecords.puppe`.

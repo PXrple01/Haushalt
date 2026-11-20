@@ -8,7 +8,7 @@ Spiele für zwei – mit Baby-Design (Einhorn Kiki) und Lila-Design (Katze Kuro)
 - **Kritzelspiel** (einer zeichnet, einer rät) und **Pantomime** (einer stellt dar, einer rät)
 - **Herzchen versenken** – Einhörner, Wolken und Katzen verstecken und finden, mit Einhorn-Bombe. Wahlweise **kurvig**: Regenbogen-Bogen, Seeschlange (S) und Raupe (L) – kniffliger!
 
-Riesige Pools: rund 4000 Galgenmännchen-Wörter, 2300 Figuren für „Wer bin ich?“, je über 1100 Begriffe für Pantomime und Kritzelspiel und 159 Fragen-Ideen für „Zahl erraten“ – jeweils in vielen Kategorien.
+Riesige Pools: rund 4000 Galgenmännchen-Wörter, 2300 Figuren für „Wer bin ich?“, je über 1100 Begriffe für Pantomime und Kritzelspiel und 159 Fragen-Ideen für „Zahl erraten“ – jeweils in vielen Kategorien und in drei Stufen **leicht / mittel / schwer** (von Hand zugeordnet; bei Galgenmännchen nach Länge, seltenen Buchstaben und Wortanzahl).
 
 **Spielen:** https://pxrple01.github.io/Haushalt/
 

@@ -37,10 +37,17 @@ const RAW = {
 };
 
 const lettersOf = (w) => w.replace(/[ -]/g, '').length;
+// Schwierigkeit fürs Raten: Punkte für Länge, seltene Buchstaben, mehrere Wörter und sehr kurze Wörter
+const RARE = /[jqxyvßäöü]|c(?![hk])/gi;
 const levelOf = (w) => {
   const n = lettersOf(w);
-  if (/[ -]/.test(w) || n >= 10) return 'schwer';
-  return n <= 6 ? 'leicht' : 'mittel';
+  let p = 0;
+  if (/[ -]/.test(w)) p += 2;
+  p += Math.min(2, (w.match(RARE) || []).length);
+  if (n >= 11) p += 2; else if (n >= 8) p += 1;
+  if (n <= 4) p += 1;
+  if (new Set(w.toLowerCase().replace(/[ -]/g, '')).size >= 9) p += 1;
+  return p === 0 ? 'leicht' : p <= 2 ? 'mittel' : 'schwer';
 };
 
 WORD_CATS.push(...MORE_CATS);

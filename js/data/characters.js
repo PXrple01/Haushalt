@@ -1,6 +1,7 @@
 // Figurenpool für „Wer bin ich?“ (jede Figur nur einmal).
 
 import { MORE_CHAR_CATS, MORE_CHARS } from './characters-more.js';
+import { curatedLevel, defaultLevel } from './levels.js';
 
 export const CHAR_CATS = [
   { id: 'all', label: 'Alles' },
@@ -37,10 +38,22 @@ export const CHARS = Object.entries(ALL).flatMap(([cat, list]) =>
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
-  }).map((text) => ({ text, cat })));
+  }).map((text) => ({ text, cat, level: curatedLevel('whoami', cat, text) || defaultLevel('whoami', cat) || 'mittel' })));
 
-export function charItems(cat) {
-  return cat === 'all' ? CHARS : CHARS.filter((c) => c.cat === cat);
+export const CHAR_LEVELS = [
+  { id: 'leicht', label: 'Leicht' },
+  { id: 'mittel', label: 'Mittel' },
+  { id: 'schwer', label: 'Schwer' },
+];
+
+// Figuren nach Kategorie und Schwierigkeit (zu wenige → alle der Kategorie)
+export function charItems(cat, level) {
+  let list = cat === 'all' ? CHARS : CHARS.filter((c) => c.cat === cat);
+  if (level) {
+    const f = list.filter((c) => c.level === level);
+    if (f.length >= 3) list = f;
+  }
+  return list;
 }
 
 // Schnellfragen (Weit weg) – antippen statt tippen

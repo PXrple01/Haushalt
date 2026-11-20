@@ -13,7 +13,7 @@ import { nav } from '../../core/router.js';
 import { createSession, addEvent, getSession, sendFx } from '../../core/sync.js';
 import { reduce } from './logic.js';
 import { enc } from '../secret.js';
-import { CHAR_CATS, charItems, QUICK_QUESTIONS, NOTE_CHIPS } from '../../data/characters.js';
+import { CHAR_CATS, CHAR_LEVELS, charItems, QUICK_QUESTIONS, NOTE_CHIPS } from '../../data/characters.js';
 import { shell, partnerNote, whoSeg, resolveWho, secretPicker, turnBanner, answerRow, logView, resultCard, finale, markCelebrated, peekButton, waitCard, onReactions } from '../common.js';
 
 const RULES = [
@@ -77,7 +77,7 @@ export function play(root, sid) {
     reveal.innerHTML = `${icon('bulb')}<span>Kategorie als Tipp verraten</span><input type="checkbox"><span class="track"></span>`;
     const picker = secretPicker({
       ownLabel: 'Eigene Figur', placeholder: 'z. B. Pikachu', maxLength: 40,
-      pool: { cats: CHAR_CATS, items: (c) => charItems(c), rerollLabel: 'Andere Figur' },
+      pool: { cats: CHAR_CATS, levels: CHAR_LEVELS, items: (c, l) => charItems(c, l).map((x) => ({ text: x.text, cat: x.cat })), rerollLabel: 'Andere Figur' },
       validate: (v) => (v.trim().length >= 2 ? { ok: true, msg: '' } : { ok: false, msg: 'Mindestens 2 Zeichen.' }),
       extra: reveal,
     });

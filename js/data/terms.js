@@ -1,4 +1,5 @@
 import { MORE_TERMS } from './terms-more.js';
+import { curatedLevel, defaultLevel } from './levels.js';
 
 // Begriffe für Pantomime und Kritzelspiel. Pro Kategorie eine Grundstufe; „!“ vor einem Begriff = schwer, „~“ = leicht.
 
@@ -35,10 +36,12 @@ for (const game of Object.keys(MORE_TERMS)) {
   P.cats.push(...M.cats);
 }
 
-const parse = (list, base) => list.split(',').map((s) => s.trim()).filter(Boolean).map((t) => {
-  if (t.startsWith('!')) return { text: t.slice(1).trim(), level: 'schwer' };
-  if (t.startsWith('~')) return { text: t.slice(1).trim(), level: 'leicht' };
-  return { text: t, level: base };
+// Stufe: von Hand zugeordnet (levels.js) → „!“/„~“ → Standard der Kategorie in levels.js → Grundstufe
+const parse = (game, cat, list, base) => list.split(',').map((s) => s.trim()).filter(Boolean).map((t) => {
+  let text = t, mark = null;
+  if (t.startsWith('!')) { text = t.slice(1).trim(); mark = 'schwer'; }
+  else if (t.startsWith('~')) { text = t.slice(1).trim(); mark = 'leicht'; }
+  return { text, level: curatedLevel(game, cat, text) || mark || defaultLevel(game, cat) || base };
 });
 
 export function termCats(game) {
@@ -51,7 +54,7 @@ const cacheAll = {};
 function allOf(game) {
   if (cacheAll[game]) return cacheAll[game];
   const seen = new Set();
-  cacheAll[game] = POOL[game].cats.flatMap((c) => parse(c.list, c.level).map((x) => ({ ...x, cat: c.id, catLabel: c.label })))
+  cacheAll[game] = POOL[game].cats.flatMap((c) => parse(game, c.id, c.list, c.level).map((x) => ({ ...x, cat: c.id, catLabel: c.label })))
     .filter((x) => { const k = x.text.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
   return cacheAll[game];
 }

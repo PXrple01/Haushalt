@@ -14,7 +14,8 @@ import { makeRng } from '../js/games/escape/rng.js';
 import { enc } from '../js/games/secret.js';
 import { cleanWord, nameMatch } from '../js/core/util.js';
 import { WORDS, WORD_CATS, wordItems } from '../js/data/words.js';
-import { CHARS, CHAR_CATS, QUICK_QUESTIONS } from '../js/data/characters.js';
+import { CHARS, CHAR_CATS, QUICK_QUESTIONS, charItems } from '../js/data/characters.js';
+import { curatedEntries } from '../js/data/levels.js';
 import { termItems, termCats } from '../js/data/terms.js';
 import { CARDS } from '../js/data/questions.js';
 
@@ -340,6 +341,32 @@ test('Pools: groß, gültig, ohne Dopplungen', () => {
     assert.ok(all.every((x) => x.text && !/[!~]/.test(x.text) && ['leicht', 'mittel', 'schwer'].includes(x.level)));
     for (const c of termCats(g).filter((x) => x.id !== 'all')) assert.ok(termItems(g, [c.id]).length >= 20, `${g}/${c.id}`);
   }
+});
+
+test('Schwierigkeit: jede Stufe gut gefüllt, Zuordnungen passen zum Pool', () => {
+  const STUFEN = ['leicht', 'mittel', 'schwer'];
+  const count = (list) => Object.fromEntries(STUFEN.map((l) => [l, list.filter((x) => x.level === l).length]));
+  for (const g of ['mime', 'draw']) {
+    const n = count(termItems(g));
+    for (const l of STUFEN) assert.ok(n[l] >= 200, `${g}/${l}: ${n[l]}`);
+    for (const l of STUFEN) assert.ok(termItems(g, ['all'], l).every((x) => x.level === l), `${g}/${l} gemischt`);
+    const keys = new Set(termItems(g).map((x) => `${x.cat}|${x.text.toLowerCase()}`));
+    const miss = curatedEntries(g).filter((e) => !keys.has(`${e.cat}|${e.key}`));
+    assert.equal(miss.length, 0, `${g}: unbekannte Zuordnung ${miss.slice(0, 5).map((e) => e.key)}`);
+  }
+  const nw = count(WORDS);
+  for (const l of STUFEN) assert.ok(nw[l] >= 500, `Galgen/${l}: ${nw[l]}`);
+  assert.equal(WORDS.find((w) => w.text === 'Fliegender Teppich')?.level, 'schwer');
+  const nc = count(CHARS);
+  for (const l of STUFEN) assert.ok(nc[l] >= 400, `Figuren/${l}: ${nc[l]}`);
+  for (const c of CHAR_CATS.filter((x) => x.id !== 'all')) for (const l of STUFEN) assert.ok(charItems(c.id, l).every((x) => x.level === l), `${c.id}/${l}`);
+  assert.equal(CHARS.find((c) => c.text === 'Micky Maus').level, 'leicht');
+  assert.equal(CHARS.find((c) => c.text === 'Lumière').level, 'schwer');
+  const keys = new Set(CHARS.map((x) => `${x.cat}|${x.text.toLowerCase()}`));
+  assert.equal(curatedEntries('whoami').filter((e) => !keys.has(`${e.cat}|${e.key}`)).length, 0);
+});
+
+test('Fragekarten: gültig', () => {
   assert.ok(CARDS.length >= 150);
   assert.equal(new Set(CARDS.map((c) => c.id)).size, CARDS.length);
   for (const c of CARDS.filter((x) => x.test)) {
