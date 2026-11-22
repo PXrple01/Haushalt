@@ -64,12 +64,12 @@ def main(skn, body_tx, ball_tx, out):
             a = curve(k, [0, 0.12, 0.6, 1], [0, 1, 0.8, 0])
             s = 235 * 2 * curve(k, [0, 0.2, 1], [0.82, 1.0, 1.04]) * scale
             x, y = project((0, 0, 0))
-            blit(c, pitch, x, y, s, s * 0.32, alpha=a, color=(0.9, 0.85, 1))
+            blit(c, pitch, x, y, s, s * 0.32, alpha=a, color=(0.85, 1, 0.9))
         if 0.30 <= t <= 0.90:
             k = (t - 0.30) / 0.6
             s = 60 * 2 * curve(k, [0, 1], [1, 7]) * scale
             x, y = project((0, 0, 0))
-            blit(c, ring, x, y, s, s * 0.32, alpha=curve(k, [0, 0.1, 1], [0, 1, 0]), color=(0.55, 0.36, 1))
+            blit(c, ring, x, y, s, s * 0.32, alpha=curve(k, [0, 0.1, 1], [0, 1, 0]), color=(0.3, 1, 0.52))
         # chains
         if t < 0.32:
             k = t / 0.32
@@ -81,13 +81,13 @@ def main(skn, body_tx, ball_tx, out):
                 pts = np.stack([64 * sc * np.cos(ph), hgt + np.sin(ph) * 64 * sc * np.sin(np.radians(tilt)), 64 * sc * np.sin(ph)], -1)
                 xs, ys = project(pts)
                 for i in range(40):
-                    col = (190, 185, 230) if i % 2 == 0 else (90, 90, 120)
+                    col = (185, 205, 192) if i % 2 == 0 else (80, 98, 88)
                     d.line([xs[i], ys[i], xs[i + 1], ys[i + 1]], fill=col, width=7 if i % 2 == 0 else 4)
                     dg.line([xs[i], ys[i], xs[i + 1], ys[i + 1]], fill=255, width=14)
             c = np.asarray(img).astype(float) / 255
             g = np.asarray(glow.filter(ImageFilter.GaussianBlur(6))).astype(float) / 255
             flare = curve(k, [0, 0.5, 0.9, 1], [0.3, 0.35, 1.0, 0.6])
-            c += g[..., None] * np.array([0.55, 0.36, 1.0]) * flare * 0.8
+            c += g[..., None] * np.array([0.3, 1.0, 0.52]) * flare * 0.8
         # burst
         if 0.28 <= t <= 0.66:
             k = (t - 0.28) / 0.38
@@ -95,7 +95,7 @@ def main(skn, body_tx, ball_tx, out):
             s = 95 * 2 * curve(k, [0, 0.18, 1], [0.3, 1.35, 1.7]) * scale
             blit(c, flash, x, y, s, s, alpha=curve(k, [0, 0.2, 1], [1, 0.9, 0]))
             s2 = 40 * 2 * curve(k, [0, 1], [1, 6]) * scale
-            blit(c, ring, x, y, s2, s2, alpha=curve(k, [0, 0.15, 1], [0, 1, 0]), color=(0.55, 0.36, 1))
+            blit(c, ring, x, y, s2, s2, alpha=curve(k, [0, 0.15, 1], [0, 1, 0]), color=(0.3, 1, 0.52))
         if 0.30 <= t <= 1.25:
             dt = t - 0.30
             for (v, ang) in shards:
@@ -105,7 +105,7 @@ def main(skn, body_tx, ball_tx, out):
                 x, y = project(p)
                 a = curve(dt / 0.95, [0, 0.65, 1], [1, 1, 0])
                 img = Image.new('RGBA', (30, 30)); dd = ImageDraw.Draw(img)
-                dd.ellipse([4, 9, 26, 21], outline=(205, 200, 255, 255), width=4)
+                dd.ellipse([4, 9, 26, 21], outline=(200, 255, 215, 255), width=4)
                 spr = np.asarray(img.rotate(ang + dt * 600)).astype(float) / 255
                 blit(c, spr, x, y, 22, 22, mode='alpha', alpha=a)
         # eye
@@ -119,7 +119,7 @@ def main(skn, body_tx, ball_tx, out):
             ew, eh = 145 * 2 * scale * sx_, 72 * 2 * scale * sy_
             blit(c, back, x, y, ew, eh, mode='alpha', alpha=a)
             rs = 165 * 2 * scale * curve(k, [0, 0.15, 1], [1.35, 1.0, 0.97])
-            blit(c, ret, x, y, rs, rs, alpha=a * curve(k, [0, 0.12, 0.8, 1], [0, 1, 1, 0]), color=(0.45, 0.34, 0.75), angle=-32 * (t - e0))
+            blit(c, ret, x, y, rs, rs, alpha=a * curve(k, [0, 0.12, 0.8, 1], [0, 1, 1, 0]), color=(0.28, 0.75, 0.42), angle=-32 * (t - e0))
             blit(c, eye, x, y, ew, eh, alpha=a)
             tk = (t - e0 - 0.16) / 0.45
             if 0 <= tk <= 1:
@@ -141,7 +141,7 @@ def main(skn, body_tx, ball_tx, out):
                 p1 = p0 - v * 0.05
                 x0, y0 = project(p0); x1, y1 = project(p1)
                 a = curve(dt / 0.6, [0, 0.5, 1], [1, 0.9, 0])
-                d.line([x0, y0, x1, y1], fill=(int(200 * a + 30), int(185 * a + 20), 255), width=3)
+                d.line([x0, y0, x1, y1], fill=(int(150 * a + 20), 255, int(175 * a + 30)), width=3)
             c = np.asarray(img).astype(float) / 255
         frames.append(Image.fromarray((np.clip(c, 0, 1) * 255).astype(np.uint8)))
     frames[0].save(out, save_all=True, append_images=frames[1:], duration=int(1000 / fps), loop=0, optimize=True)

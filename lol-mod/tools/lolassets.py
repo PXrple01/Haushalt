@@ -6,14 +6,14 @@ import numpy as np
 from PIL import Image
 
 # ------------------------------------------------------------------ palette
-# "Dunkelblau-Lila": every colored value is pushed into deep royal blue (222-240 deg)
-# or violet (255-280 deg). Neutral greys/whites stay neutral so cores keep their punch.
+# Flow green: every colored value is pushed into deep emerald (140-155 deg)
+# or bright green (115-135 deg). Neutral greys/whites stay neutral so cores keep their punch.
 def flow_hue(h_deg):
-    if 150 <= h_deg < 248:          # cyan / blue family -> deep royal blue
-        return 222 + (h_deg - 150) / 98 * 18
-    if 248 <= h_deg < 345:          # purple / magenta family -> violet
-        return 255 + (h_deg - 248) / 97 * 25
-    return 272                      # warm colors -> purple accent
+    if 150 <= h_deg < 248:          # cyan / blue family -> deep emerald
+        return 140 + (h_deg - 150) / 98 * 15
+    if 248 <= h_deg < 345:          # purple / magenta family -> bright green
+        return 115 + (h_deg - 248) / 97 * 20
+    return 125                      # warm colors -> green accent
 
 
 def flow_rgb(r, g, b):
@@ -49,8 +49,8 @@ def flow_image(im: Image.Image) -> Image.Image:
     # vectorised hsv
     hsv = np.asarray(Image.fromarray((rgb * 255).astype(np.uint8)).convert('HSV')).astype(np.float32)
     h = hsv[..., 0] / 255 * 360
-    h2 = np.where((h >= 150) & (h < 248), 222 + (h - 150) / 98 * 18,
-         np.where((h >= 248) & (h < 345), 255 + (h - 248) / 97 * 25, 272))
+    h2 = np.where((h >= 150) & (h < 248), 140 + (h - 150) / 98 * 15,
+         np.where((h >= 248) & (h < 345), 115 + (h - 248) / 97 * 20, 125))
     s2 = np.clip(s * 1.25 + 0.10, 0, 1)
     v2 = mx * 0.90
     out = np.stack([h2 / 360 * 255, s2 * 255, v2 * 255], -1).astype(np.uint8)

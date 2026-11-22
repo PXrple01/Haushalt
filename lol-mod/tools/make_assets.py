@@ -15,9 +15,9 @@ ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, 'assets_src', 'gen')
 FONT = os.path.join(ROOT, 'assets_src', 'fonts', 'BigShoulders-Bold.ttf')
 
-VIOLET = np.array([0.48, 0.27, 1.00])     # Flow violet
-BLUE = np.array([0.12, 0.22, 0.95])       # deep royal blue
-LAVENDER = np.array([0.80, 0.74, 1.00])   # highlight
+FLOW = np.array([0.22, 1.00, 0.48])       # Flow green
+DEEP = np.array([0.02, 0.55, 0.30])       # deep emerald
+HIGHLIGHT = np.array([0.82, 1.00, 0.88])  # mint highlight
 
 
 def save(arr, name):
@@ -124,13 +124,13 @@ def make_ball_sprite(name, glow=0.35, rim=0.25, seam_emit=0.0, size=256):
     shade = 0.58 + 0.42 * nz ** 0.55                       # rotation-symmetric -> safe to spin
     col = col * shade[..., None]
     fres = (1 - nz) ** 2.2
-    col = col * (1 - rim * fres[..., None]) + VIOLET * (rim * 1.6 * fres[..., None])
+    col = col * (1 - rim * fres[..., None]) + FLOW * (rim * 1.6 * fres[..., None])
     if seam_emit > 0:
         g = seam_glow(e / (1 + 0.8 * seam_emit))[..., None] * seam_emit
-        col = col * (1 - 0.8 * np.clip(g, 0, 1)) + (VIOLET * 1.0 + LAVENDER * 0.45) * g * 1.25
+        col = col * (1 - 0.8 * np.clip(g, 0, 1)) + (FLOW * 1.0 + HIGHLIGHT * 0.45) * g * 1.25
     aa = 1 - smoothstep(R - 0.008, R + 0.004, r)
     halo = glow * np.exp(-((r - R) / 0.075) ** 2) * (r >= R - 0.01)
-    rgb = col * aa[..., None] + (VIOLET * 0.9 + 0.1) * halo[..., None] * (1 - aa[..., None])
+    rgb = col * aa[..., None] + (FLOW * 0.9 + 0.1) * halo[..., None] * (1 - aa[..., None])
     a = np.clip(aa + halo * (1 - aa), 0, 1)
     rgb = np.where(a[..., None] > 1e-4, rgb / np.maximum(a[..., None], 1e-4) * np.minimum(a[..., None], 1), 0)
     save(np.concatenate([np.clip(rgb, 0, 1), a[..., None]], -1), name)
@@ -213,9 +213,9 @@ def make_chain_texture():
     U, V = np.meshgrid(u, v)
     th = V * 2 * np.pi
     light = 0.5 + 0.5 * np.sin(th)                       # top of tube bright, underside dark
-    steel = np.array([0.15, 0.15, 0.22]) + np.array([0.55, 0.52, 0.80]) * (light ** 3)[..., None]
-    spec = np.exp(-((V - 0.25) / 0.05) ** 2)[..., None] * np.array([0.9, 0.88, 1.0])
-    edge = np.exp(-((V - 0.75) / 0.07) ** 2)[..., None] * VIOLET * 0.9  # energy edge on underside
+    steel = np.array([0.13, 0.16, 0.15]) + np.array([0.58, 0.68, 0.62]) * (light ** 3)[..., None]
+    spec = np.exp(-((V - 0.25) / 0.05) ** 2)[..., None] * np.array([0.88, 1.0, 0.92])
+    edge = np.exp(-((V - 0.75) / 0.07) ** 2)[..., None] * FLOW * 0.9  # energy edge on underside
     wear = (np.sin(U * 2 * np.pi * 4 + 1.3) * 0.5 + 0.5)[..., None] * 0.06
     rgb = steel + spec * 0.55 + edge + wear
     save(np.concatenate([np.clip(rgb, 0, 1), np.ones((h, w, 1))], -1), 'chain_metal')
@@ -293,15 +293,15 @@ def make_eye(w=1024, h=512):
     bright = np.clip(line + rings + core + cross + text, 0, 1.5)
     soft = np.clip(iris_fill + tglow * 0.9 + sclera, 0, 1)
     inten = np.clip(bright + soft, 0, 1)
-    rgb = np.clip(LAVENDER * np.clip(bright, 0, 1)[..., None] + VIOLET * soft[..., None] * 1.8 +
-                  BLUE * sclera[..., None] * 2.0, 0, 1)
+    rgb = np.clip(HIGHLIGHT * np.clip(bright, 0, 1)[..., None] + FLOW * soft[..., None] * 1.8 +
+                  DEEP * sclera[..., None] * 2.0, 0, 1)
     save(np.concatenate([rgb, inten[..., None]], -1), 'eye')
     # same layout, only the word (for the sequential light sweep over the letters)
     tl = np.clip(text + tglow * 0.6, 0, 1)
     save(np.stack([np.ones_like(tl), np.ones_like(tl), np.ones_like(tl), tl], -1), 'eye_text')
     # dark backing (alpha blended) so the eye reads on bright ground
     back = inside * 0.62 * smoothstep(0.0, 0.06, np.minimum(du, dl))
-    save(np.stack([np.full_like(x, 0.02), np.full_like(x, 0.02), np.full_like(x, 0.09), back], -1), 'eye_backing')
+    save(np.stack([np.full_like(x, 0.01), np.full_like(x, 0.07), np.full_like(x, 0.035), back], -1), 'eye_backing')
     # angular gradient (clockwise from 12 o'clock) used as erosion map for the letter sweep
     ang = (np.degrees(np.arctan2(x - icx, y - icy)) % 360) / 360
     g = (ang * 255).astype(np.uint8)
@@ -327,7 +327,7 @@ def make_reticle(size=512):
     a = np.asarray(img).astype(float) / 255
     glow = np.asarray(img.filter(ImageFilter.GaussianBlur(5))).astype(float) / 255
     i = np.clip(a + glow * 0.9, 0, 1)
-    rgb = np.clip(LAVENDER * a[..., None] + VIOLET * glow[..., None] * 1.3, 0, 1)
+    rgb = np.clip(HIGHLIGHT * a[..., None] + FLOW * glow[..., None] * 1.3, 0, 1)
     save(np.concatenate([rgb, i[..., None]], -1), 'reticle')
 
 
@@ -384,7 +384,7 @@ def make_pitch_lines(size=1024):
     y, x = np.mgrid[0:size, 0:size].astype(float) / (size - 1) * 2 - 1
     vign = smoothstep(1.0, 0.55, np.hypot(x, y * 1.3))
     i = np.clip(a * 1.2 + glow * 1.8, 0, 1) * vign
-    rgb = np.clip(LAVENDER * a[..., None] + VIOLET * glow[..., None] * 1.5, 0, 1)
+    rgb = np.clip(HIGHLIGHT * a[..., None] + FLOW * glow[..., None] * 1.5, 0, 1)
     save(np.concatenate([rgb, i[..., None]], -1), 'pitch_lines')
 
 

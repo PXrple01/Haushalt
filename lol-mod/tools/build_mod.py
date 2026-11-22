@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -143,7 +143,7 @@ def step_bead_balls(b, game):
     files['assets/characters/yunara/skins/base/yunara_base.skn'] = open(out, 'rb').read()
     os.remove(out)
     # 2) material: point the bead material at the football texture (same-length path keeps the
-    #    raw entry valid) and make the rim light Flow-violet
+    #    raw entry valid) and make the rim light Flow-green
     # (texture paths inside these material entries are stored as xxh64 hashes)
     old_path = 'assets/characters/yunara/skins/base/yunara_base_weapon_tx_cm.tex'
     new_path = 'assets/characters/yunara/skins/base/mvfx_soccerball_beads_cm.tex'
@@ -154,7 +154,7 @@ def step_bead_balls(b, game):
     raw = e.raw.replace(old_h, new_h)
     old_fres = struct.pack('<4f', 0.5799953937530518, 0.5300068855285645, 1.0, 0.6000000238418579)
     if raw.count(old_fres) == 1:
-        raw = raw.replace(old_fres, struct.pack('<4f', 0.47, 0.30, 1.0, 0.55))
+        raw = raw.replace(old_fres, struct.pack('<4f', 0.30, 1.0, 0.52, 0.55))
     e.raw = raw
     put_tex(new_path, gen('ball_albedo'))
     # 3) keep the idle orb aura subtle so the ball stays readable
@@ -174,14 +174,14 @@ def step_bead_balls(b, game):
 
 
 def step_ult_bead_seams(b):
-    """During R the eight footballs get glowing violet seams (attached-mesh glow on the beads)."""
+    """During R the eight footballs get glowing green seams (attached-mesh glow on the beads)."""
     put_tex(MV + 'mvfx_ball_seams.tex', gen('ball_seams_glow'))
     path = PART + 'MV_R_BeadSeams'
     st = V.clone_system(b, PART + 'Yunara_Base_Q_Buff_OnBeads', path, keep_emitters={'ADD_EdgeGlow'})
     em = V.find_emitter(st, 'ADD_EdgeGlow')
     em.set('emitterName', L.STRING, 'MV_SeamGlow')
     em.set('texture', L.STRING, MV + 'mvfx_ball_seams.tex')
-    em.set('birthColor', L.EMBED, V.vcolor((0.62, 0.42, 1.0, 1.0)))
+    em.set('birthColor', L.EMBED, V.vcolor((0.42, 1.0, 0.60, 1.0)))
     em.remove('texDiv')
     em.set('birthScale0', L.EMBED, V.vvec3((1.012, 1.0, 1.0)))
     V.add_resource(b, RES, 'MV_R_BeadSeams', path)
@@ -224,7 +224,7 @@ def step_ult_cast(b):
     lp, lu, lt = make_assets.chain_link()
     files[MV + 'mvfx_chain_link.scb'] = scb_bytes(lp, lu, lt, 'mvfx_chain_link')
     T = lambda n: MV + 'mvfx_' + n + '.tex'
-    VIO = (0.55, 0.36, 1.0); BLU = (0.20, 0.30, 1.0); LAV = (0.85, 0.80, 1.0)
+    FLOW = (0.30, 1.0, 0.52); DEEP = (0.04, 0.62, 0.34); HI = (0.84, 1.0, 0.90)
     fade = lambda c, t_in=0.08, t_out=0.85: ([0.0, t_in, t_out, 1.0], [c + (0.0,), c + (1.0,), c + (1.0,), c + (0.0,)])
     ems = []
     BREAK = 0.30
@@ -239,7 +239,7 @@ def step_ult_cast(b):
         ems.append(V.emitter(f'MV_ChainGlow{k}', T('chain_metal'), blend=4, life=BREAK + 0.02, pos=pos, rotation=rot,
                              scale=(1.03, 1.03, 1.03), scale_curve=tighten, spin=(0, 25 * (1 if k % 2 else -1), 0),
                              mesh=MV + 'mvfx_chain_ring.scb', pass_=9010 + k, backface=True,
-                             color_curve=([0.0, 0.5, 0.88, 1.0], [VIO + (0.0,), VIO + (0.35,), LAV + (1.0,), (1, 1, 1, 0.0)])))
+                             color_curve=([0.0, 0.5, 0.88, 1.0], [FLOW + (0.0,), FLOW + (0.35,), HI + (1.0,), (1, 1, 1, 0.0)])))
     # ---- the burst
     ems.append(V.emitter('MV_ChainShards', T('chain_metal'), blend=1, single=False, rate=650, emitter_life=0.05,
                          delay=BREAK, life=0.95, bind=0.0, pos=(0, 105, 0), spawn_radius=60,
@@ -248,24 +248,24 @@ def step_ult_cast(b):
                          velocity=V.vvec3((950, 650, 950), rand=[(-1, 1), (0.15, 1.0), (-1, 1)]),
                          accel=(0, -1700, 0), rotation=V.vvec3((180, 180, 180), rand=[(-1, 1)] * 3),
                          spin=V.vvec3((900, 700, 0), rand=[(-1, 1), (-1, 1), None]),
-                         color_curve=([0.0, 0.1, 0.65, 1.0], [LAV + (1.0,), (1, 1, 1, 1.0), (1, 1, 1, 1.0), VIO + (0.0,)]),
+                         color_curve=([0.0, 0.1, 0.65, 1.0], [HI + (1.0,), (1, 1, 1, 1.0), (1, 1, 1, 1.0), FLOW + (0.0,)]),
                          pass_=9020))
     ems.append(V.emitter('MV_BurstFlash', T('flash_star'), blend=4, delay=BREAK - 0.02, life=0.38, pos=(0, 110, 0),
                          scale=(95, 95, 1), scale_curve=([0, 0.18, 1], [(0.3,) * 3, (1.35,) * 3, (1.7,) * 3]),
-                         color_curve=([0, 0.2, 1], [(1, 1, 1, 1), LAV + (0.9,), VIO + (0.0,)]),
+                         color_curve=([0, 0.2, 1], [(1, 1, 1, 1), HI + (0.9,), FLOW + (0.0,)]),
                          rotation=V.vvec3((45, 0, 0), rand=[(-1, 1), None, None]), pass_=9030))
     ems.append(V.emitter('MV_BurstRing', T('shock_ring'), blend=4, delay=BREAK, life=0.45, pos=(0, 110, 0),
                          scale=(40, 40, 1), scale_curve=([0, 1], [(1,) * 3, (6.0,) * 3]),
-                         color_curve=([0, 0.15, 1], [LAV + (0.0,), VIO + (1.0,), BLU + (0.0,)]), pass_=9031))
+                         color_curve=([0, 0.15, 1], [HI + (0.0,), FLOW + (1.0,), DEEP + (0.0,)]), pass_=9031))
     ems.append(V.emitter('MV_BurstGround', T('shock_ring'), blend=4, delay=BREAK, life=0.6, bind=0.0,
                          rotation=(-90, -90, 0), ground=True, scale=(60, 60, 1),
                          scale_curve=([0, 1], [(1,) * 3, (7.0,) * 3]),
-                         color_curve=([0, 0.1, 1], [VIO + (0.0,), VIO + (1.0,), BLU + (0.0,)]), pass_=-2900))
+                         color_curve=([0, 0.1, 1], [FLOW + (0.0,), FLOW + (1.0,), DEEP + (0.0,)]), pass_=-2900))
     ems.append(V.emitter('MV_BurstSparks', P + 'base_generic_sparks_add.tex', blend=4, single=False, rate=1800,
                          emitter_life=0.03, delay=BREAK, life=0.5, bind=0.0, pos=(0, 110, 0), spawn_radius=30,
                          scale=(7, 7, 7), velocity=V.vvec3((1200, 900, 1200), rand=[(-1, 1), (-0.4, 1), (-1, 1)]),
                          drag=(3.0, 3.0, 3.0), direction_oriented=True, dir_scale=0.004,
-                         color_curve=([0, 0.6, 1], [LAV + (1.0,), VIO + (0.8,), BLU + (0.0,)]), pass_=9032))
+                         color_curve=([0, 0.6, 1], [HI + (1.0,), FLOW + (0.8,), DEEP + (0.0,)]), pass_=9032))
     # ---- the METAVISION eye
     EYE_T = 0.42; EYE_L = 1.45; EYE_POS = (0, 300, 0); EYE_S = (145, 72, 1)
     opening = ([0.0, 0.09, 0.15, 1.0], [(1, 0.02, 1), (1, 1.12, 1), (1, 1, 1), (1.03, 1.03, 1)])
@@ -273,31 +273,31 @@ def step_ult_cast(b):
                          scale=EYE_S, uniform=False, scale_curve=opening, color_curve=fade((1.0, 1.0, 1.0)), pass_=9100))
     ems.append(V.emitter('MV_EyeReticle', T('reticle'), blend=4, delay=EYE_T + 0.05, life=EYE_L - 0.05, pos=EYE_POS,
                          scale=(165, 165, 1), scale_curve=([0, 0.15, 1], [(1.35,) * 3, (1.0,) * 3, (0.97,) * 3]),
-                         spin=(32, 0, 0), color_curve=fade(tuple(x * 0.75 for x in VIO), 0.12, 0.8), pass_=9101))
+                         spin=(32, 0, 0), color_curve=fade(tuple(x * 0.75 for x in FLOW), 0.12, 0.8), pass_=9101))
     ems.append(V.emitter('MV_Eye', T('eye'), blend=4, delay=EYE_T, life=EYE_L, pos=EYE_POS, scale=EYE_S,
                          uniform=False, scale_curve=opening, pass_=9102,
                          color_curve=([0.0, 0.08, 0.16, 0.84, 0.92, 1.0],
                                       [(0.5, 0.4, 1, 0), (1, 1, 1, 1), (1, 1, 1, 1), (0.9, 0.85, 1, 1), (1, 1, 1, 1), (1, 1, 1, 0)])))
     ems.append(V.emitter('MV_EyeTextFlare', T('eye_text'), blend=4, delay=EYE_T + 0.16, life=0.45, pos=EYE_POS,
                          scale=EYE_S, uniform=False, pass_=9103,
-                         color_curve=([0, 0.15, 1], [(1, 1, 1, 0), (1, 1, 1, 1), VIO + (0,)])))
+                         color_curve=([0, 0.15, 1], [(1, 1, 1, 0), (1, 1, 1, 1), FLOW + (0,)])))
     ems.append(V.emitter('MV_PupilFlash', T('flash_star'), blend=4, delay=EYE_T + 0.16, life=0.32,
                          pos=(0, 305, 0), scale=(50, 50, 1), scale_curve=([0, 0.25, 1], [(0.2,) * 3, (1.4,) * 3, (0.8,) * 3]),
-                         color_curve=([0, 0.25, 1], [(1, 1, 1, 1), LAV + (1,), VIO + (0,)]), pass_=9104))
+                         color_curve=([0, 0.25, 1], [(1, 1, 1, 1), HI + (1,), FLOW + (0,)]), pass_=9104))
     # ---- dissolve into light lines that rain down and draw a pitch on the ground
     END = EYE_T + EYE_L - 0.12
     ems.append(V.emitter('MV_EyeEndFlash', T('flash_star'), blend=4, delay=END, life=0.28, pos=EYE_POS,
                          scale=(110, 110, 1), scale_curve=([0, 1], [(0.5,) * 3, (1.5,) * 3]),
-                         color_curve=([0, 0.2, 1], [(1, 1, 1, 0.9), LAV + (0.7,), VIO + (0,)]), pass_=9105))
+                         color_curve=([0, 0.2, 1], [(1, 1, 1, 0.9), HI + (0.7,), FLOW + (0,)]), pass_=9105))
     ems.append(V.emitter('MV_LightLines', T('light_dot'), blend=4, single=False, rate=1100, emitter_life=0.05,
                          delay=END, life=0.6, bind=0.0, pos=EYE_POS, spawn_radius=110, scale=(6, 6, 6),
                          velocity=V.vvec3((750, 950, 750), rand=[(-1, 1), (-1.0, 0.25), (-1, 1)]),
                          drag=(1.5, 1.5, 1.5), direction_oriented=True, dir_scale=0.006,
-                         color_curve=([0, 0.5, 1], [LAV + (1,), VIO + (0.9,), BLU + (0,)]), pass_=9106))
+                         color_curve=([0, 0.5, 1], [HI + (1,), FLOW + (0.9,), DEEP + (0,)]), pass_=9106))
     ems.append(V.emitter('MV_PitchLines', T('pitch_lines'), blend=4, delay=END + 0.15, life=1.0, bind=0.0,
                          rotation=(-90, -90, 0), ground=True, scale=(235, 235, 1),
                          scale_curve=([0, 0.2, 1], [(0.82,) * 3, (1.0,) * 3, (1.04,) * 3]),
-                         color_curve=([0, 0.12, 0.6, 1], [LAV + (0,), (1, 1, 1, 1), VIO + (0.8,), BLU + (0,)]), pass_=-2890))
+                         color_curve=([0, 0.12, 0.6, 1], [HI + (0,), (1, 1, 1, 1), FLOW + (0.8,), DEEP + (0,)]), pass_=-2890))
     cast = b.entry(PART + 'Yunara_Base_R_Cast').struct
     # Yunara's own ground cast symbols are replaced by the pitch + shockwave
     f = cast.field('complexEmitterDefinitionData')
@@ -344,7 +344,7 @@ def main(game):
     files['data/characters/yunara/skins/skin0.bin'] = data
     wad = wad_bytes(files)
     info = {'Name': 'Flow Striker (Yunara)', 'Author': 'Flow Striker Project', 'Version': VERSION,
-            'Description': 'Football beads + projectiles, dark blue/violet Flow effects, METAVISION ult. Replaces the base skin.',
+            'Description': 'Football beads + projectiles, green Flow effects, METAVISION ult. Replaces the base skin.',
             'Heading': '', 'Home': ''}
     out = os.path.join(BUILD, f'FlowStriker_Yunara_v{VERSION}.fantome')
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
