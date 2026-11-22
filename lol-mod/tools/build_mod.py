@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -121,7 +121,7 @@ def step_bead_balls(b, game):
         idx = s.indices[m['istart']:m['istart'] + m['icount']].astype(np.int64) - m['vstart']
         if m['name'].startswith('Bead_'):
             c = v['pos'].mean(0)
-            pos, nrm, uv, tris = make_assets.uv_sphere(18.5, seg=28, rings=18)
+            pos, nrm, uv, tris = make_assets.uv_sphere(13.5, seg=28, rings=18)   # real football proportions
             nv = np.zeros(len(pos), s.verts.dtype)
             nv['pos'] = pos + c
             nv['nrm'] = nrm
@@ -173,14 +173,48 @@ def step_bead_balls(b, game):
     return len([m for m in subs if m['name'].startswith('Bead_')])
 
 
+OUTLINE_BONES = None
+
+
+def outline_thickness(pos, vpart, joints):
+    """Ink-shell thickness per vertex: proportional to the local limb radius (thin fingers, bold torso)."""
+    J = {j['name']: np.array(j['pos']) for j in joints['joints']}
+    segs = []
+    for a, b in (('Pelvis', 'Spine1'), ('Spine1', 'Spine2'), ('Spine2', 'Chest'), ('Chest', 'Neck'), ('Neck', 'Head')):
+        segs.append((J[a], J[b]))
+    for s in ('L', 'R'):
+        for a, b in ((f'{s}_Clavicle', f'{s}_Shoulder'), (f'{s}_Shoulder', f'{s}_Elbow'), (f'{s}_Elbow', f'{s}_Hand'),
+                     (f'{s}_Hip', f'{s}_KneeLower'), (f'{s}_KneeLower', f'{s}_Foot'), (f'{s}_Foot', f'{s}_Toe')):
+            segs.append((J[a], J[b]))
+        for f in ('Thumb', 'Index', 'Middle', 'Ring', 'Pinky'):
+            segs.append((J[f'{s}_{f}1'], J[f'{s}_{f}3']))
+    dmin = np.full(len(pos), 1e9)
+    for a, b in segs:
+        ab = b - a
+        t = np.clip(((pos - a) @ ab) / (ab @ ab), 0, 1)
+        dmin = np.minimum(dmin, np.linalg.norm(pos - (a + t[:, None] * ab), axis=1))
+    th = np.clip(0.11 * dmin, 0.35, 1.35)
+    th[vpart == 1] = 0.75                   # head
+    th[(vpart == 2) | (vpart == 3)] = 0.75  # hair
+    th[vpart == 4] = np.clip(0.2 * dmin[vpart == 4], 0.22, 0.45)
+    return th
+
+
 def step_character(b):
-    """Replaces Yunara's body with the original anime striker (Body = body+head, Pants = hair)."""
+    """Replaces Yunara's body with the original anime striker (Body = body/head/hands/boots, Pants = hair),
+    plus an inverted-hull ink outline (League culls back faces, as its double-sided cloth shows)."""
     s = STATE['skn']
-    d = np.load(os.path.join(CHAR, 'striker_rigged.npz'))
+    d = np.load(os.path.join(CHAR, 'striker2_rigged.npz'))
+    ink = json.load(open(os.path.join(CHAR, 'striker2_ink.json')))
+    joints = json.load(open(os.path.join(CHAR, 'yunara_joints.json')))
     tris, part = d['tris'], d['part']
+    vpart = np.full(len(d['pos']), -1)
+    for k in range(7):
+        vpart[np.unique(tris[part == k])] = k
+    th = outline_thickness(d['pos'].astype(np.float64), vpart, joints)
     new_v, new_i, subs = [], [], []
     vcount = icount = 0
-    for name, sel in (('Body', part <= 1), ('Pants', part >= 2)):
+    for name, sel in (('Body', np.isin(part, (0, 1, 4, 5, 6))), ('Pants', np.isin(part, (2, 3)))):
         t = tris[sel]
         used = np.unique(t)
         remap = np.full(len(d['pos']), -1, np.int64); remap[used] = np.arange(len(used))
@@ -192,8 +226,23 @@ def step_character(b):
         if 'tan' in nv.dtype.names:
             nv['tan'] = (1.0, 0.0, 0.0, 1.0)
         idx = remap[t].reshape(-1)
-        subs.append(dict(name=name, vstart=vcount, vcount=len(used), istart=icount, icount=len(idx)))
-        new_v.append(nv); new_i.append(idx + vcount); vcount += len(used); icount += len(idx)
+        # ink shell: same skinning, pushed out along the normal, reversed winding, ink texel
+        shell_tris = t[~np.isin(part[sel], (5, 6))]
+        sv_used = np.unique(shell_tris)
+        sremap = np.full(len(d['pos']), -1, np.int64); sremap[sv_used] = np.arange(len(sv_used)) + len(used)
+        sv = np.zeros(len(sv_used), s.verts.dtype)
+        sv['pos'] = d['pos'][sv_used] + d['nrm'][sv_used] * th[sv_used, None]
+        sv['nrm'] = d['nrm'][sv_used]; sv['infl'] = d['infl'][sv_used]; sv['w'] = d['w'][sv_used]
+        skin_like = np.isin(vpart[sv_used], (1, 4))
+        sv['uv'] = np.where(skin_like[:, None], np.array(ink['ink_skin'], np.float32), np.array(ink['ink_dark'], np.float32))
+        if 'col' in sv.dtype.names:
+            sv['col'] = 255
+        if 'tan' in sv.dtype.names:
+            sv['tan'] = (1.0, 0.0, 0.0, 1.0)
+        sidx = sremap[shell_tris[:, ::-1]].reshape(-1)
+        allv = np.concatenate([nv, sv]); alli = np.concatenate([idx, sidx])
+        subs.append(dict(name=name, vstart=vcount, vcount=len(allv), istart=icount, icount=len(alli)))
+        new_v.append(allv); new_i.append(alli + vcount); vcount += len(allv); icount += len(alli)
     for m in s.submeshes:                     # dragon head, tail and the football beads stay
         if m['name'] in ('Body', 'Pants'):
             continue
@@ -204,11 +253,14 @@ def step_character(b):
     assert vcount < 65536, vcount
     s.submeshes, s.verts = subs, np.concatenate(new_v)
     s.indices = np.concatenate(new_i).astype(np.uint16)
-    # body texture: the skin's texture field is a PATH (xxh64 of the lower-case path)
-    put_tex(STRIKER_TEX, Image.open(os.path.join(CHAR, 'striker_albedo.png')))
+    put_tex(STRIKER_TEX, Image.open(os.path.join(CHAR, 'striker2_albedo.png')))
+    # loading screen + HUD portraits (same paths as the originals inside Yunara's archive)
+    put_tex('assets/characters/yunara/skins/base/yunaraloadscreen_0.tex', Image.open(os.path.join(CHAR, 'loadscreen.png')))
+    put_tex('assets/characters/yunara/hud/yunara_square_0.tex', Image.open(os.path.join(CHAR, 'icon_square.png')))
+    put_tex('assets/characters/yunara/hud/yunara_circle_0.tex', Image.open(os.path.join(CHAR, 'icon_circle.png')))
     smp = b.entry(SKIN).struct.get('skinMeshProperties')
     smp.set('texture', L.PATH, xxhash.xxh64(STRIKER_TEX.encode()).intdigest())
-    return f"{len(d['pos'])} verts, {len(tris)} tris"
+    return f"{vcount} verts total, {len(tris)} model tris + ink shell"
 
 
 def step_write_skn():
@@ -391,7 +443,7 @@ def main(game):
     files['data/characters/yunara/skins/skin0.bin'] = data
     wad = wad_bytes(files)
     info = {'Name': 'Flow Striker (Yunara)', 'Author': 'Flow Striker Project', 'Version': VERSION,
-            'Description': 'Original anime football striker model, football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
+            'Description': 'Original anime football striker model (v2: fingers, cleats, baked anime lighting, ink outline), football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
             'Heading': '', 'Home': ''}
     out = os.path.join(BUILD, f'FlowStriker_Yunara_v{VERSION}.fantome')
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:

@@ -3,11 +3,15 @@
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
 Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.2.0 enthält
+## Was Version 0.3.0 enthält
 
 | Teil | Änderung |
 |---|---|
-| Modell | eigener Anime-Fußballstürmer statt Yunara: dunkelgrüne, zur Seite gestylte Frisur, bernsteinfarbene Augen, dunkelgrünes Trikot mit weißer Schärpe und Nummer 8, schwarze Shorts, weiße Stutzen, schwarze Schuhe mit neongrüner Sohle – an Yunaras Skelett gebunden, nutzt ihre Animationen |
+| Modell v2 | echte Finger (bewegen sich mit den Animationen), Fußballschuhe mit Stollen, Armband, Schienbeinschoner, vollere Frisur; Gewichte für Oberkörper/Hände aus Yunaras Original übernommen |
+| Licht & Textur | in Blender Cycles gebackenes Licht mit Haar-Schatten auf der Stirn, 3-stufige Anime-Schattierung, Nähte, Seitenteile, eigenes Vereinswappen, Strähnen mit Glanzlichtern, detaillierte Augen |
+| Konturlinie | Anime-Outline als Hülle im Modell (Riot blendet Rückseiten aus – sieht man an Yunaras doppelseitigem Stoff) |
+| Ladebildschirm & Icons | eigener Ladebildschirm (Volleyschuss) und eigene Porträt-Icons für Minimap/Fähigkeitsleiste |
+| Modell (v0.2) | eigener Anime-Fußballstürmer statt Yunara: dunkelgrüne, zur Seite gestylte Frisur, bernsteinfarbene Augen, dunkelgrünes Trikot mit weißer Schärpe und Nummer 8, schwarze Shorts, weiße Stutzen, schwarze Schuhe mit neongrüner Sohle – an Yunaras Skelett gebunden, nutzt ihre Animationen |
 | Perlen um den Körper | werden zu 8 echten 3D-Fußbällen (schwarz-weiß) |
 | Normale Angriffe, Krits, Q-Angriffe, W | Geschosse sind drehende Fußbälle |
 | Q / W | Fußbälle mit dunkelgrünem „Flow“-Leuchten |
@@ -19,7 +23,7 @@ Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind s
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.2.0.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.3.0.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
 
@@ -27,7 +31,9 @@ Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risik
 
 ## Vorschau
 
-![Stürmer](previews/striker_v0.2_front.png)
+![Ladebildschirm](previews/striker_v0.3_loadscreen.png)
+
+![Posen](previews/striker_v0.3_poses.png)
 
 ## Selbst neu bauen
 
@@ -49,4 +55,6 @@ Benötigt: Python 3, `pip install numpy pillow xxhash`. Ergebnis liegt in `build
   `blender_mesh.py` / `blender_bake.py` / `blender_rig.py` (Blender als Python-Modul: Aufräumen, UVs,
   Baken, Gewichte), `texture.py` (Anime-Bemalung), `animtest.py` (Test mit echten Animationen),
   `run_all.sh` (alles neu erzeugen). Ergebnis liegt in `assets_src/char/`.
+- `tools/char/*2.py`, `run_v2_all.sh` – Modell v2 (Finger, Stollen, Cycles-Licht-Bake, Textur v2, Rig mit Fingern);
+  `blender_render.py` + `compose.py` – Cycles-Renders, Ladebildschirm und Icons
 - `tools/fetch_wad.py` – lädt Yunaras Spielarchiv direkt von Riots Update-Server (für Skelett/Animationen)
