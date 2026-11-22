@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -154,7 +154,7 @@ def step_bead_balls(b, game):
     raw = e.raw.replace(old_h, new_h)
     old_fres = struct.pack('<4f', 0.5799953937530518, 0.5300068855285645, 1.0, 0.6000000238418579)
     if raw.count(old_fres) == 1:
-        raw = raw.replace(old_fres, struct.pack('<4f', 0.30, 1.0, 0.52, 0.55))
+        raw = raw.replace(old_fres, struct.pack('<4f', 0.12, 0.65, 0.30, 0.55))
     e.raw = raw
     put_tex(new_path, gen('ball_albedo'))
     # 3) keep the idle orb aura subtle so the ball stays readable
@@ -181,7 +181,7 @@ def step_ult_bead_seams(b):
     em = V.find_emitter(st, 'ADD_EdgeGlow')
     em.set('emitterName', L.STRING, 'MV_SeamGlow')
     em.set('texture', L.STRING, MV + 'mvfx_ball_seams.tex')
-    em.set('birthColor', L.EMBED, V.vcolor((0.42, 1.0, 0.60, 1.0)))
+    em.set('birthColor', L.EMBED, V.vcolor((0.12, 0.75, 0.35, 1.0)))
     em.remove('texDiv')
     em.set('birthScale0', L.EMBED, V.vvec3((1.012, 1.0, 1.0)))
     V.add_resource(b, RES, 'MV_R_BeadSeams', path)
@@ -224,7 +224,7 @@ def step_ult_cast(b):
     lp, lu, lt = make_assets.chain_link()
     files[MV + 'mvfx_chain_link.scb'] = scb_bytes(lp, lu, lt, 'mvfx_chain_link')
     T = lambda n: MV + 'mvfx_' + n + '.tex'
-    FLOW = (0.30, 1.0, 0.52); DEEP = (0.04, 0.62, 0.34); HI = (0.84, 1.0, 0.90)
+    FLOW = (0.10, 0.65, 0.30); DEEP = (0.02, 0.36, 0.16); HI = (0.62, 0.98, 0.72)
     fade = lambda c, t_in=0.08, t_out=0.85: ([0.0, t_in, t_out, 1.0], [c + (0.0,), c + (1.0,), c + (1.0,), c + (0.0,)])
     ems = []
     BREAK = 0.30
@@ -344,7 +344,7 @@ def main(game):
     files['data/characters/yunara/skins/skin0.bin'] = data
     wad = wad_bytes(files)
     info = {'Name': 'Flow Striker (Yunara)', 'Author': 'Flow Striker Project', 'Version': VERSION,
-            'Description': 'Football beads + projectiles, green Flow effects, METAVISION ult. Replaces the base skin.',
+            'Description': 'Football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
             'Heading': '', 'Home': ''}
     out = os.path.join(BUILD, f'FlowStriker_Yunara_v{VERSION}.fantome')
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:

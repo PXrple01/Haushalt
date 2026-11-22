@@ -15,9 +15,9 @@ ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, 'assets_src', 'gen')
 FONT = os.path.join(ROOT, 'assets_src', 'fonts', 'BigShoulders-Bold.ttf')
 
-FLOW = np.array([0.22, 1.00, 0.48])       # Flow green
-DEEP = np.array([0.02, 0.55, 0.30])       # deep emerald
-HIGHLIGHT = np.array([0.82, 1.00, 0.88])  # mint highlight
+FLOW = np.array([0.08, 0.62, 0.28])       # Flow dark green
+DEEP = np.array([0.01, 0.32, 0.14])       # very dark emerald
+HIGHLIGHT = np.array([0.62, 0.98, 0.72])  # light green core
 
 
 def save(arr, name):
@@ -213,8 +213,8 @@ def make_chain_texture():
     U, V = np.meshgrid(u, v)
     th = V * 2 * np.pi
     light = 0.5 + 0.5 * np.sin(th)                       # top of tube bright, underside dark
-    steel = np.array([0.13, 0.16, 0.15]) + np.array([0.58, 0.68, 0.62]) * (light ** 3)[..., None]
-    spec = np.exp(-((V - 0.25) / 0.05) ** 2)[..., None] * np.array([0.88, 1.0, 0.92])
+    steel = np.array([0.10, 0.13, 0.11]) + np.array([0.50, 0.62, 0.54]) * (light ** 3)[..., None]
+    spec = np.exp(-((V - 0.25) / 0.05) ** 2)[..., None] * np.array([0.85, 1.0, 0.9])
     edge = np.exp(-((V - 0.75) / 0.07) ** 2)[..., None] * FLOW * 0.9  # energy edge on underside
     wear = (np.sin(U * 2 * np.pi * 4 + 1.3) * 0.5 + 0.5)[..., None] * 0.06
     rgb = steel + spec * 0.55 + edge + wear
@@ -301,7 +301,7 @@ def make_eye(w=1024, h=512):
     save(np.stack([np.ones_like(tl), np.ones_like(tl), np.ones_like(tl), tl], -1), 'eye_text')
     # dark backing (alpha blended) so the eye reads on bright ground
     back = inside * 0.62 * smoothstep(0.0, 0.06, np.minimum(du, dl))
-    save(np.stack([np.full_like(x, 0.01), np.full_like(x, 0.07), np.full_like(x, 0.035), back], -1), 'eye_backing')
+    save(np.stack([np.full_like(x, 0.005), np.full_like(x, 0.04), np.full_like(x, 0.02), back], -1), 'eye_backing')
     # angular gradient (clockwise from 12 o'clock) used as erosion map for the letter sweep
     ang = (np.degrees(np.arctan2(x - icx, y - icy)) % 360) / 360
     g = (ang * 255).astype(np.uint8)

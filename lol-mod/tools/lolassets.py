@@ -6,14 +6,14 @@ import numpy as np
 from PIL import Image
 
 # ------------------------------------------------------------------ palette
-# Flow green: every colored value is pushed into deep emerald (140-155 deg)
-# or bright green (115-135 deg). Neutral greys/whites stay neutral so cores keep their punch.
+# Flow dark green: every colored value is pushed into dark emerald (138-148 deg)
+# or dark green (125-137 deg), saturated and darkened. Neutral greys/whites stay neutral so cores keep their punch.
 def flow_hue(h_deg):
     if 150 <= h_deg < 248:          # cyan / blue family -> deep emerald
-        return 140 + (h_deg - 150) / 98 * 15
+        return 138 + (h_deg - 150) / 98 * 10
     if 248 <= h_deg < 345:          # purple / magenta family -> bright green
-        return 115 + (h_deg - 248) / 97 * 20
-    return 125                      # warm colors -> green accent
+        return 125 + (h_deg - 248) / 97 * 12
+    return 130                      # warm colors -> green accent
 
 
 def flow_rgb(r, g, b):
@@ -23,8 +23,8 @@ def flow_rgb(r, g, b):
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
     w = _smoothstep(0.04, 0.22, s)        # 0 = neutral (kept), 1 = fully remapped
     h2 = flow_hue(h * 360) / 360
-    s2 = min(1.0, s * 1.25 + 0.10)
-    v2 = v * 0.90
+    s2 = min(1.0, s * 1.30 + 0.15)
+    v2 = v * 0.72
     r2, g2, b2 = colorsys.hsv_to_rgb(h2, s2, v2)
     mix = lambda a, b_: a * (1 - w) + b_ * w
     return mix(r, r2) * scale, mix(g, g2) * scale, mix(b, b2) * scale
@@ -49,10 +49,10 @@ def flow_image(im: Image.Image) -> Image.Image:
     # vectorised hsv
     hsv = np.asarray(Image.fromarray((rgb * 255).astype(np.uint8)).convert('HSV')).astype(np.float32)
     h = hsv[..., 0] / 255 * 360
-    h2 = np.where((h >= 150) & (h < 248), 140 + (h - 150) / 98 * 15,
-         np.where((h >= 248) & (h < 345), 115 + (h - 248) / 97 * 20, 125))
-    s2 = np.clip(s * 1.25 + 0.10, 0, 1)
-    v2 = mx * 0.90
+    h2 = np.where((h >= 150) & (h < 248), 138 + (h - 150) / 98 * 10,
+         np.where((h >= 248) & (h < 345), 125 + (h - 248) / 97 * 12, 130))
+    s2 = np.clip(s * 1.30 + 0.15, 0, 1)
+    v2 = mx * 0.72
     out = np.stack([h2 / 360 * 255, s2 * 255, v2 * 255], -1).astype(np.uint8)
     rgb2 = np.asarray(Image.fromarray(out, 'HSV').convert('RGB')).astype(np.float32) / 255
     t = np.clip((s - 0.04) / (0.22 - 0.04), 0, 1)

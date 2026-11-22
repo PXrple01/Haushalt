@@ -60,7 +60,7 @@ def render(skn_path, textures, out, size=(900, 1100), yaw_deg=35, pitch_deg=12, 
             n /= np.linalg.norm(n, axis=-1, keepdims=True) + 1e-9
             shade = 0.55 + 0.45 * np.clip(n @ light, 0, 1)
             rim = np.clip(1 - np.abs(n[..., 2]), 0, 1) ** 3
-            col = col * shade[..., None] + rim[..., None] * np.array([0.3, 1.0, 0.5]) * 0.5
+            col = col * shade[..., None] + rim[..., None] * np.array([0.1, 0.65, 0.3]) * 0.5
             region = img[y0:y1 + 1, x0:x1 + 1]
             region[vis] = col[vis]
             zb[vis] = z[vis]
