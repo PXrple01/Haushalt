@@ -152,9 +152,9 @@ def uv_sphere(radius, seg=32, rings=20):
         for i in range(seg):
             a = j * (seg + 1) + i; b = a + seg + 1
             if j != 0:
-                tris.append((a, b, a + 1))
+                tris.append((a, a + 1, b))          # outward-facing winding (League convention)
             if j != rings - 1:
-                tris.append((a + 1, b, b + 1))
+                tris.append((a + 1, b + 1, b))
     return np.array(pos, np.float32), np.array(nrm, np.float32), np.array(uv, np.float32), np.array(tris, np.uint32)
 
 

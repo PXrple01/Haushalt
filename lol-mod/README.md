@@ -3,10 +3,11 @@
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
 Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.1.2 enthält
+## Was Version 0.2.0 enthält
 
 | Teil | Änderung |
 |---|---|
+| Modell | eigener Anime-Fußballstürmer statt Yunara: dunkelgrüne, zur Seite gestylte Frisur, bernsteinfarbene Augen, dunkelgrünes Trikot mit weißer Schärpe und Nummer 8, schwarze Shorts, weiße Stutzen, schwarze Schuhe mit neongrüner Sohle – an Yunaras Skelett gebunden, nutzt ihre Animationen |
 | Perlen um den Körper | werden zu 8 echten 3D-Fußbällen (schwarz-weiß) |
 | Normale Angriffe, Krits, Q-Angriffe, W | Geschosse sind drehende Fußbälle |
 | Q / W | Fußbälle mit dunkelgrünem „Flow“-Leuchten |
@@ -18,11 +19,15 @@ Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind s
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.1.2.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.2.0.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
 
 Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risiko. Nach LoL-Patches kann ein Update nötig sein.
+
+## Vorschau
+
+![Stürmer](previews/striker_v0.2_front.png)
 
 ## Selbst neu bauen
 
@@ -40,3 +45,8 @@ Benötigt: Python 3, `pip install numpy pillow xxhash`. Ergebnis liegt in `build
 - `tools/make_assets.py` – erzeugt alle eigenen Grafiken (`assets_src/gen/`)
 - `tools/build_mod.py` – baut daraus die `.fantome`-Datei
 - `assets_src/fonts/` – Schrift „Big Shoulders“ (SIL Open Font License)
+- `tools/char/` – Modell-Pipeline des Stürmers: `design.py` (Formen per Signed-Distance-Modellierung),
+  `blender_mesh.py` / `blender_bake.py` / `blender_rig.py` (Blender als Python-Modul: Aufräumen, UVs,
+  Baken, Gewichte), `texture.py` (Anime-Bemalung), `animtest.py` (Test mit echten Animationen),
+  `run_all.sh` (alles neu erzeugen). Ergebnis liegt in `assets_src/char/`.
+- `tools/fetch_wad.py` – lädt Yunaras Spielarchiv direkt von Riots Update-Server (für Skelett/Animationen)

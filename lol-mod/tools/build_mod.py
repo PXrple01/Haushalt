@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.1.2'
+VERSION = '0.2.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -35,6 +35,9 @@ MV = 'assets/characters/yunara/skins/base/particles/mvfx/'
 R_SPELL = 'Characters/Yunara/Spells/YunaraRAbility/YunaraR'
 
 files = {}            # game path -> bytes
+STATE = {}
+CHAR = os.path.join(ROOT, 'assets_src', 'char')
+STRIKER_TEX = 'assets/characters/yunara/skins/base/mvfx_striker_tx_cm.tex'
 
 
 # ------------------------------------------------------------------ io helpers
@@ -138,10 +141,7 @@ def step_bead_balls(b, game):
     s.submeshes = subs
     s.verts = np.concatenate(new_v)
     s.indices = np.concatenate(new_i).astype(np.uint16)
-    out = os.path.join(BUILD, 'tmp.skn'); os.makedirs(BUILD, exist_ok=True)
-    lolskn.write(s, out)
-    files['assets/characters/yunara/skins/base/yunara_base.skn'] = open(out, 'rb').read()
-    os.remove(out)
+    STATE['skn'] = s
     # 2) material: point the bead material at the football texture (same-length path keeps the
     #    raw entry valid) and make the rim light Flow-green
     # (texture paths inside these material entries are stored as xxh64 hashes)
@@ -171,6 +171,51 @@ def step_bead_balls(b, game):
             vals = dyn.field('values')
             vals.value.items = [c[:3] + (c[3] * 0.4,) for c in vals.value.items]
     return len([m for m in subs if m['name'].startswith('Bead_')])
+
+
+def step_character(b):
+    """Replaces Yunara's body with the original anime striker (Body = body+head, Pants = hair)."""
+    s = STATE['skn']
+    d = np.load(os.path.join(CHAR, 'striker_rigged.npz'))
+    tris, part = d['tris'], d['part']
+    new_v, new_i, subs = [], [], []
+    vcount = icount = 0
+    for name, sel in (('Body', part <= 1), ('Pants', part >= 2)):
+        t = tris[sel]
+        used = np.unique(t)
+        remap = np.full(len(d['pos']), -1, np.int64); remap[used] = np.arange(len(used))
+        nv = np.zeros(len(used), s.verts.dtype)
+        nv['pos'] = d['pos'][used]; nv['nrm'] = d['nrm'][used]; nv['uv'] = d['uv'][used]
+        nv['infl'] = d['infl'][used]; nv['w'] = d['w'][used]
+        if 'col' in nv.dtype.names:
+            nv['col'] = 255
+        if 'tan' in nv.dtype.names:
+            nv['tan'] = (1.0, 0.0, 0.0, 1.0)
+        idx = remap[t].reshape(-1)
+        subs.append(dict(name=name, vstart=vcount, vcount=len(used), istart=icount, icount=len(idx)))
+        new_v.append(nv); new_i.append(idx + vcount); vcount += len(used); icount += len(idx)
+    for m in s.submeshes:                     # dragon head, tail and the football beads stay
+        if m['name'] in ('Body', 'Pants'):
+            continue
+        v = s.verts[m['vstart']:m['vstart'] + m['vcount']]
+        idx = s.indices[m['istart']:m['istart'] + m['icount']].astype(np.int64) - m['vstart']
+        subs.append(dict(name=m['name'], vstart=vcount, vcount=len(v), istart=icount, icount=len(idx)))
+        new_v.append(v); new_i.append(idx + vcount); vcount += len(v); icount += len(idx)
+    assert vcount < 65536, vcount
+    s.submeshes, s.verts = subs, np.concatenate(new_v)
+    s.indices = np.concatenate(new_i).astype(np.uint16)
+    # body texture: the skin's texture field is a PATH (xxh64 of the lower-case path)
+    put_tex(STRIKER_TEX, Image.open(os.path.join(CHAR, 'striker_albedo.png')))
+    smp = b.entry(SKIN).struct.get('skinMeshProperties')
+    smp.set('texture', L.PATH, xxhash.xxh64(STRIKER_TEX.encode()).intdigest())
+    return f"{len(d['pos'])} verts, {len(tris)} tris"
+
+
+def step_write_skn():
+    out = os.path.join(BUILD, 'tmp.skn'); os.makedirs(BUILD, exist_ok=True)
+    lolskn.write(STATE['skn'], out)
+    files['assets/characters/yunara/skins/base/yunara_base.skn'] = open(out, 'rb').read()
+    os.remove(out)
 
 
 def step_ult_bead_seams(b):
@@ -337,6 +382,8 @@ def main(game):
     print('recolor            :', step_recolor(b, game))
     print('football missiles  :', step_ball_projectiles(b))
     print('football beads     :', step_bead_balls(b, game))
+    print('striker model      :', step_character(b))
+    step_write_skn()
     print('ult seam conditions:', step_ult_bead_seams(b))
     print('ult cast emitters  :', step_ult_cast(b))
     data = L.write(b)
@@ -344,7 +391,7 @@ def main(game):
     files['data/characters/yunara/skins/skin0.bin'] = data
     wad = wad_bytes(files)
     info = {'Name': 'Flow Striker (Yunara)', 'Author': 'Flow Striker Project', 'Version': VERSION,
-            'Description': 'Football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
+            'Description': 'Original anime football striker model, football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
             'Heading': '', 'Home': ''}
     out = os.path.join(BUILD, f'FlowStriker_Yunara_v{VERSION}.fantome')
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
