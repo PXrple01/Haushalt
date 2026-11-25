@@ -3,12 +3,14 @@
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
 Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.6.0 enthält
+## Was Version 0.6.1 enthält
 
 | Teil | Änderung |
 |---|---|
 | Farben (neu in v0.6) | Stürmer in Blau-Lila: königsblaues Trikot, violette Akzente (Kragen, Ärmelsäume, Stutzenstreifen, Schnürsenkel, Wappen), tiefviolette Shorts, indigo Strumpfhose, dunkelblaue Haare mit violettem Schimmer; Bernsteinaugen bleiben. Effekte bleiben dunkelgrün |
 | Ult: Hologramm-Stadion (neu) | METAVISION baut beim Aktivieren ein Stadion aus grünen Hologrammen: vier Flutlichtmasten wachsen aus dem Boden und schalten flackernd ihre Lichtkegel auf den Stürmer, ringsum blitzen Handykameras wie auf der Tribüne; fünf Geister-Verteidiger bauen sich Scan für Scan auf, bekommen Zielmarkierungen und zerspringen in Splitter; dann erscheint ein Holo-Tor, ein Ball wird hineingeschossen, das Netz beult aus, Lichtblitz + Lichtbrechung + Konfetti. Masten und Verteidiger mit Meshy modelliert, Hologramm-Look mit Riots Fresnel-Rand und Auflöse-Effekt |
+| Q als Flow-Zustand (neu in v0.6.1) | alle Q-Effekte in Weiß → Lavendel → Violett mit weichen Übergängen (helle Kerne weiß, verblassende Ränder violett): Licht wird in den Stürmer gesogen und bricht aus, danach leuchtender weiß-violetter Konturrand um den ganzen Körper, aufsteigende Lichtschleier, violetter Schein, Funkeln, Konturen-Nachbilder beim Bewegen, Lichtspuren hinter Händen und kreisenden Bällen; Q-Bälle und Q-Treffer weiß-violett |
+| Animationen geprüft (v0.6.1) | alle 72 Animationen Bild für Bild am Modell geprüft (Vorschauvideo); Riots extreme Dehn-Effekte (Arme/Beine/Wirbelsäule bis +80 %) auf ±10 % begrenzt, damit nichts gestreckt oder kaputt aussieht |
 | Ult-Aura (neu) | alle ~1,4 s gleitet ein Scanner-Ring über den Stürmer („METAVISION liest das Spiel“) |
 | Modell (neu in v0.5) | viel detaillierterer Anime-Stürmer (eigenes Design, mit Meshy erzeugt): dunkelgrüne, zur Seite gestylte Haare, bernsteinfarbene Augen, dunkelblaues Trikot mit weißer Schärpe und Wappen, lange dunkelblaue Strumpfhose unter den Shorts, weiße Stutzen mit grünen Streifen, schwarze Stollenschuhe – mit seinen eigenen Anime-Proportionen |
 | Eigenes Skelett (neu) | die Knochen sitzen an den Gelenken des Stürmers; alle 72 Animationen von Yunara werden beim Bauen darauf umgerechnet (gleiche Bewegungen, Bein- und Armlängen angepasst, Füße bleiben am Boden) |
@@ -28,7 +30,7 @@ Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind s
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.6.0.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.6.1.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
 
@@ -58,6 +60,10 @@ Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risik
 ![Ult: Hologramm-Stadion (Simulation)](previews/effects_v0.6_ult_stadium.gif)
 
 ![Ult nah (Simulation)](previews/effects_v0.6_ult_closeup.gif)
+
+![Q – Flow-Zustand (Simulation)](previews/effects_v0.6.1_q_flow.gif)
+
+Vorschauvideo mit allen 72 Animationen: `tools/char/anim_video.py` (siehe unten).
 
 ![Effekte (Simulation)](previews/effects_v0.4.gif)
 
@@ -94,6 +100,8 @@ Stürmers um. Riots Dateien landen nie im Repository.
 - `tools/extract_wad.py` – holt daraus Skelett, Animationsgraph und alle Animationen für den Build
 - `tools/stadium_fx.py` – Hologramm-Stadion der Ult (Masten, Verteidiger, Tor, Lichtkegel, Zeitachse);
   `tools/char/vfx_mesh.py` macht aus Meshy-Modellen leichte Effekt-Meshes (`assets_src/vfx/`)
+- `tools/char/anim_video.py` + `posebin.py` + `tools/ltk_pose_dump/` (C#, LeagueToolkit) – Vorschauvideo: jede Animation
+  exakt ausgewertet am Modell, danach die Effekte
 - `tools/bcn.py` – DXT1/DXT5-Kodierung der Texturen (wie Riot), `tools/validate_bin.py` – prüft Bins gegen Riots Klassenschema
 - `tools/char/meshy_prep.py`, `meshy_repose.py`, `meshy_bake.py`, `meshy_texture.py` – Pipeline für das Meshy-Modell:
   reduzieren (682.000 → 26.000 Dreiecke), Arme/Beine in Yunaras Grundpose drehen, Licht vom Originalmodell backen,

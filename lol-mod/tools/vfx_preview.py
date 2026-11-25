@@ -64,6 +64,10 @@ def load_meshes(fantome):
             tris[k] = struct.unpack_from('<3I', d, off); u = struct.unpack_from('<6f', d, off + 76)
             cuv[k] = [(u[0], u[3]), (u[1], u[4]), (u[2], u[5])]; off += 100
         out[pth] = S.mesh_samples(pos, tris, cuv)
+    # the striker himself for attached-mesh glows (mirrored like the backdrop)
+    d = np.load(os.path.join(HERE, '..', 'assets_src', 'char', 'meshy_striker_rigged.npz'))
+    P = d['pos'].astype(float) * np.array([-1.0, 1, 1]); T = d['tris'][:, ::-1]
+    out['__attached__'] = S.mesh_samples(P, T, d['uv'][T].astype(float), per_unit2=1.5, cap=90000)
     return out
 
 
@@ -72,7 +76,7 @@ def load_textures(game_png):
     for f in os.listdir(GEN):
         if f.endswith('.png'):
             tex[f'assets/characters/yunara/skins/base/particles/mvfx/mvfx_{f[:-4]}.tex'] = Image.open(os.path.join(GEN, f)).convert('RGBA')
-    for orb, src in (('yunara_base_ba_orb01', 'ball_sprite'), ('yunara_base_q_orb01', 'ball_sprite_flow'), ('yunara_base_passive_orb01', 'ball_sprite_flow')):
+    for orb, src in (('yunara_base_ba_orb01', 'ball_sprite'), ('yunara_base_q_orb01', 'ball_sprite_q'), ('yunara_base_passive_orb01', 'ball_sprite_flow')):
         tex[f'assets/characters/yunara/skins/base/particles/{orb}.tex'] = Image.open(os.path.join(GEN, src + '.png')).convert('RGBA')
     tex['assets/characters/yunara/skins/base/particles/mvfx/mvfx_ball_rebound.tex'] = Image.open(os.path.join(GEN, 'ball_sprite.png')).convert('RGBA')
     tex['assets/characters/yunara/skins/base/particles/mvfx/mvfx_ball_ult.tex'] = Image.open(os.path.join(GEN, 'ball_sprite_ult.png')).convert('RGBA')
@@ -82,6 +86,13 @@ def load_textures(game_png):
         a = np.asarray(im).astype(float); lum = a[..., :3].max(-1)
         im = Image.fromarray(np.dstack([np.full(lum.shape, 255), np.full(lum.shape, 255), np.full(lum.shape, 255), lum]).astype(np.uint8))
         tex['assets/characters/yunara/skins/base/particles/base_generic_sparks_add.tex'] = im
+    # white-violet copies of shared Riot textures used by the Q (see build_mod.step_q_flow)
+    from lolassets import q_image
+    import recolor as RC
+    for n in RC.COLORED_TEXTURES:
+        src = os.path.join(game_png, f'assets_characters_yunara_skins_base_particles_{n}.png')
+        if os.path.exists(src):
+            tex[f'assets/characters/yunara/skins/base/particles/mvfx/mvfx_q_{n}.tex'] = q_image(Image.open(src))
     return {k.lower(): v for k, v in tex.items()}
 
 
@@ -120,6 +131,7 @@ def backdrop(cam, rigged, albedo, W, H):
         u = np.clip(uv[..., 0] * (tw - 1), 0, tw - 1).astype(int); v = np.clip(uv[..., 1] * (th - 1), 0, th - 1).astype(int)
         img[y0:y1 + 1, x0:x1 + 1][vis] = tex[v, u][vis]
         zr[vis] = zz[vis]
+    S.DEPTH['zb'] = zb                 # particles behind the striker get hidden (like the game's depth test)
     return img
 
 

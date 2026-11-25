@@ -24,6 +24,10 @@ MAIN = ['Root', 'Spine1', 'Spine2', 'Chest', 'Neck', 'Head'] + [
 TWINS = {f'{s}_{a}': f'{s}_{b}' for s in ('L', 'R') for a, b in
          (('KneeLower', 'KneeUpper'), ('Shoulder_Scale', 'Shoulder'), ('Elbow_Scale', 'Elbow'), ('Hip_Snap', 'Hip'))}
 ROOTLIKE = ['Root', 'C_Buffbone_Glb_Center_Loc', 'L_Hip_Snap', 'R_Hip_Snap', 'Buffbone_Glb_Ground_Loc']
+# Riot's clips stretch limbs and spine up to +80 % for a frame or two (squash & stretch smears). On Yunara's thin
+# limbs that reads as motion; on a model with sleeves, shorts and socks it reads as broken. Body bones keep their
+# length within about +-15 % (soft limit, tanh), timing and direction stay exactly as animated.
+STRETCH_LIMIT = 0.10
 
 
 def segments(P, head_top):
@@ -101,12 +105,14 @@ def build_skeleton(skl_path, joints_path, lm_path, out_dir, name):
         struct.pack_into('<3f', raw, rec + 16, *c_loc)
         struct.pack_into('<3f', raw, rec + 56, *ib[:3, 3])
         changed += 1
+        k = 0.0
         if n in ROOTLIKE:
             s_ = float(T['Root'][1] / Y['Root'][1])
         else:
             lb, lc = np.linalg.norm(b_loc), np.linalg.norm(c_loc)
             s_ = float(lc / lb) if lb > 1.0 else 1.0
-        retarget[str(h)] = {'name': n, 'b': b_loc.tolist(), 'c': c_loc.tolist(), 's': s_}
+            k = STRETCH_LIMIT if (lc > 1.0 and under_root(i)) else 0.0
+        retarget[str(h)] = {'name': n, 'b': b_loc.tolist(), 'c': c_loc.tolist(), 's': s_, 'k': k}
     os.makedirs(out_dir, exist_ok=True)
     open(os.path.join(out_dir, f'{name}.skl'), 'wb').write(raw)
     out_j = {'joints': [], 'influences': jd['influences']}
@@ -124,10 +130,20 @@ def _xf(params, h):
     p = params.get(str(h))
     if p is None:
         return None
-    b, c, s = np.array(p['b']), np.array(p['c']), p['s']
-    if s == 1.0 and np.array_equal(b, c):
+    b, c, s, k = np.array(p['b']), np.array(p['c']), p['s'], p.get('k', 0.0)
+    if s == 1.0 and np.array_equal(b, c) and not k:
         return None
-    return lambda t: c + (t - b) * s
+    lc = float(np.linalg.norm(c))
+
+    def f(t):
+        v = c + (t - b) * s
+        if k:
+            ln = float(np.linalg.norm(v))
+            if ln > 1e-6:
+                r = ln / lc
+                v = v * ((1.0 + k * np.tanh((r - 1.0) / k)) / r)
+        return v
+    return f
 
 
 def retarget_uncompressed(raw, params):

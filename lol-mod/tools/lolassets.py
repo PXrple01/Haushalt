@@ -30,6 +30,39 @@ def flow_rgb(r, g, b):
     return mix(r, r2) * scale, mix(g, g2) * scale, mix(b, b2) * scale
 
 
+# Q / flow state: brightness picks the colour on a white -> lavender -> violet -> deep violet ramp,
+# so bright cores turn white and fading edges turn violet (a soft blended transition over every curve).
+Q_STOPS = [(0.00, (0.20, 0.05, 0.42)), (0.35, (0.40, 0.14, 0.82)), (0.62, (0.62, 0.40, 1.00)),
+           (0.84, (0.86, 0.76, 1.00)), (1.00, (1.00, 1.00, 1.00))]
+
+
+def q_rgb(r, g, b):
+    mx = max(r, g, b)
+    scale = mx if mx > 1.0 else 1.0
+    v = mx / scale
+    for (t0, c0), (t1, c1) in zip(Q_STOPS, Q_STOPS[1:]):
+        if v <= t1:
+            k = (v - t0) / max(t1 - t0, 1e-6)
+            c = [a + (b_ - a) * k for a, b_ in zip(c0, c1)]
+            break
+    else:
+        c = list(Q_STOPS[-1][1])
+    return tuple(x * v / max(c) * scale if max(c) > 0 else 0.0 for x in c)
+
+
+def q_rgba(c):
+    return q_rgb(*c[:3]) + tuple(c[3:])
+
+
+def q_image(im: Image.Image) -> Image.Image:
+    a = np.asarray(im.convert('RGBA')).astype(np.float32) / 255
+    v = a[..., :3].max(-1)
+    ts = np.array([t for t, _ in Q_STOPS]); cs = np.array([c for _, c in Q_STOPS])
+    rgb = np.stack([np.interp(v, ts, cs[:, k]) for k in range(3)], -1)
+    rgb = rgb * (v / np.maximum(rgb.max(-1), 1e-6))[..., None]
+    return Image.fromarray((np.dstack([np.clip(rgb, 0, 1), a[..., 3]]) * 255).astype(np.uint8), 'RGBA')
+
+
 def _smoothstep(e0, e1, x):
     t = min(1.0, max(0.0, (x - e0) / (e1 - e0)))
     return t * t * (3 - 2 * t)

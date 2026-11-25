@@ -108,7 +108,10 @@ def rot_to(a, b):
     return np.eye(3) + vx + vx @ vx / (1 + c)
 
 
-def make_ball_sprite(name, glow=0.35, rim=0.25, seam_emit=0.0, size=256):
+def make_ball_sprite(name, glow=0.35, rim=0.25, seam_emit=0.0, size=256, tint=None, core=None):
+    """tint/core: rim + halo colour and the bright inner glow (default: the Flow greens)."""
+    FLOW_ = np.asarray(tint if tint is not None else FLOW, float)
+    HIGH_ = np.asarray(core if core is not None else HIGHLIGHT, float)
     R = 0.80
     y, x = np.mgrid[size - 1:-1:-1, 0:size] / (size - 1) * 2 - 1
     x = x.astype(float); y = y.astype(float)
@@ -124,13 +127,13 @@ def make_ball_sprite(name, glow=0.35, rim=0.25, seam_emit=0.0, size=256):
     shade = 0.58 + 0.42 * nz ** 0.55                       # rotation-symmetric -> safe to spin
     col = col * shade[..., None]
     fres = (1 - nz) ** 2.2
-    col = col * (1 - rim * fres[..., None]) + FLOW * (rim * 1.6 * fres[..., None])
+    col = col * (1 - rim * fres[..., None]) + FLOW_ * (rim * 1.6 * fres[..., None])
     if seam_emit > 0:
         g = seam_glow(e / (1 + 0.8 * seam_emit))[..., None] * seam_emit
-        col = col * (1 - 0.8 * np.clip(g, 0, 1)) + (FLOW * 1.0 + HIGHLIGHT * 0.45) * g * 1.25
+        col = col * (1 - 0.8 * np.clip(g, 0, 1)) + (FLOW_ * 1.0 + HIGH_ * 0.45) * g * 1.25
     aa = 1 - smoothstep(R - 0.008, R + 0.004, r)
     halo = glow * np.exp(-((r - R) / 0.075) ** 2) * (r >= R - 0.01)
-    rgb = col * aa[..., None] + (FLOW * 0.9 + 0.1) * halo[..., None] * (1 - aa[..., None])
+    rgb = col * aa[..., None] + (FLOW_ * 0.9 + 0.1) * halo[..., None] * (1 - aa[..., None])
     a = np.clip(aa + halo * (1 - aa), 0, 1)
     rgb = np.where(a[..., None] > 1e-4, rgb / np.maximum(a[..., None], 1e-4) * np.minimum(a[..., None], 1), 0)
     save(np.concatenate([np.clip(rgb, 0, 1), a[..., None]], -1), name)
@@ -503,6 +506,8 @@ if __name__ == '__main__':
     make_ball_sprite('ball_sprite', glow=0.30, rim=0.22)
     make_ball_sprite('ball_sprite_flow', glow=0.75, rim=0.50, seam_emit=0.35)
     make_ball_sprite('ball_sprite_ult', glow=0.95, rim=0.55, seam_emit=1.0)
+    # Q (flow state): white core, lavender seams, violet rim + halo
+    make_ball_sprite('ball_sprite_q', glow=0.85, rim=0.55, seam_emit=0.45, tint=(0.58, 0.32, 1.0), core=(1.0, 0.95, 1.0))
     make_chain_texture()
     make_eye()
     make_reticle()

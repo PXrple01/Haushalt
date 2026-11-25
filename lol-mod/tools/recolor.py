@@ -10,35 +10,40 @@ H_VALUES = L.fnv1a('values')
 H_FRESNEL = L.fnv1a('fresnelColor')
 
 
-def recolor_value(v, t, stats, skip=None):
+def recolor_value(v, t, stats, skip=None, fn=flow_rgba):
     if isinstance(v, L.Struct):
         if skip and skip(v):
             return
         th = v.type_hash
         for f in v.fields:
             if th == VALUE_COLOR and f.hash == H_CONST and f.type == L.VEC4:
-                f.value = flow_rgba(f.value); stats['const'] += 1
+                f.value = fn(f.value); stats['const'] += 1
             elif th == ANIM_COLOR and f.hash == H_VALUES and isinstance(f.value, L.List) and f.value.vtype == L.VEC4:
-                f.value.items = [flow_rgba(c) for c in f.value.items]; stats['anim'] += len(f.value.items)
+                f.value.items = [fn(c) for c in f.value.items]; stats['anim'] += len(f.value.items)
             elif th == REFLECTION and f.hash == H_FRESNEL and f.type == L.VEC4:
-                f.value = flow_rgba(f.value); stats['fresnel'] += 1
+                f.value = fn(f.value); stats['fresnel'] += 1
             else:
-                recolor_value(f.value, f.type, stats, skip)
+                recolor_value(f.value, f.type, stats, skip, fn)
     elif isinstance(v, L.List):
         for x in v.items:
-            recolor_value(x, v.vtype, stats, skip)
+            recolor_value(x, v.vtype, stats, skip, fn)
     elif isinstance(v, L.Map):
         for k, x in v.items:
-            recolor_value(x, v.vtype, stats, skip)
+            recolor_value(x, v.vtype, stats, skip, fn)
     elif isinstance(v, L.Option) and v.value is not None:
-        recolor_value(v.value, v.vtype, stats, skip)
+        recolor_value(v.value, v.vtype, stats, skip, fn)
 
 
-def recolor_bin(b: L.BinFile):
+def is_q_system(st):
+    """Q (flow state) systems get the white-violet palette instead of Flow green."""
+    return '_Q_' in str(st.get('particleName') or '')
+
+
+def recolor_bin(b: L.BinFile, skip_system=None):
     stats = {'const': 0, 'anim': 0, 'fresnel': 0}
     vfx = L.fnv1a('VfxSystemDefinitionData')
     for e in b.entries:
-        if e.struct is not None and e.struct.type_hash == vfx:
+        if e.struct is not None and e.struct.type_hash == vfx and not (skip_system and skip_system(e.struct)):
             recolor_value(e.struct, L.EMBED, stats)
     return stats
 

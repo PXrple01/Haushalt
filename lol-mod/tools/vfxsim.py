@@ -19,6 +19,8 @@ H = {n: L.fnv1a(n) for n in [
     'alphaErosionDefinition', 'erosionDriveCurve', 'erosionMapName', 'reflectionDefinition', 'fresnelColor']}
 T_PRIM_MESH = L.fnv1a('VfxPrimitiveMesh')
 T_PRIM_QUAD = L.fnv1a('VfxPrimitiveArbitraryQuad')
+T_PRIM_ATTACHED = L.fnv1a('VfxPrimitiveAttachedMesh')
+WHITE = Image.new('RGBA', (4, 4), (255, 255, 255, 255))
 
 
 def mesh_samples(pos, tris, cuv, per_unit2=0.5, cap=60000, seed=3):
@@ -116,6 +118,11 @@ class Emitter:
         self.flat = isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_QUAD and not self.ground
         if isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_MESH:
             mm = _get(prim, 'mMesh'); self.mesh = meshes.get((_get(mm, 'mSimpleMeshName') or '').lower())
+        self.attached = isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_ATTACHED
+        sf = em.field(L.fnv1a('stencilMode'))
+        self.stencil = bool(sf is not None and sf.value)
+        if self.attached:                                   # the champion's own mesh (static pose in the preview)
+            self.mesh = meshes.get('__attached__')
         ero = _get(em, 'alphaErosionDefinition'); self.erosion = None
         if isinstance(ero, L.Struct):
             emap = textures.get((_get(ero, 'erosionMapName') or '').lower())
@@ -125,6 +132,13 @@ class Emitter:
         self.fresnel = np.array(_get(refl, 'fresnelColor')[:3]) if isinstance(refl, L.Struct) and _get(refl, 'fresnelColor') else None
         tex = (_get(em, 'texture') or '').lower()
         self.tex = textures.get(tex)
+        if self.tex is None and getattr(self, 'attached', False) and self.mesh is not None:
+            self.tex = WHITE
+        # stencil emulation: black alpha mask writers draw nothing visible; other stencil glows only show
+        # around the silhouette (Riot inflates the body mesh and masks the body itself out)
+        bc = self.bcol.const
+        if self.stencil and self.blend != 4 and len(bc) >= 3 and max(bc[:3]) < 0.05:
+            self.tex = None
         self.particles = []
         self.emitted = 0.0
 
@@ -193,7 +207,10 @@ def _sprite(img, rgba, size_px, angle, stretch=None):
     return a
 
 
-def composite(canvas, spr, cx, cy, additive):
+DEPTH = {'zb': None}          # optional depth buffer of the backdrop (character): hides particles behind it
+
+
+def composite(canvas, spr, cx, cy, additive, z=None):
     h, w = spr.shape[:2]
     x0, y0 = int(cx - w / 2), int(cy - h / 2)
     H_, W_ = canvas.shape[:2]
@@ -201,6 +218,9 @@ def composite(canvas, spr, cx, cy, additive):
     if xa >= xb or ya >= yb:
         return
     s = spr[ya - y0:yb - y0, xa - x0:xb - x0]
+    if z is not None and DEPTH['zb'] is not None:
+        vis = (z < DEPTH['zb'][ya:yb, xa:xb])[..., None]
+        s = s * vis
     reg = canvas[ya:yb, xa:xb]
     if additive:
         reg += s[..., :3] * s[..., 3:4]
@@ -240,6 +260,11 @@ def render_mesh(canvas, e, p, age, t, cam):
     H, W = canvas.shape[:2]
     xi = np.round(scr[:, 0]).astype(int); yi = np.round(scr[:, 1]).astype(int)
     ok &= (xi >= 0) & (xi < W) & (yi >= 0) & (yi < H) & (mask > 0.01)
+    if DEPTH['zb'] is not None:
+        if getattr(e, 'stencil', False):
+            ok[ok] &= DEPTH['zb'][yi[ok], xi[ok]] > 1e8                # only outside the body silhouette
+        else:
+            ok[ok] &= z[ok] < DEPTH["zb"][yi[ok], xi[ok]] + 3.0      # own surface passes, hidden back side not
     layer = np.zeros((H, W, 3))
     idx = yi[ok] * W + xi[ok]
     for k in range(3):
@@ -288,5 +313,5 @@ def render_frame(emitters, cam, t, background):
                 d = v2 - np.array([sx, sy]); ang = -math.degrees(math.atan2(d[1], d[0])) + 90
                 h = max(h, np.linalg.norm(p['vel']) * e.dscale * 2 * sc[0] * px_per_unit + h)
             spr = _sprite(e.tex, col, (w, h), ang)
-        composite(canvas, spr, sx, sy, e.blend == 4)
+        composite(canvas, spr, sx, sy, e.blend == 4, z)
     return np.clip(canvas, 0, 1)

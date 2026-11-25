@@ -3,10 +3,22 @@ import numpy as np
 from PIL import Image
 
 
+def project(P, size, yaw, pitch, center, scale):
+    """Screen position of world points with the same camera as render()."""
+    W, H = size
+    a, b = np.radians(yaw), np.radians(pitch)
+    Ry = np.array([[np.cos(a), 0, np.sin(a)], [0, 1, 0], [-np.sin(a), 0, np.cos(a)]])
+    Rx = np.array([[1, 0, 0], [0, np.cos(b), -np.sin(b)], [0, np.sin(b), np.cos(b)]])
+    v = (np.asarray(P, float) - center) @ (Rx @ Ry).T
+    return np.stack([v[:, 0] * scale + W / 2, H / 2 - v[:, 1] * scale], -1)
+
+
 def render(verts, tris, corner_uv, tex, out, size=(600, 900), yaw=0.0, pitch=10.0, center=(0, 105, 0), scale=4.0,
-           bg=(0.09, 0.10, 0.12), outline=True):
+           bg=(0.09, 0.10, 0.12), outline=True, background=None):
     W, H = size
     img = np.zeros((H, W, 3)); img[:] = bg
+    if background is not None:
+        img[:] = background
     zb = np.full((H, W), -1e9)
     a, b = np.radians(yaw), np.radians(pitch)
     Ry = np.array([[np.cos(a), 0, np.sin(a)], [0, 1, 0], [-np.sin(a), 0, np.cos(a)]])
@@ -52,4 +64,6 @@ def render(verts, tris, corner_uv, tex, out, size=(600, 900), yaw=0.0, pitch=10.
             dz = np.maximum(dz, np.where(m & sh, np.abs(zb - zz), 0))
         edge |= dz > 6.0
         img[edge] = img[edge] * 0.25
+    if out is None:
+        return np.clip(img, 0, 1)
     Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8)).save(out)

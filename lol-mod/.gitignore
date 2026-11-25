@@ -1,3 +1,5 @@
 build/
 __pycache__/
 /meshy/
+tools/ltk_pose_dump/bin/
+tools/ltk_pose_dump/obj/

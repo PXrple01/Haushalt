@@ -4,6 +4,7 @@ Usage:  python3 build_mod.py <dir with downloaded game files>
 The game-file dir must mirror CommunityDragon's layout (see fetch_game_files.sh).
 """
 import io
+import math
 import json
 import os
 import struct
@@ -26,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.6.0'
+VERSION = '0.6.1'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -74,7 +75,7 @@ def scb_bytes(pos, uv, tris, name):
 
 # ------------------------------------------------------------------ steps
 def step_recolor(b, game):
-    stats = RC.recolor_bin(b)
+    stats = RC.recolor_bin(b, skip_system=RC.is_q_system)        # Q systems: white-violet, see step_q_flow
     pre = os.path.join(game, 'png', 'assets_characters_yunara_skins_base_particles_')
     for n in RC.COLORED_TEXTURES:
         if n.endswith('_orb01'):
@@ -322,6 +323,7 @@ def step_ult_bead_seams(b):
     st = V.clone_system(b, PART + 'Yunara_Base_Q_Buff_OnBeads', path, keep_emitters={'ADD_EdgeGlow'})
     em = V.find_emitter(st, 'ADD_EdgeGlow')
     em.set('emitterName', L.STRING, 'MV_SeamGlow')
+    RC.recolor_value(st, L.EMBED, {'const': 0, 'anim': 0, 'fresnel': 0})     # the Q template is not green
     em.set('texture', L.STRING, MV + 'mvfx_ball_seams.tex')
     em.set('birthColor', L.EMBED, V.vcolor((0.12, 0.75, 0.35, 1.0)))
     em.remove('texDiv')
@@ -447,6 +449,119 @@ def step_ult_cast(b):
     f.value.items = [e for e in f.value.items if e.get('emitterName') not in drop]
     V.add_emitters(cast, ems)
     return len(ems)
+
+
+def step_q_flow(b, game):
+    """Q = flow state: every Q system in white -> lavender -> violet (brightness-driven, so cores are white and
+    fading edges violet), white-violet copies of the shared coloured textures, a white-violet football, and the
+    flow elements: an inward light implosion + burst on cast, rising light wisps, violet afterimages and light
+    trails behind the hands and the orbiting footballs while Q is active."""
+    import copy
+    from lolassets import q_rgba, q_image
+    stats = {'const': 0, 'anim': 0, 'fresnel': 0}
+    pre = os.path.join(game, 'png', 'assets_characters_yunara_skins_base_particles_')
+    shared = {(P + n + '.tex').lower(): n for n in RC.COLORED_TEXTURES if not n.endswith('_orb01')}
+    swapped = set()
+    qsys = [e.struct for e in b.entries if e.struct is not None and e.struct.type_hash == L.fnv1a('VfxSystemDefinitionData')
+            and RC.is_q_system(e.struct)]
+    for st in qsys:
+        RC.recolor_value(st, L.EMBED, stats, fn=q_rgba)
+        for em in V.emitters_of(st):
+            for key in ('texture',):
+                tx = em.get(key)
+                if isinstance(tx, str) and tx.lower() in shared:
+                    n = shared[tx.lower()]
+                    put_tex(MV + 'mvfx_q_' + n + '.tex', q_image(Image.open(pre + n + '.png')))
+                    em.set(key, L.STRING, MV + 'mvfx_q_' + n + '.tex'); swapped.add(n)
+    put_tex(P + 'yunara_base_q_orb01.tex', gen('ball_sprite_q'))
+    T = lambda n: MV + 'mvfx_' + n + '.tex'
+    WH = (1.0, 1.0, 1.0); LAV = (0.80, 0.68, 1.0); VIO = (0.55, 0.30, 1.0); DVI = (0.30, 0.10, 0.70)
+    flow = lambda a=1.0: ([0.0, 0.18, 0.5, 1.0], [WH + (a,), LAV + (a * 0.9,), VIO + (a * 0.6,), DVI + (0.0,)])
+    ems_cast = [
+        # light implodes into the striker ...
+        V.emitter('MVQ_Implode', T('shock_ring'), blend=4, life=0.22, pos=(0, 110, 0), scale=(70, 70, 1),
+                  scale_curve=([0, 1], [(5.0,) * 3, (0.35,) * 3]),
+                  color_curve=([0, 0.3, 1], [VIO + (0.0,), LAV + (0.9,), WH + (1.0,)]), pass_=720),
+    ] + [
+        # 10 light streaks rush into the chest from all around (fixed velocities, no attraction fields)
+        V.emitter(f'MVQ_InStreak{k}', T('light_streak'), blend=4, delay=0.01 * (k % 3), life=0.19, bind=1.0,
+                  pos=(150 * math.cos(math.radians(36 * k)), 60 + 28 * (k % 4), 150 * math.sin(math.radians(36 * k))),
+                  velocity=(-150 * math.cos(math.radians(36 * k)) / 0.19, (110 - (60 + 28 * (k % 4))) / 0.19,
+                            -150 * math.sin(math.radians(36 * k)) / 0.19),
+                  scale=(7, 7, 7), direction_oriented=True, dir_scale=0.0012, pass_=721,
+                  color_curve=([0, 0.4, 1], [VIO + (0.0,), LAV + (0.95,), WH + (1.0,)]))
+        for k in range(10)] + [
+        # ... then bursts out as the flow switches on
+        V.emitter('MVQ_Burst', T('flash_star'), blend=4, delay=0.2, life=0.3, pos=(0, 115, 0), scale=(95, 95, 1),
+                  scale_curve=([0, 0.25, 1], [(0.3,) * 3, (1.35,) * 3, (1.6,) * 3]), color_curve=flow(1.0), pass_=722),
+        V.emitter('MVQ_BurstRays', T('god_rays'), blend=4, delay=0.2, life=0.45, pos=(0, 115, 0), scale=(150, 150, 1),
+                  spin=(90, 0, 0), scale_curve=([0, 0.2, 1], [(0.5,) * 3, (1.0,) * 3, (1.25,) * 3]), color_curve=flow(0.75), pass_=723),
+        V.emitter('MVQ_BurstLines', T('light_dot'), blend=4, single=False, rate=1200, emitter_life=0.04, delay=0.2, life=0.4,
+                  bind=0.0, pos=(0, 110, 0), scale=(5, 5, 5), drag=(3, 3, 3),
+                  velocity=V.vvec3((1100, 800, 1100), rand=[(-1, 1), (-0.5, 1), (-1, 1)]),
+                  direction_oriented=True, dir_scale=0.006, color_curve=flow(1.0), pass_=724)]
+    a = copy.deepcopy(V.find_emitter(b.entry(PART + 'Yunara_Base_Q_Buff_OnBeads').struct, 'ADD_EdgeGlow'))
+    a.set('emitterName', L.STRING, 'MVQ_AfterImage')
+    mm = a.get('primitive').get('mMesh')
+    mm.set('mSubmeshesToDraw', L.LIST, V.submesh_list(['Body', 'Pants'])); mm.set('mLockMeshToAttachment', L.BOOL, False)
+    a.remove('texDiv'); a.remove('isSingleParticle')
+    a.set('rate', L.EMBED, V.vfloat(7.0)); a.set('lifetime', L.OPTION, L.Option(L.F32, 8.0))
+    a.set('particleLifetime', L.EMBED, V.vfloat(0.32)); a.set('bindWeight', L.EMBED, V.vfloat(0.0))
+    # outline ghosts: no fill (black base in additive), only the fresnel rim -> a light trail when moving,
+    # no lavender wash over the body when standing still
+    a.set('blendMode', L.U8, 4)
+    a.set('birthScale0', L.EMBED, V.vvec3((1.0, 1.0, 1.0))); a.set('birthColor', L.EMBED, V.vcolor((0.0, 0.0, 0.0, 0.6)))
+    a.set('Color', L.EMBED, V.vcolor((1, 1, 1, 1), [0, 0.4, 1], [(1, 1, 1, 1.0), (1, 1, 1, 0.6), (1, 1, 1, 0.0)]))
+    ar = a.field('reflectionDefinition')
+    arefl = L.Struct('VfxReflectionDefinitionData', [V.F('fresnelColor', L.VEC4, (0.66, 0.46, 1.0, 0.0))], L.STRUCT)
+    if ar is None:
+        a.fields.append(V.F('reflectionDefinition', L.STRUCT, arefl))
+    else:
+        ar.value = arefl
+    rim = copy.deepcopy(V.find_emitter(b.entry(PART + 'Yunara_Base_Q_Buff_OnBeads').struct, 'ADD_EdgeGlow'))
+    rim.set('emitterName', L.STRING, 'MVQ_FlowRim')
+    mm = rim.get('primitive').get('mMesh')
+    mm.set('mSubmeshesToDraw', L.LIST, V.submesh_list(['Body', 'Pants'])); mm.set('mLockMeshToAttachment', L.BOOL, True)
+    rim.remove('texDiv')
+    rim.set('particleLifetime', L.EMBED, V.vfloat(8.0)); rim.set('lifetime', L.OPTION, L.Option(L.F32, 0.1))
+    rim.set('blendMode', L.U8, 4); rim.set('birthScale0', L.EMBED, V.vvec3((1.0, 1.0, 1.0)))
+    rim.set('birthColor', L.EMBED, V.vcolor((0.0, 0.0, 0.0, 0.25)))
+    rim.set('Color', L.EMBED, V.vcolor((1, 1, 1, 1), [0, 0.03, 0.95, 1], [(1, 1, 1, 0), (1, 1, 1, 1), (1, 1, 1, 1), (1, 1, 1, 0)]))
+    rf = rim.field('reflectionDefinition')
+    refl = L.Struct('VfxReflectionDefinitionData', [V.F('fresnelColor', L.VEC4, (0.92, 0.82, 1.0, 0.0))], L.STRUCT)
+    if rf is None:
+        rim.fields.append(V.F('reflectionDefinition', L.STRUCT, refl))
+    else:
+        rf.value = refl
+    ems_buff = [
+        a, rim,
+        V.emitter('MVQ_Wisps', T('light_streak'), blend=4, single=False, rate=30, emitter_life=8.0, life=0.8, bind=0.0,
+                  pos=(0, 70, 0), extra=[V.F('SpawnShape', L.STRUCT, L.Struct('VfxShapeBox', [V.F('Size', L.VEC3, (70.0, 110.0, 70.0))], L.STRUCT))],
+                  scale=V.vvec3((11, 11, 11), rand=[(0.6, 1.4), None, None]),
+                  velocity=V.vvec3((45, 260, 45), rand=[(-1, 1), (0.7, 1.3), (-1, 1)]), drag=(0.9, 0.35, 0.9),
+                  direction_oriented=True, dir_scale=0.007, color_curve=flow(1.0), pass_=725, importance=2),
+        V.emitter('MVQ_AuraGlow', T('light_dot'), blend=4, life=8.0, pos=(0, 105, -8), scale=(120, 150, 1), uniform=False,
+                  color_curve=([0, 0.03, 0.2, 0.4, 0.6, 0.8, 0.97, 1],
+                               [VIO + (0.0,), VIO + (0.55,), LAV + (0.4,), VIO + (0.55,), LAV + (0.4,), VIO + (0.55,), VIO + (0.45,), VIO + (0.0,)]),
+                  pass_=690),
+        V.emitter('MVQ_Sparkle', T('flash_star'), blend=4, single=False, rate=16, emitter_life=8.0, life=0.3, bind=0.0,
+                  pos=(0, 100, 0), extra=[V.F('SpawnShape', L.STRUCT, L.Struct('VfxShapeBox', [V.F('Size', L.VEC3, (100.0, 180.0, 100.0))], L.STRUCT))],
+                  scale=V.vvec3((13, 13, 1), rand=[(0.5, 1.5), None, None]), color_curve=flow(1.0), pass_=726, importance=2),
+        V.emitter('MVQ_FeetGlow', T('light_dot'), blend=4, life=8.0, rotation=(-90, -90, 0), ground=True, scale=(70, 70, 1),
+                  color_curve=([0, 0.04, 0.94, 1], [VIO + (0.0,), LAV + (0.55,), VIO + (0.45,), DVI + (0.0,)]), pass_=-2785)]
+    trail = lambda name, rate, size: V.emitter(name, T('light_dot'), blend=4, single=False, rate=rate, emitter_life=8.0,
+                                                life=0.26, bind=0.0, scale=(size, size, size),
+                                                scale_curve=([0, 1], [(1,) * 3, (0.25,) * 3]), color_curve=flow(0.9),
+                                                pass_=727, importance=2)
+    adds = {'Yunara_Base_Q_Cast': ems_cast, 'Yunara_Base_Q_Buff_OnBase': ems_buff,
+            'Yunara_Base_Q_Buff_OnHands': [trail('MVQ_HandTrail', 70, 6.0)],
+            'Yunara_Base_Q_Buff_OnBeads': [trail('MVQ_BallTrail', 55, 7.5)]}
+    n = 0
+    for sysname, ems in adds.items():
+        st = b.entry(PART + sysname)
+        if st is not None:
+            V.add_emitters(st.struct, ems); n += len(ems)
+    return f'{len(qsys)} systems white-violet ({stats["const"] + stats["anim"]} colours), {len(swapped)} textures, {n} flow emitters'
 
 
 def step_ult_stadium(b):
@@ -577,6 +692,7 @@ def step_vfx_polish(b):
                   color_curve=([0, 0.4, 1], [HI + (0.9,), FLOW + (0.7,), DEEP + (0.0,)]), pass_=702, importance=2)])
     # ---- E: afterimages while sprinting; ult-dashes get a ghost burst + ground ring
     ghost = V.clone_emitter(b, PART + 'Yunara_Base_Q_Buff_OnBeads', 'ADD_EdgeGlow', 'MV_EGhost')
+    RC.recolor_value(ghost, L.STRUCT, {'const': 0, 'anim': 0, 'fresnel': 0})  # Q template keeps its own colours
     prim = ghost.get('primitive'); mm = prim.get('mMesh')
     mm.set('mSubmeshesToDraw', L.LIST, V.submesh_list(['Body', 'Pants']))
     mm.set('mLockMeshToAttachment', L.BOOL, False)
@@ -597,6 +713,7 @@ def step_vfx_polish(b):
         if av is not None:                      # was drawing the body with Yunara's own texture
             av.set('texture', L.STRING, STRIKER_TEX)
         g2 = V.clone_emitter(b, PART + 'Yunara_Base_Q_Buff_OnBeads', 'ADD_EdgeGlow', 'MV_DashGhosts')
+        RC.recolor_value(g2, L.STRUCT, {'const': 0, 'anim': 0, 'fresnel': 0})
         mm = g2.get('primitive').get('mMesh')
         mm.set('mSubmeshesToDraw', L.LIST, V.submesh_list(['Body', 'Pants'])); mm.set('mLockMeshToAttachment', L.BOOL, False)
         g2.remove('texDiv'); g2.remove('isSingleParticle')
@@ -679,6 +796,7 @@ def main(game, variant='full'):
         print('ult cast emitters  :', step_ult_cast(b))
         print('ult stadium        :', step_ult_stadium(b))
         print('polish emitters    :', step_vfx_polish(b))
+        print('Q flow (white-violet):', step_q_flow(b, game))
     data = L.write(b)
     L.read(data)                                              # sanity: must parse again
     files['data/characters/yunara/skins/skin0.bin'] = data
