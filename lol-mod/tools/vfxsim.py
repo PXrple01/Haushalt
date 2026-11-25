@@ -15,8 +15,35 @@ H = {n: L.fnv1a(n) for n in [
     'EmitterPosition', 'birthScale0', 'scale0', 'birthColor', 'Color', 'birthRotation0', 'birthRotationalVelocity0',
     'birthVelocity', 'worldAcceleration', 'drag', 'SpawnShape', 'radius', 'primitive', 'mMesh', 'mSimpleMeshName',
     'texture', 'blendMode', 'isGroundLayer', 'isDirectionOriented', 'directionVelocityScale', 'isUniformScale',
-    'constantValue', 'dynamics', 'times', 'values', 'probabilityTables', 'keyTimes', 'keyValues', 'texDiv', 'numFrames']}
+    'constantValue', 'dynamics', 'times', 'values', 'probabilityTables', 'keyTimes', 'keyValues', 'texDiv', 'numFrames',
+    'alphaErosionDefinition', 'erosionDriveCurve', 'erosionMapName', 'reflectionDefinition', 'fresnelColor']}
 T_PRIM_MESH = L.fnv1a('VfxPrimitiveMesh')
+T_PRIM_QUAD = L.fnv1a('VfxPrimitiveArbitraryQuad')
+
+
+def mesh_samples(pos, tris, cuv, per_unit2=0.5, cap=60000, seed=3):
+    """Dense surface points of a mesh (position, uv, face normal) for point-splat rendering."""
+    rng = np.random.default_rng(seed)
+    a, b, c = pos[tris[:, 0]], pos[tris[:, 1]], pos[tris[:, 2]]
+    n = np.cross(b - a, c - a); area = np.linalg.norm(n, axis=1) / 2
+    n = n / (np.linalg.norm(n, axis=1, keepdims=True) + 1e-9)
+    cnt = np.maximum(1, np.round(area * per_unit2)).astype(int)
+    if cnt.sum() > cap:
+        cnt = np.maximum(1, np.round(cnt * cap / cnt.sum())).astype(int)
+    fi = np.repeat(np.arange(len(tris)), cnt)
+    r1, r2 = rng.random(len(fi)), rng.random(len(fi))
+    s = np.sqrt(r1); w0, w1, w2 = 1 - s, s * (1 - r2), s * r2
+    P = w0[:, None] * a[fi] + w1[:, None] * b[fi] + w2[:, None] * c[fi]
+    UV = w0[:, None] * cuv[fi, 0] + w1[:, None] * cuv[fi, 1] + w2[:, None] * cuv[fi, 2]
+    return P, UV, n[fi]
+
+
+def euler(deg):
+    x, y, z = np.radians(deg[:3])
+    Rx = np.array([[1, 0, 0], [0, np.cos(x), -np.sin(x)], [0, np.sin(x), np.cos(x)]])
+    Ry = np.array([[np.cos(y), 0, np.sin(y)], [0, 1, 0], [-np.sin(y), 0, np.cos(y)]])
+    Rz = np.array([[np.cos(z), -np.sin(z), 0], [np.sin(z), np.cos(z), 0], [0, 0, 1]])
+    return Ry @ Rx @ Rz
 
 
 def _get(s, name, default=None):
@@ -86,8 +113,16 @@ class Emitter:
         self.dir = bool(_get(em, 'isDirectionOriented', 0)); self.dscale = _get(em, 'directionVelocityScale', 0.0) or 0.0
         self.uniform = bool(_get(em, 'isUniformScale', 0))
         prim = _get(em, 'primitive'); self.mesh = None
+        self.flat = isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_QUAD and not self.ground
         if isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_MESH:
             mm = _get(prim, 'mMesh'); self.mesh = meshes.get((_get(mm, 'mSimpleMeshName') or '').lower())
+        ero = _get(em, 'alphaErosionDefinition'); self.erosion = None
+        if isinstance(ero, L.Struct):
+            emap = textures.get((_get(ero, 'erosionMapName') or '').lower())
+            if emap is not None:
+                self.erosion = (Value(_get(ero, 'erosionDriveCurve'), 0.0), np.asarray(emap.convert('L')).astype(float) / 255)
+        refl = _get(em, 'reflectionDefinition')
+        self.fresnel = np.array(_get(refl, 'fresnelColor')[:3]) if isinstance(refl, L.Struct) and _get(refl, 'fresnelColor') else None
         tex = (_get(em, 'texture') or '').lower()
         self.tex = textures.get(tex)
         self.particles = []
@@ -173,6 +208,50 @@ def composite(canvas, spr, cx, cy, additive):
         reg[:] = reg * (1 - s[..., 3:4]) + s[..., :3] * s[..., 3:4]
 
 
+def render_mesh(canvas, e, p, age, t, cam):
+    """Point-splat a mesh particle: texture alpha x colour, alpha erosion, fresnel rim, additive or alpha."""
+    P0, UV, N0 = e.mesh
+    sc = p['bscale'][:3] * e.scale.at(age)[:3]
+    col = p['bcol'][:4] * e.col.at(age)[:4]
+    R = euler(p['rot'][:3] + p['spin'][:3] * (t - p['t0']))
+    Pw = (P0 * sc) @ R.T + p['pos']
+    Nw = (N0 / np.where(sc == 0, 1, sc)) @ R.T; Nw /= np.linalg.norm(Nw, axis=1, keepdims=True) + 1e-9
+    scr, z = cam.project(Pw)
+    ok = z > 1
+    th, tw = e.tex.shape[:2] if isinstance(e.tex, np.ndarray) else (e.tex.size[1], e.tex.size[0])
+    tex = e._texarr if hasattr(e, '_texarr') else np.asarray(e.tex.convert('RGBA')).astype(float) / 255
+    e._texarr = tex
+    u = np.clip((UV[:, 0] % 1.0) * (tw - 1), 0, tw - 1).astype(int); v = np.clip((UV[:, 1] % 1.0) * (th - 1), 0, th - 1).astype(int)
+    texel = tex[v, u]
+    inten = texel[:, 3] * col[3]
+    rgb = texel[:, :3] * col[:3]
+    mask = np.ones(len(P0))
+    if e.erosion is not None:
+        drive = float(e.erosion[0].at(age)[0]); em = e.erosion[1]
+        mv = em[np.clip((UV[:, 1] % 1) * (em.shape[0] - 1), 0, em.shape[0] - 1).astype(int),
+                np.clip((UV[:, 0] % 1) * (em.shape[1] - 1), 0, em.shape[1] - 1).astype(int)]
+        mask = np.clip((mv - drive) / 0.04 + 0.5, 0, 1)
+    out = rgb * inten[:, None]
+    if e.fresnel is not None:
+        view = cam.eye - Pw; view /= np.linalg.norm(view, axis=1, keepdims=True) + 1e-9
+        rim = (1 - np.abs((Nw * view).sum(1))) ** 2.2
+        out = out + e.fresnel[None] * rim[:, None] * min(1.0, col[3] * 1.4)
+    out *= mask[:, None]
+    H, W = canvas.shape[:2]
+    xi = np.round(scr[:, 0]).astype(int); yi = np.round(scr[:, 1]).astype(int)
+    ok &= (xi >= 0) & (xi < W) & (yi >= 0) & (yi < H) & (mask > 0.01)
+    layer = np.zeros((H, W, 3))
+    idx = yi[ok] * W + xi[ok]
+    for k in range(3):
+        flat = layer[..., k].reshape(-1)
+        np.maximum.at(flat, idx, out[ok, k])
+    if e.blend == 4:
+        canvas += layer
+    else:
+        a = np.clip(layer.max(-1, keepdims=True) * 1.5, 0, 1)
+        canvas[:] = canvas * (1 - a) + layer * a
+
+
 def render_frame(emitters, cam, t, background):
     canvas = background.copy()
     items = []
@@ -186,6 +265,9 @@ def render_frame(emitters, cam, t, background):
     for e, p, age in items:
         if e.tex is None:
             continue
+        if e.mesh is not None:
+            render_mesh(canvas, e, p, age, t, cam)
+            continue
         sc = p['bscale'][:3] * e.scale.at(age)[:3]
         col = p['bcol'][:4] * e.col.at(age)[:4]
         if col[3] <= 0.003:
@@ -194,7 +276,7 @@ def render_frame(emitters, cam, t, background):
         if z <= 1:
             continue
         px_per_unit = cam.f / z
-        if e.ground:
+        if e.ground or e.flat:
             w = 2 * sc[0] * px_per_unit; h = w * abs(math.sin(math.radians(56)))
             spr = _sprite(e.tex, col, (w, h), 0)
         else:

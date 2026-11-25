@@ -26,7 +26,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.5.1'
+VERSION = '0.6.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -449,6 +449,20 @@ def step_ult_cast(b):
     return len(ems)
 
 
+def step_ult_stadium(b):
+    """METAVISION builds a hologram stadium during the ult cast (see stadium_fx.py)."""
+    import stadium_fx as S
+    for n in S.TEXTURES:
+        put_tex(MV + 'mvfx_' + n + '.tex', gen(n))
+    put_tex(MV + 'mvfx_ball_albedo.tex', gen('ball_albedo'))
+    for name, (p, u, t) in S.meshes(ROOT).items():
+        files[MV + name] = scb_bytes(p, u, t, name[:-4])
+    tmpl = V.find_emitter(b.entry(PART + 'Yunara_Base_Q_AA_Crit_Tar').struct, 'Distort3')
+    ems = S.emitters(MV, tmpl)
+    V.add_emitters(b.entry(PART + 'Yunara_Base_R_Cast').struct, ems)
+    return len(ems)
+
+
 # ------------------------------------------------------------------ packaging
 def wad_bytes(entries):
     """WAD v3.3, uncompressed entries, sorted by path hash (keys: game path, or an int path hash)."""
@@ -616,7 +630,14 @@ def step_vfx_polish(b):
         V.emitter('MV_RMotes', SPARK, blend=4, single=False, rate=16, emitter_life=15.0, life=1.2, bind=0.0, pos=(0, 8, 0),
                   spawn_radius=32, scale=(4.5, 4.5, 4.5), scale_curve=([0, 1], [(1,) * 3, (0.25,) * 3]),
                   velocity=V.vvec3((0, 170, 0), rand=[None, (0.7, 1.3), None]),
-                  color_curve=([0, 0.4, 1], [HI + (0.9,), FLOW + (0.75,), DEEP + (0.0,)]), pass_=703, importance=2)])
+                  color_curve=([0, 0.4, 1], [HI + (0.9,), FLOW + (0.75,), DEEP + (0.0,)]), pass_=703, importance=2),
+        # METAVISION keeps reading the field: a scanner ring sweeps up the striker every ~1.4 s
+        V.emitter('MV_RScanPulse', T('scan_ring'), blend=4, single=False, rate=0.7, emitter_life=14.6, delay=0.4, life=0.62,
+                  pos=(0, 4, 0), rotation=(-90, -90, 0), scale=(46, 46, 1), velocity=(0, 360, 0),
+                  scale_curve=([0, 0.5, 1], [(1.25,) * 3, (0.95,) * 3, (0.7,) * 3]),
+                  extra=[V.F('primitive', L.STRUCT, L.Struct('VfxPrimitiveArbitraryQuad', [], L.STRUCT)),
+                         V.F('disableBackfaceCull', L.BOOL, True)],
+                  color_curve=([0, 0.12, 0.7, 1], [HI + (0.0,), HI + (0.75,), FLOW + (0.5,), FLOW + (0.0,)]), pass_=704)])
     return added
 
 
@@ -656,6 +677,7 @@ def main(game, variant='full'):
     if fx:
         print('ult seam conditions:', step_ult_bead_seams(b))
         print('ult cast emitters  :', step_ult_cast(b))
+        print('ult stadium        :', step_ult_stadium(b))
         print('polish emitters    :', step_vfx_polish(b))
     data = L.write(b)
     L.read(data)                                              # sanity: must parse again

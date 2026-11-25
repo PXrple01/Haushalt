@@ -4,7 +4,7 @@
 # A model slot with its own skeleton uses the skeleton + retargeted clips from the built WAD instead.
 set -e
 SP="$1"; HERE="$(cd "$(dirname "$0")" && pwd)"; ROOT="$HERE/../.."
-FANTOME=$(ls -t "$ROOT"/build/*.fantome | head -1)
+FANTOME=$(ls -t "$ROOT"/build/FlowStriker_Yunara_v*.fantome | head -1)
 KICK=6de75c6f0c23b3c0; HERO=477dc1765be45513
 CFG="$ROOT/assets_src/char/model.json"
 SLOT=$(python3 -c "import json;print(json.load(open('$CFG'))['model'])" 2>/dev/null || echo striker2)

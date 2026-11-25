@@ -446,7 +446,58 @@ def make_polish_fx():
     save(np.stack([np.clip(0.75 + 0.25 * a_, 0, 1), np.ones_like(i), np.clip(0.8 + 0.2 * a_, 0, 1), i], -1), 'center_circle')
 
 
+def make_stadium_fx():
+    """Textures of the METAVISION 'virtual stadium' in the ult (hologram defenders, floodlights, holo goal)."""
+    rng = np.random.default_rng(7)
+    # hologram fill: faint body, crisp horizontal scanlines, soft vertical streaks
+    w = h = 256
+    y, x = np.mgrid[0:h, 0:w].astype(float)
+    scan = (np.mod(y, 8) < 2).astype(float)
+    streak = np.repeat(rng.random((1, w)), h, 0)
+    from scipy.ndimage import gaussian_filter
+    streak = gaussian_filter(streak, (0, 2.0)); streak = (streak - streak.min()) / (np.ptp(streak) + 1e-6)
+    i = np.clip(0.16 + 0.5 * scan + 0.10 * streak, 0, 1)
+    save(np.stack([np.ones_like(i), np.ones_like(i), np.ones_like(i), i], -1), 'holo_body')
+    # erosion map for hologram build-up: a top->bottom ramp in texture space (= feet -> head on the meshes)
+    # with ragged noise so the build edge looks digital
+    noise = gaussian_filter(rng.random((h, w)), 1.2); noise = (noise - noise.mean()) / (noise.std() + 1e-6)
+    blocks = np.kron(rng.random((h // 8, w // 8)), np.ones((8, 8)))
+    ramp = 1.0 - y / (h - 1)
+    e = np.clip(ramp * 0.86 + 0.07 + 0.035 * noise + 0.05 * (blocks - 0.5), 0, 1)
+    Image.fromarray((np.stack([e, e, e, np.ones_like(e)], -1) * 255 + 0.5).astype(np.uint8), 'RGBA').save(os.path.join(OUT, 'holo_erode.png'))
+    # floodlight beam: soft across, bright at the lamp (v = 0) fading towards the ground, faint dust
+    w, h = 128, 256
+    y, x = np.mgrid[0:h, 0:w].astype(float)
+    u = x / (w - 1); v = y / (h - 1)
+    across = np.sin(np.pi * u) ** 1.5
+    along = (1 - v) ** 1.6 * 0.85 + 0.15 * smoothstep(1.0, 0.6, v)
+    dust = gaussian_filter(rng.random((h, w)), 3.0); dust = (dust - dust.min()) / (np.ptp(dust) + 1e-6)
+    i = np.clip(across * along * (0.8 + 0.4 * dust), 0, 1)
+    save(np.stack([np.ones_like(i), np.ones_like(i), np.ones_like(i), i], -1), 'light_beam')
+    # shard: a bright sharp triangle with a soft halo
+    s = 64
+    y, x = np.mgrid[0:s, 0:s].astype(float) / (s - 1) * 2 - 1
+    tri = np.minimum.reduce([y + 0.75, 0.75 - y * 0.5 - np.abs(x) * 1.2, np.ones_like(x)])
+    i = np.clip(smoothstep(0.0, 0.08, tri) + 0.3 * np.exp(-(np.hypot(x, y) / 0.5) ** 2), 0, 1)
+    save(np.stack([np.ones_like(i), np.ones_like(i), np.ones_like(i), i], -1), 'holo_shard')
+    # scanner ring: thin bright edge, faint inner disc, tick marks
+    s = 256
+    y, x = np.mgrid[0:s, 0:s].astype(float) / (s - 1) * 2 - 1
+    r = np.hypot(x, y); a = np.arctan2(y, x)
+    ticks = (np.mod(a * 36 / (2 * np.pi), 1.0) < 0.18) * np.exp(-((r - 0.80) / 0.03) ** 2)
+    i = np.clip(np.exp(-((r - 0.9) / 0.018) ** 2) + 0.6 * ticks + 0.10 * (r < 0.88), 0, 1) * (r < 1)
+    save(np.stack([np.ones_like(i), np.ones_like(i), np.ones_like(i), i], -1), 'scan_ring')
+    # goal net: diamond mesh lines
+    s = 256
+    y, x = np.mgrid[0:s, 0:s].astype(float)
+    d1 = np.abs(np.mod(x + y, 32) - 16); d2 = np.abs(np.mod(x - y, 32) - 16)
+    line = np.maximum(np.exp(-((16 - d1) / 1.3) ** 2), np.exp(-((16 - d2) / 1.3) ** 2))
+    i = np.clip(line * 0.95 + 0.06, 0, 1)
+    save(np.stack([np.ones_like(i), np.ones_like(i), np.ones_like(i), i], -1), 'goal_net')
+
+
 if __name__ == '__main__':
+    make_stadium_fx()
     make_polish_fx()
     make_ball_textures()
     make_ball_sprite('ball_sprite', glow=0.30, rim=0.22)

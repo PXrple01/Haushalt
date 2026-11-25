@@ -28,6 +28,45 @@ def load_bin(fantome):
     return L.read(wad[c.offset:c.offset + c.compressed_size])
 
 
+def load_meshes(fantome):
+    """All .scb meshes of the build (by path) as point samples for vfxsim."""
+    import struct
+    wad = zipfile.ZipFile(fantome).read('WAD/Yunara.wad.client')
+    b = load_bin(fantome)
+    paths = set()
+    for e in b.entries:
+        if e.struct is None:
+            continue
+        stack = [e.struct]
+        while stack:
+            st = stack.pop()
+            for f in st.fields:
+                if f.type == L.STRING and isinstance(f.value, str) and f.value.lower().endswith('.scb'):
+                    paths.add(f.value.lower())
+                v = f.value
+                if hasattr(v, 'fields'):
+                    stack.append(v)
+                elif hasattr(v, 'items') and isinstance(v.items, list):
+                    stack += [x for x in v.items if hasattr(x, 'fields')]
+    n = struct.unpack_from('<I', wad, 268)[0]
+    toc = {struct.unpack_from('<Q', wad, 272 + 32 * i)[0]: struct.unpack_from('<II', wad, 272 + 32 * i + 8) for i in range(n)}
+    out = {}
+    for pth in paths:
+        h = xxhash.xxh64(pth.encode()).intdigest()
+        if h not in toc:
+            continue
+        o, c = toc[h]; d = wad[o:o + c]
+        nv, nf, flags = struct.unpack_from('<III', d, 140)
+        pos = np.frombuffer(d, '<f4', nv * 3, 180).reshape(-1, 3).astype(float)
+        off = 180 + nv * 12 + 12
+        tris = np.zeros((nf, 3), int); cuv = np.zeros((nf, 3, 2))
+        for k in range(nf):
+            tris[k] = struct.unpack_from('<3I', d, off); u = struct.unpack_from('<6f', d, off + 76)
+            cuv[k] = [(u[0], u[3]), (u[1], u[4]), (u[2], u[5])]; off += 100
+        out[pth] = S.mesh_samples(pos, tris, cuv)
+    return out
+
+
 def load_textures(game_png):
     tex = {}
     for f in os.listdir(GEN):
@@ -84,12 +123,14 @@ def backdrop(cam, rigged, albedo, W, H):
     return img
 
 
-def run(b, systems, textures, cam, bg, seconds, fps, out_gif, travel=None, scale_out=None):
+def run(b, systems, textures, cam, bg, seconds, fps, out_gif, travel=None, scale_out=None, meshes=None, only=None):
     ems = []
     for sname in systems:
         st = b.entry(PART + sname).struct
         for em in st.field(L.fnv1a('complexEmitterDefinitionData')).value.items:
-            e = S.Emitter(em, textures, {})
+            if only and not any(str(em.get('emitterName')).startswith(o) for o in only):
+                continue
+            e = S.Emitter(em, textures, meshes or {})
             if e.tex is not None:
                 ems.append(e)
     rng = np.random.default_rng(1)
@@ -118,11 +159,16 @@ if __name__ == '__main__':
     cam = S.Camera(W, H, target=(0, 120, 0), dist=900, pitch=48, yaw=0, fov=40)
     bg = backdrop(cam, rigged, albedo, W, H)
     Image.fromarray((bg * 255).astype(np.uint8)).save(os.path.join(outdir, 'backdrop.png'))
+    meshes = load_meshes(fantome)
+    wide = S.Camera(W, H, target=(0, 140, 120), dist=2100, pitch=42, yaw=0, fov=40)
+    wbg = backdrop(wide, rigged, albedo, W, H)
+    run(b, ['Yunara_Base_R_Cast'], tex, wide, wbg, 3.4, 20, os.path.join(outdir, 'ult_stadium.gif'), meshes=meshes)
+    print('rendered ult_stadium')
     jobs = {
         'ult_cast': (['Yunara_Base_R_Cast'], 3.0),
         'ult_aura': (['Yunara_Base_R_Buff_OnBase'], 2.0),
         'q_cast': (['Yunara_Base_Q_Cast', 'Yunara_Base_Q_Buff_OnBase'], 2.0),
     }
     for name, (systems, sec) in jobs.items():
-        run(b, systems, tex, cam, bg, sec, 24, os.path.join(outdir, name + '.gif'))
+        run(b, systems, tex, cam, bg, sec, 24, os.path.join(outdir, name + '.gif'), meshes=meshes)
         print('rendered', name)
