@@ -38,6 +38,9 @@ files = {}            # game path -> bytes
 STATE = {}
 CHAR = os.path.join(ROOT, 'assets_src', 'char')
 STRIKER_TEX = 'assets/characters/yunara/skins/base/mvfx_striker_tx_cm.tex'
+# which model sits in the slot (see tools/char/import_model.py); default: the original striker
+_slot_cfg = os.path.join(CHAR, 'model.json')
+MODEL_SLOT = json.load(open(_slot_cfg))['model'] if os.path.exists(_slot_cfg) else 'striker2'
 
 
 # ------------------------------------------------------------------ io helpers
@@ -105,6 +108,7 @@ def step_ball_projectiles(b):
         em.set('birthColor', L.EMBED, V.vcolor((1.0, 1.0, 1.0, 1.0)))
         em.set('birthRotationalVelocity0', L.EMBED, spin)
         em.set('isRotationEnabled', L.FLAG, 1)
+        em.set('isUniformScale', L.FLAG, 1)          # a football must stay round (the old orbs were stretched)
         if sysname == 'Yunara_Base_RW_Laser':
             em.set('texture', L.STRING, MV + 'mvfx_ball_ult.tex')
         done += 1
@@ -204,8 +208,9 @@ def step_character(b):
     """Replaces Yunara's body with the original anime striker (Body = body/head/hands/boots, Pants = hair),
     plus an inverted-hull ink outline (League culls back faces, as its double-sided cloth shows)."""
     s = STATE['skn']
-    d = np.load(os.path.join(CHAR, 'striker2_rigged.npz'))
-    ink = json.load(open(os.path.join(CHAR, 'striker2_ink.json')))
+    slot = MODEL_SLOT
+    d = np.load(os.path.join(CHAR, f'{slot}_rigged.npz'))
+    ink = json.load(open(os.path.join(CHAR, f'{slot}_ink.json')))
     joints = json.load(open(os.path.join(CHAR, 'yunara_joints.json')))
     tris, part = d['tris'], d['part']
     vpart = np.full(len(d['pos']), -1)
@@ -216,6 +221,8 @@ def step_character(b):
     vcount = icount = 0
     for name, sel in (('Body', np.isin(part, (0, 1, 4, 5, 6))), ('Pants', np.isin(part, (2, 3)))):
         t = tris[sel]
+        if len(t) == 0:
+            continue
         used = np.unique(t)
         remap = np.full(len(d['pos']), -1, np.int64); remap[used] = np.arange(len(used))
         nv = np.zeros(len(used), s.verts.dtype)
@@ -253,7 +260,7 @@ def step_character(b):
     assert vcount < 65536, vcount
     s.submeshes, s.verts = subs, np.concatenate(new_v)
     s.indices = np.concatenate(new_i).astype(np.uint16)
-    put_tex(STRIKER_TEX, Image.open(os.path.join(CHAR, 'striker2_albedo.png')))
+    put_tex(STRIKER_TEX, Image.open(os.path.join(CHAR, f'{slot}_albedo.png')))
     # loading screen + HUD portraits (same paths as the originals inside Yunara's archive)
     put_tex('assets/characters/yunara/skins/base/yunaraloadscreen_0.tex', Image.open(os.path.join(CHAR, 'loadscreen.png')))
     put_tex('assets/characters/yunara/hud/yunara_square_0.tex', Image.open(os.path.join(CHAR, 'icon_square.png')))
@@ -423,6 +430,8 @@ def step_vfx_polish(b):
     flash and an anime impact frame), Q flow burst + aura, E afterimages, dash ghosts, ult impact frame
     and god rays, a 15 s Metavision aura with a small eye above the head. Everything hangs on skeleton
     bones or attached-mesh submesh names (Body/Pants), so it survives a model swap."""
+    put_tex(MV + 'mvfx_ball_rebound.tex', gen('ball_sprite'))
+    put_tex(MV + 'mvfx_light_streak.tex', gen('light_streak'))
     for n in ('hex_net', 'manga_burst', 'manga_burst_light', 'god_rays', 'center_circle'):
         im = gen(n)
         put_tex(MV + 'mvfx_' + n + '.tex', im.resize((512, 512), Image.LANCZOS) if im.width > 512 else im)
@@ -447,8 +456,8 @@ def step_vfx_polish(b):
         add(sysname, [
             V.emitter('MV_BallGlow', T('light_dot'), blend=4, life=3.0, scale=(g, g, g), color=FLOW + (0.85,), pass_=200,
                       color_curve=([0, 0.04, 1], [FLOW + (0.0,), FLOW + (1.0,), FLOW + (1.0,)])),
-            V.emitter('MV_BallSparks', SPARK, blend=4, single=False, rate=48 + 16 * big, emitter_life=3.0, life=0.32,
-                      bind=0.0, scale=V.vvec3((4.2 + big, 4.2 + big, 4.2 + big), rand=[(0.6, 1.2), None, None]),
+            V.emitter('MV_BallSparks', SPARK, blend=4, single=False, rate=60 + 20 * big, emitter_life=3.0, life=0.34,
+                      bind=0.0, scale=V.vvec3((6.0 + big, 6.0 + big, 6.0 + big), rand=[(0.6, 1.2), None, None]),
                       scale_curve=([0, 1], [(1, 1, 1), (0.15, 0.15, 0.15)]),
                       velocity=V.vvec3((70, 70, 70), rand=[(-1, 1), (-1, 1), (-1, 1)]), drag=(2.5, 2.5, 2.5),
                       color_curve=([0, 0.35, 1], [HI + (1.0,), FLOW + (0.85,), DEEP + (0.0,)]), pass_=210, importance=2)])
@@ -466,13 +475,23 @@ def step_vfx_polish(b):
             V.emitter('MV_HitRing', T('shock_ring'), blend=4, life=0.22, scale=(10 * k, 10 * k, 1),
                       scale_curve=([0, 0.4, 1], [(1,) * 3, (3.4,) * 3, (4.4,) * 3]),
                       color_curve=([0, 0.15, 1], [HI + (0.0,), FLOW + (1.0,), DEEP + (0.0,)]), pass_=651),
-            V.emitter('MV_HitSparks', SPARK, blend=4, single=False, rate=550 + 250 * lvl, emitter_life=0.02, life=0.35, bind=0.0,
-                      scale=V.vvec3((3.6, 3.6, 3.6), rand=[(0.6, 1.3), None, None]),
+            V.emitter('MV_HitSparks', SPARK, blend=4, single=False, rate=700 + 300 * lvl, emitter_life=0.02, life=0.35, bind=0.0,
+                      scale=V.vvec3((4.8, 4.8, 4.8), rand=[(0.6, 1.3), None, None]),
                       velocity=V.vvec3((430 * k, 380 * k, 430 * k), rand=[(-1, 1), (0.2, 1.0), (-1, 1)]),
                       accel=(0, -1300, 0), drag=(1.5, 1.5, 1.5), direction_oriented=True, dir_scale=0.0035,
                       color_curve=([0, 0.5, 1], [HI + (1.0,), FLOW + (0.9,), DEEP + (0.0,)]), pass_=652, importance=2)]
+        # the ball rebounds off the target: unmistakably football
+        ems.append(V.emitter('MV_HitBall', MV + ('mvfx_ball_ult.tex' if lvl == 2 else 'mvfx_ball_rebound.tex'), blend=1,
+                             life=0.38, bind=0.0, scale=(8.5 * k, 8.5 * k, 1),
+                             scale_curve=([0, 0.2, 1], [(1.15,) * 3, (1.0,) * 3, (0.8,) * 3]),
+                             velocity=V.vvec3((160, 330, 160), rand=[(-1, 1), (0.8, 1.2), (-1, 1)]), accel=(0, -1600, 0),
+                             rotation=V.vvec3((180, 0, 0), rand=[(-1, 1), None, None]), spin=(-1100, 0, 0),
+                             color_curve=([0, 0.7, 1], [W1 + (1.0,), W1 + (1.0,), W1 + (0.0,)]), pass_=654))
         if lvl == 2:
             ems += [
+                V.emitter('MV_ImpactLight', T('manga_burst_light'), blend=4, life=0.12, scale=(80, 80, 1),
+                          scale_curve=([0, 1], [(0.9,) * 3, (1.15,) * 3]),
+                          color_curve=([0, 0.35, 1], [HI + (0.8,), FLOW + (0.6,), DEEP + (0.0,)]), pass_=9501),
                 V.emitter('MV_NetFlash', T('hex_net'), blend=4, life=0.30, scale=(32, 32, 1),
                           scale_curve=([0, 0.2, 1], [(0.7,) * 3, (1.05,) * 3, (1.25,) * 3]),
                           color_curve=([0, 0.12, 1], [HI + (0.0,), HI + (0.95,), FLOW + (0.0,)]),

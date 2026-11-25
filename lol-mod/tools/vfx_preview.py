@@ -33,6 +33,10 @@ def load_textures(game_png):
     for f in os.listdir(GEN):
         if f.endswith('.png'):
             tex[f'assets/characters/yunara/skins/base/particles/mvfx/mvfx_{f[:-4]}.tex'] = Image.open(os.path.join(GEN, f)).convert('RGBA')
+    for orb, src in (('yunara_base_ba_orb01', 'ball_sprite'), ('yunara_base_q_orb01', 'ball_sprite_flow'), ('yunara_base_passive_orb01', 'ball_sprite_flow')):
+        tex[f'assets/characters/yunara/skins/base/particles/{orb}.tex'] = Image.open(os.path.join(GEN, src + '.png')).convert('RGBA')
+    tex['assets/characters/yunara/skins/base/particles/mvfx/mvfx_ball_rebound.tex'] = Image.open(os.path.join(GEN, 'ball_sprite.png')).convert('RGBA')
+    tex['assets/characters/yunara/skins/base/particles/mvfx/mvfx_ball_ult.tex'] = Image.open(os.path.join(GEN, 'ball_sprite_ult.png')).convert('RGBA')
     sp = os.path.join(game_png, 'assets_characters_yunara_skins_base_particles_base_generic_sparks_add.png')
     if os.path.exists(sp):
         im = Image.open(sp).convert('RGBA')
