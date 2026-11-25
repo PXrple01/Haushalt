@@ -19,13 +19,14 @@ import lolskn
 import make_assets
 import recolor as RC
 import vfxlib as V
-from lolassets import flow_image, flow_rgba, TEX_BGRA8
+import bcn
+from lolassets import flow_image, flow_rgba
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.5.0'
+VERSION = '0.5.1'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -45,24 +46,16 @@ MODEL_SLOT = json.load(open(_slot_cfg))['model'] if os.path.exists(_slot_cfg) el
 
 # ------------------------------------------------------------------ io helpers
 def tex_bytes(im, mipmaps=True):
-    im = im.convert('RGBA')
-    w, h = im.size
-    levels = [im]
-    if mipmaps:
-        cw, ch = w, h
-        while cw > 1 or ch > 1:
-            cw, ch = max(1, cw // 2), max(1, ch // 2)
-            levels.append(im.resize((cw, ch), Image.LANCZOS))
-    data = b''.join(np.asarray(lv)[..., [2, 1, 0, 3]].tobytes() for lv in reversed(levels))
-    return struct.pack('<IHHBBBB', 0x00584554, w, h, 1, TEX_BGRA8, 0, 1 if mipmaps else 0) + data
+    """DXT1 (opaque) / DXT5 (alpha) like every texture Riot ships for Yunara (see bcn.py)."""
+    return bcn.tex_bytes(im, mipmaps)
 
 
 def gen(name):
     return Image.open(os.path.join(GEN, name + '.png')).convert('RGBA')
 
 
-def put_tex(path, im):
-    files[path.lower()] = tex_bytes(im)
+def put_tex(path, im, mipmaps=True):
+    files[path.lower()] = tex_bytes(im, mipmaps)
 
 
 def scb_bytes(pos, uv, tris, name):
@@ -306,10 +299,10 @@ def step_character(b):
     s.submeshes, s.verts = subs, np.concatenate(new_v)
     s.indices = np.concatenate(new_i).astype(np.uint16)
     put_tex(STRIKER_TEX, Image.open(os.path.join(CHAR, f'{slot}_albedo.png')))
-    # loading screen + HUD portraits (same paths as the originals inside Yunara's archive)
-    put_tex('assets/characters/yunara/skins/base/yunaraloadscreen_0.tex', Image.open(os.path.join(CHAR, 'loadscreen.png')))
-    put_tex('assets/characters/yunara/hud/yunara_square_0.tex', Image.open(os.path.join(CHAR, 'icon_square.png')))
-    put_tex('assets/characters/yunara/hud/yunara_circle_0.tex', Image.open(os.path.join(CHAR, 'icon_circle.png')))
+    # loading screen + HUD portraits (same paths and layout as the originals: DXT, no mip chain)
+    put_tex('assets/characters/yunara/skins/base/yunaraloadscreen_0.tex', Image.open(os.path.join(CHAR, 'loadscreen.png')), False)
+    put_tex('assets/characters/yunara/hud/yunara_square_0.tex', Image.open(os.path.join(CHAR, 'icon_square.png')), False)
+    put_tex('assets/characters/yunara/hud/yunara_circle_0.tex', Image.open(os.path.join(CHAR, 'icon_circle.png')), False)
     smp = b.entry(SKIN).struct.get('skinMeshProperties')
     smp.set('texture', L.PATH, xxhash.xxh64(STRIKER_TEX.encode()).intdigest())
     return f"{vcount} verts total, {len(tris)} model tris + ink shell"
@@ -637,26 +630,42 @@ def preview_card():
     return bg
 
 
-def main(game):
+VARIANTS = {   # diagnostic packages: isolate the model/skeleton part from the effects part
+    'full': ('Flow Striker (Yunara)', f'FlowStriker_Yunara_v{VERSION}.fantome'),
+    'model': ('Flow Striker TEST - nur Modell', f'FlowStriker_TEST_nur-Modell_v{VERSION}.fantome'),
+    'vfx': ('Flow Striker TEST - nur Effekte', f'FlowStriker_TEST_nur-Effekte_v{VERSION}.fantome'),
+}
+
+
+def main(game, variant='full'):
+    files.clear(); STATE.clear()
     os.makedirs(BUILD, exist_ok=True)
     b = L.read(os.path.join(game, 'data/characters/yunara/skins/skin0.bin'))
-    print('recolor            :', step_recolor(b, game))
-    print('football missiles  :', step_ball_projectiles(b))
+    fx = variant in ('full', 'vfx')
+    model = variant in ('full', 'model')
+    if fx:
+        print('recolor            :', step_recolor(b, game))
+        print('football missiles  :', step_ball_projectiles(b))
     print('football beads     :', step_bead_balls(b, game))
-    print('skeleton           :', step_custom_skeleton(b, game))
-    print('striker model      :', step_character(b))
+    if model:
+        print('skeleton           :', step_custom_skeleton(b, game))
+        print('striker model      :', step_character(b))
+    else:
+        put_tex(STRIKER_TEX, Image.open(os.path.join(CHAR, f'{MODEL_SLOT}_albedo.png')))   # used by effect afterimages
     step_write_skn()
-    print('ult seam conditions:', step_ult_bead_seams(b))
-    print('ult cast emitters  :', step_ult_cast(b))
-    print('polish emitters    :', step_vfx_polish(b))
+    if fx:
+        print('ult seam conditions:', step_ult_bead_seams(b))
+        print('ult cast emitters  :', step_ult_cast(b))
+        print('polish emitters    :', step_vfx_polish(b))
     data = L.write(b)
     L.read(data)                                              # sanity: must parse again
     files['data/characters/yunara/skins/skin0.bin'] = data
     wad = wad_bytes(files)
-    info = {'Name': 'Flow Striker (Yunara)', 'Author': 'Flow Striker Project', 'Version': VERSION,
+    name, fname = VARIANTS[variant]
+    info = {'Name': name, 'Author': 'Flow Striker Project', 'Version': VERSION,
             'Description': 'Original anime football striker (high-detail model with its own skeleton + retargeted animations, baked anime lighting, ink outline), football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
             'Heading': '', 'Home': ''}
-    out = os.path.join(BUILD, f'FlowStriker_Yunara_v{VERSION}.fantome')
+    out = os.path.join(BUILD, fname)
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('META/info.json', json.dumps(info, indent=2))
         buf = io.BytesIO(); preview_card().convert('RGB').save(buf, 'PNG')
@@ -667,4 +676,7 @@ def main(game):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    # python3 build_mod.py <game dir> [full|model|vfx|all]
+    v = sys.argv[2] if len(sys.argv) > 2 else 'full'
+    for name in (VARIANTS if v == 'all' else [v]):
+        main(sys.argv[1], name)

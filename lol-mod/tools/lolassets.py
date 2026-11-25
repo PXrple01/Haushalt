@@ -86,12 +86,9 @@ def write_tex(im: Image.Image, path, mipmaps=True):
 
 
 def read_tex_bgra8(path):
-    d = open(path, 'rb').read()
-    _, w, h, _, fmt, _, mip = struct.unpack_from('<IHHBBBB', d, 0)
-    assert fmt == TEX_BGRA8
-    top = d[-w * h * 4:]
-    arr = np.frombuffer(top, np.uint8).reshape(h, w, 4)[..., [2, 1, 0, 3]]
-    return Image.fromarray(arr.copy(), 'RGBA')
+    """Top mip level of a .tex as RGBA (BGRA8, DXT1 or DXT5)."""
+    import bcn
+    return bcn.read_tex(open(path, 'rb').read())
 
 
 # ------------------------------------------------------------------ .scb

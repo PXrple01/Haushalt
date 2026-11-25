@@ -57,4 +57,5 @@ def write(s: Skn, path):
     out += struct.pack('<5I', s.flags, len(s.indices), len(v), dt.itemsize, s.vtype)
     out += struct.pack('<6f', *mn, *mx) + struct.pack('<4f', *c, r)
     out += np.asarray(s.indices, '<u2').tobytes() + v.tobytes()
+    out += b'\0' * 12                       # end tab: Riot's .skn files end with 12 zero bytes
     open(path, 'wb').write(bytes(out))
