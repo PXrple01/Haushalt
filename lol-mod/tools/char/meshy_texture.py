@@ -79,6 +79,55 @@ def sleeve_crests(alb, d, decals):
     return Image.fromarray((np.clip(A, 0, 1) * 255).astype(np.uint8))
 
 
+def _smooth(e0, e1, x):
+    t = np.clip((x - e0) / (e1 - e0), 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def recolor(alb, d, cfg):
+    """Colour scheme change in texture space. Classes come from hue/value + the baked 3D position:
+    accents (bright green), hair (dark teal above the neck), navy cloth split by height into jersey /
+    shorts / tights. Each texel keeps its brightness relative to its class (folds, strands, print detail)."""
+    H, W = d['mask'].shape
+    A = np.asarray(alb.resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
+    hsv = np.asarray(alb.resize((W, H), Image.LANCZOS).convert('HSV')).astype(np.float32) / 255
+    h, s, v = hsv[..., 0] * 360, hsv[..., 1], hsv[..., 2]
+    M = d['mask']; y = d['pos'][..., 1].astype(np.float32)
+    lum = A @ np.array([0.299, 0.587, 0.114], np.float32)
+    # soft class weights (anti-aliased edges get partial weight -> no coloured fringes)
+    w_green = _smooth(80, 98, h) * (1 - _smooth(180, 195, h)) * _smooth(0.12, 0.30, s) * _smooth(0.06, 0.12, v)
+    hairish = _smooth(148, 156, h) * _smooth(cfg['hair_min_y'] - 2, cfg['hair_min_y'] + 2, y)
+    w_hair = w_green * hairish
+    w_acc = w_green * (1 - hairish)
+    w_navy = _smooth(188, 200, h) * (1 - _smooth(255, 268, h)) * _smooth(0.15, 0.30, s) * (1 - _smooth(0.42, 0.55, v))
+    out = A.copy()
+
+    def apply(weight, region, target, gamma=1.0, hi=None):
+        m = M & (weight > 0.01) & region
+        if not m.any():
+            return 0
+        ref = np.median(lum[m & (weight > 0.5)]) if (m & (weight > 0.5)).any() else np.median(lum[m])
+        r = np.clip(lum / max(ref, 1e-3), 0, 3.0)
+        T = np.broadcast_to(np.array(target, np.float32), A.shape).copy()
+        if hi is not None:                                    # brighter texels drift towards a second colour
+            t = _smooth(hi[1], hi[2], r)[..., None]
+            T = T * (1 - t) + np.array(hi[0], np.float32) * t
+        new = np.clip(T * (r ** gamma)[..., None], 0, 1)
+        wt = (weight * m)[..., None]
+        out[:] = out * (1 - wt) + new * wt
+        return int((weight[m] > 0.5).sum())
+    c = cfg['colors']
+    n = {}
+    n['accents'] = apply(w_acc, np.ones_like(M), c['accent'])
+    n['hair'] = apply(w_hair, np.ones_like(M), c['hair'], 0.9, (c['hair_sheen'], 1.05, 1.9))
+    yj, ys = cfg['jersey_min_y'], cfg['shorts_min_y']
+    n['jersey'] = apply(w_navy * _smooth(yj - 1.5, yj + 1.5, y), np.ones_like(M), c['jersey'])
+    n['shorts'] = apply(w_navy * _smooth(ys - 1.5, ys + 1.5, y) * (1 - _smooth(yj - 1.5, yj + 1.5, y)), np.ones_like(M), c['shorts'])
+    n['tights'] = apply(w_navy * (1 - _smooth(ys - 1.5, ys + 1.5, y)), np.ones_like(M), c['tights'])
+    print('  recolor: ' + ', '.join(f'{k} {v} texels' for k, v in n.items()))
+    return Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8))
+
+
 def shade(alb, d):
     H, W = d['mask'].shape
     A = np.asarray(alb.resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
@@ -130,6 +179,8 @@ def main():
     d = np.load(bake)
     if conf.get('sleeve_crests'):
         img = sleeve_crests(img, d, conf['sleeve_crests'])
+    if conf.get('recolor'):
+        img = recolor(img, d, conf['recolor'])
     res = shade(img, d)
     res.save(out)
     if len(sys.argv) > 5:
