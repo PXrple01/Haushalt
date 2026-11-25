@@ -153,7 +153,10 @@ def fx_segment(out_dir, k, seg_dir, title, sub):
         fx = Image.open(os.path.join(seg_dir, f)).convert('RGB').resize((880, 660), Image.LANCZOS)
         im = Image.fromarray((background() * 255).astype(np.uint8)); im.paste(fx, (30, 30)); dr = ImageDraw.Draw(im)
         dr.text((940, 60), 'EFFEKTE', font=font(30), fill=(160, 168, 200))
-        dr.text((940, 100), title, font=font(48), fill=(255, 255, 255))
+        size = 48
+        while size > 24 and dr.textlength(title, font=font(size)) > W - 960:
+            size -= 2
+        dr.text((940, 100), title, font=font(size), fill=(255, 255, 255))
         for j, t in enumerate(sub):
             dr.text((940, 170 + j * 28), t, font=font(18, True), fill=(185, 190, 215))
         dr.text((940, 640), 'Vorschau-Simulation (nicht der Spiel-Renderer)', font=font(14, True), fill=(120, 126, 150))
