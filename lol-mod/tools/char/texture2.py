@@ -14,16 +14,17 @@ FONT = os.path.join(HERE, '..', '..', 'assets_src', 'fonts', 'BigShoulders-Bold.
 A = lambda *v: np.array(v, np.float32)
 PAL = dict(
     skin=A(1.0, 0.86, 0.76), skin_mid=A(0.97, 0.75, 0.66), skin_sh=A(0.86, 0.60, 0.56),
-    jersey=A(0.07, 0.36, 0.20), jersey_mid=A(0.05, 0.28, 0.17), jersey_sh=A(0.03, 0.18, 0.13),
-    panel=A(0.05, 0.29, 0.16),
+    jersey=A(0.08, 0.15, 0.36), jersey_mid=A(0.055, 0.105, 0.27), jersey_sh=A(0.03, 0.06, 0.17),
+    panel=A(0.055, 0.11, 0.28),
     white=A(0.97, 0.98, 0.97), white_mid=A(0.86, 0.90, 0.92), white_sh=A(0.66, 0.74, 0.80),
-    shorts=A(0.11, 0.11, 0.12), shorts_mid=A(0.08, 0.08, 0.095), shorts_sh=A(0.05, 0.05, 0.065),
+    shorts=A(0.055, 0.10, 0.24), shorts_mid=A(0.04, 0.075, 0.18), shorts_sh=A(0.022, 0.042, 0.11),
+    tights=A(0.042, 0.068, 0.155), tights_mid=A(0.03, 0.05, 0.118), tights_sh=A(0.018, 0.03, 0.076),
     accent=A(0.15, 0.66, 0.36), accent_mid=A(0.11, 0.52, 0.30), accent_sh=A(0.07, 0.36, 0.22),
     boot=A(0.12, 0.13, 0.14), boot_mid=A(0.08, 0.09, 0.10), boot_sh=A(0.045, 0.05, 0.06),
     neon=A(0.36, 0.95, 0.55), neon_mid=A(0.27, 0.80, 0.45), neon_sh=A(0.18, 0.58, 0.34),
     hair=A(0.10, 0.39, 0.22), hair_mid=A(0.07, 0.29, 0.17), hair_sh=A(0.035, 0.17, 0.10), hair_hi=A(0.42, 0.78, 0.52),
 )
-INK_DARK = A(0.035, 0.085, 0.055)
+INK_DARK = A(0.025, 0.04, 0.085)
 INK_SKIN = A(0.34, 0.17, 0.13)
 LINE = A(0.07, 0.07, 0.09); BROW = A(0.05, 0.19, 0.11); MOUTH = A(0.60, 0.31, 0.28)
 IRIS_TOP = A(0.42, 0.18, 0.02); IRIS_BOT = A(1.0, 0.76, 0.24); PUPIL = A(0.14, 0.06, 0.02)
@@ -162,7 +163,7 @@ def paint(baked, raw, joints_json, out_png, out_json):
     idx = np.where(sfront)[0][sn[v, u] > 0.5]; setm(np.isin(np.arange(n), idx), 'white')
     kn_y, ft_y = J['L_KneeLower'][1], J['L_Foot'][1]
     legs = torso & (y <= hem_y)
-    setm(legs, 'skin')
+    setm(legs, 'tights')                                                  # long base-layer pants under the shorts
     sock_top = kn_y - 0.16 * (kn_y - ft_y)
     socks = legs & (y < sock_top) & (y > 17.0)
     setm(socks, 'white')
@@ -227,11 +228,18 @@ def paint(baked, raw, joints_json, out_png, out_json):
         ang = np.arctan2(z, x - kx)
         rib = socks & (np.sign(x) == np.sign(kx))
         col[rib] *= (0.975 + 0.025 * np.sin(ang[rib] * 16))[:, None]
+    # tights: compression sheen and an outer seam
+    tg = mat == 'tights'
+    col[tg] += (ss(0.82, 0.95, N[tg] @ hvec_t) * 0.10)[:, None] if False else 0
     # boot gloss
     view = np.array([0.0, 0.55, 0.83]); hvec = view + np.array([-0.35, 0.80, 0.55]); hvec /= np.linalg.norm(hvec)
     spec = ss(0.90, 0.97, N @ hvec)
-    gl = (mat == 'boot') | (mat == 'boot_dark') | (mat == 'shorts')
-    col[gl] += (spec[gl] * 0.22)[:, None]
+    gl = (mat == 'boot') | (mat == 'boot_dark') | (mat == 'shorts') | (mat == 'tights')
+    col[gl] += (spec[gl] * np.where(mat[gl] == 'tights', 0.12, 0.22))[:, None]
+    for s_ in ('L', 'R'):
+        kx = J[s_ + '_KneeLower'][0]
+        seam = (mat == 'tights') & (np.sign(x) == np.sign(kx)) & (np.abs(np.abs(x - kx) - 5.0) < 0.22) & (np.abs(z) < 2.5)
+        col[seam] *= 0.78
     # ---------------- hair: strands along the flow, zigzag highlights
     hair = cap | locks
     cl = r['locks_cl']; cln = r['locks_cl_n']

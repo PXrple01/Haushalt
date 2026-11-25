@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.3.0'
+VERSION = '0.4.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -418,6 +418,151 @@ def wad_bytes(entries):
     return header + bytes(toc) + bytes(blob)
 
 
+def step_vfx_polish(b):
+    """v0.4 polish: ball glow + spark trails, layered impacts (flash, ring, sparks; crits get a goal-net
+    flash and an anime impact frame), Q flow burst + aura, E afterimages, dash ghosts, ult impact frame
+    and god rays, a 15 s Metavision aura with a small eye above the head. Everything hangs on skeleton
+    bones or attached-mesh submesh names (Body/Pants), so it survives a model swap."""
+    for n in ('hex_net', 'manga_burst', 'manga_burst_light', 'god_rays', 'center_circle'):
+        im = gen(n)
+        put_tex(MV + 'mvfx_' + n + '.tex', im.resize((512, 512), Image.LANCZOS) if im.width > 512 else im)
+    T = lambda n: MV + 'mvfx_' + n + '.tex'
+    SPARK = P + 'base_generic_sparks_add.tex'
+    FLOW = (0.10, 0.65, 0.30); DEEP = (0.02, 0.36, 0.16); HI = (0.62, 0.98, 0.72); W1 = (1.0, 1.0, 1.0)
+    sysget = lambda n: b.entry(PART + n).struct if b.entry(PART + n) else None
+    added = 0
+
+    def add(sysname, ems):
+        nonlocal added
+        st = sysget(sysname)
+        if st is None:
+            print('   ! missing system', sysname); return
+        V.add_emitters(st, ems); added += len(ems)
+
+    # ---- projectiles: soft flow glow behind the ball + sparkling trail
+    for sysname, big in (('Yunara_Base_BA_Missile', 0), ('Yunara_Base_P_BA_Crit_missile', 1), ('Yunara_Base_Q_AA_Missile', 1),
+                         ('Yunara_Base_Q_AA_Crit_Missile', 1), ('Yunara_Base_Q_AA_Bounce_Missile', 0),
+                         ('Yunara_Base_Q_AA_Crit_Bounce_Missile', 1), ('Yunara_Base_W_Missile_Child', 2)):
+        g = (16, 21, 28)[big]
+        add(sysname, [
+            V.emitter('MV_BallGlow', T('light_dot'), blend=4, life=3.0, scale=(g, g, g), color=FLOW + (0.85,), pass_=200,
+                      color_curve=([0, 0.04, 1], [FLOW + (0.0,), FLOW + (1.0,), FLOW + (1.0,)])),
+            V.emitter('MV_BallSparks', SPARK, blend=4, single=False, rate=48 + 16 * big, emitter_life=3.0, life=0.32,
+                      bind=0.0, scale=V.vvec3((4.2 + big, 4.2 + big, 4.2 + big), rand=[(0.6, 1.2), None, None]),
+                      scale_curve=([0, 1], [(1, 1, 1), (0.15, 0.15, 0.15)]),
+                      velocity=V.vvec3((70, 70, 70), rand=[(-1, 1), (-1, 1), (-1, 1)]), drag=(2.5, 2.5, 2.5),
+                      color_curve=([0, 0.35, 1], [HI + (1.0,), FLOW + (0.85,), DEEP + (0.0,)]), pass_=210, importance=2)])
+    # ---- impacts: flash + ring + sparks, crits add a goal-net flash and an anime impact frame
+    impacts = [('Yunara_Base_BA_Tar', 0), ('Yunara_Base_Q_AA_Tar', 1), ('Yunara_Base_Q_AA_Bounce_Missile_Tar', 0),
+               ('Yunara_Base_P_BA_Crit_Tar', 2), ('Yunara_Base_Q_AA_Crit_Tar', 2), ('Yunara_Base_Q_AA_Crit_Bounce_Missile_Tar', 2),
+               ('Yunara_Base_W_tar', 1), ('Yunara_Base_RW_Tar', 2)]
+    for sysname, lvl in impacts:
+        k = 1.0 + 0.25 * lvl
+        ems = [
+            V.emitter('MV_HitFlash', T('flash_star'), blend=4, life=0.16, scale=(24 * k, 24 * k, 1),
+                      scale_curve=([0, 0.25, 1], [(0.5,) * 3, (1.3,) * 3, (1.5,) * 3]),
+                      color_curve=([0, 0.3, 1], [W1 + (1.0,), HI + (0.8,), FLOW + (0.0,)]),
+                      rotation=V.vvec3((45, 0, 0), rand=[(-1, 1), None, None]), pass_=650),
+            V.emitter('MV_HitRing', T('shock_ring'), blend=4, life=0.22, scale=(10 * k, 10 * k, 1),
+                      scale_curve=([0, 0.4, 1], [(1,) * 3, (3.4,) * 3, (4.4,) * 3]),
+                      color_curve=([0, 0.15, 1], [HI + (0.0,), FLOW + (1.0,), DEEP + (0.0,)]), pass_=651),
+            V.emitter('MV_HitSparks', SPARK, blend=4, single=False, rate=550 + 250 * lvl, emitter_life=0.02, life=0.35, bind=0.0,
+                      scale=V.vvec3((3.6, 3.6, 3.6), rand=[(0.6, 1.3), None, None]),
+                      velocity=V.vvec3((430 * k, 380 * k, 430 * k), rand=[(-1, 1), (0.2, 1.0), (-1, 1)]),
+                      accel=(0, -1300, 0), drag=(1.5, 1.5, 1.5), direction_oriented=True, dir_scale=0.0035,
+                      color_curve=([0, 0.5, 1], [HI + (1.0,), FLOW + (0.9,), DEEP + (0.0,)]), pass_=652, importance=2)]
+        if lvl == 2:
+            ems += [
+                V.emitter('MV_NetFlash', T('hex_net'), blend=4, life=0.30, scale=(32, 32, 1),
+                          scale_curve=([0, 0.2, 1], [(0.7,) * 3, (1.05,) * 3, (1.25,) * 3]),
+                          color_curve=([0, 0.12, 1], [HI + (0.0,), HI + (0.95,), FLOW + (0.0,)]),
+                          rotation=V.vvec3((30, 0, 0), rand=[(-1, 1), None, None]), pass_=653),
+                V.emitter('MV_ImpactFrame', T('manga_burst'), blend=1, life=0.10, scale=(85, 85, 1),
+                          color_curve=([0, 0.5, 1], [W1 + (0.9,), W1 + (0.8,), W1 + (0.0,)]), pass_=9500)]
+        add(sysname, ems)
+    # ---- Q: activation burst + flow aura while active
+    add('Yunara_Base_Q_Cast', [
+        V.emitter('MV_QRing', T('shock_ring'), blend=4, life=0.45, bind=1.0, rotation=(-90, -90, 0), ground=True,
+                  scale=(30, 30, 1), scale_curve=([0, 0.5, 1], [(1,) * 3, (4.2,) * 3, (5.2,) * 3]),
+                  color_curve=([0, 0.1, 1], [HI + (0.0,), FLOW + (1.0,), DEEP + (0.0,)]), pass_=-2800),
+        V.emitter('MV_QPillar', T('light_streak'), blend=4, life=0.38, pos=(0, 120, 0), scale=(14, 170, 1), uniform=False,
+                  scale_curve=([0, 0.2, 1], [(0.3, 0.6, 1), (1.0, 1.0, 1), (0.15, 1.25, 1)]),
+                  color_curve=([0, 0.2, 1], [W1 + (0.0,), HI + (0.95,), FLOW + (0.0,)]), pass_=699),
+        V.emitter('MV_QRise', T('light_dot'), blend=4, single=False, rate=520, emitter_life=0.08, life=0.6, bind=0.0,
+                  pos=(0, 30, 0), spawn_radius=30, scale=(4.2, 4.2, 4.2),
+                  velocity=V.vvec3((0, 540, 0), rand=[None, (0.6, 1.25), None]), drag=(1.2, 1.2, 1.2),
+                  direction_oriented=True, dir_scale=0.006,
+                  color_curve=([0, 0.5, 1], [HI + (1.0,), FLOW + (0.9,), DEEP + (0.0,)]), pass_=700),
+        V.emitter('MV_QFlash', T('flash_star'), blend=4, life=0.22, pos=(0, 120, 0), scale=(60, 60, 1),
+                  scale_curve=([0, 0.3, 1], [(0.4,) * 3, (1.3,) * 3, (1.5,) * 3]),
+                  color_curve=([0, 0.3, 1], [W1 + (0.9,), HI + (0.7,), FLOW + (0.0,)]), pass_=701)])
+    add('Yunara_Base_Q_Buff_OnBase', [
+        V.emitter('MV_QAuraGround', T('center_circle'), blend=4, life=8.0, rotation=(-90, -90, 0), ground=True,
+                  scale=(80, 80, 1), color_curve=([0, 0.04, 0.94, 1], [FLOW + (0.0,), FLOW + (0.45,), FLOW + (0.45,), FLOW + (0.0,)]),
+                  pass_=-2790),
+        V.emitter('MV_QMotes', SPARK, blend=4, single=False, rate=11, emitter_life=8.0, life=1.0, bind=0.0, pos=(0, 10, 0),
+                  spawn_radius=26, scale=(4.0, 4.0, 4.0), scale_curve=([0, 1], [(1,) * 3, (0.3,) * 3]),
+                  velocity=V.vvec3((0, 140, 0), rand=[None, (0.7, 1.3), None]),
+                  color_curve=([0, 0.4, 1], [HI + (0.9,), FLOW + (0.7,), DEEP + (0.0,)]), pass_=702, importance=2)])
+    # ---- E: afterimages while sprinting; ult-dashes get a ghost burst + ground ring
+    ghost = V.clone_emitter(b, PART + 'Yunara_Base_Q_Buff_OnBeads', 'ADD_EdgeGlow', 'MV_EGhost')
+    prim = ghost.get('primitive'); mm = prim.get('mMesh')
+    mm.set('mSubmeshesToDraw', L.LIST, V.submesh_list(['Body', 'Pants']))
+    mm.set('mLockMeshToAttachment', L.BOOL, False)
+    ghost.remove('texDiv')
+    ghost.set('rate', L.EMBED, V.vfloat(9.0)); ghost.remove('isSingleParticle')
+    ghost.set('lifetime', L.OPTION, L.Option(L.F32, 3.0))
+    ghost.set('particleLifetime', L.EMBED, V.vfloat(0.30))
+    ghost.set('bindWeight', L.EMBED, V.vfloat(0.0))
+    ghost.set('birthScale0', L.EMBED, V.vvec3((1.0, 1.0, 1.0)))
+    ghost.set('birthColor', L.EMBED, V.vcolor(FLOW + (0.55,)))
+    V.set_curve_color(ghost, [0, 1], [(1, 1, 1, 1), (1, 1, 1, 0)])
+    add('Yunara_Base_E_SpeedBuff', [ghost])
+    for dash in ('Yunara_Base_RE_ShortDash', 'Yunara_Base_RE_FlipKick'):
+        st = sysget(dash)
+        if st is None:
+            continue
+        av = V.find_emitter(st, 'AV_ChromaticAbberation')
+        if av is not None:                      # was drawing the body with Yunara's own texture
+            av.set('texture', L.STRING, STRIKER_TEX)
+        g2 = V.clone_emitter(b, PART + 'Yunara_Base_Q_Buff_OnBeads', 'ADD_EdgeGlow', 'MV_DashGhosts')
+        mm = g2.get('primitive').get('mMesh')
+        mm.set('mSubmeshesToDraw', L.LIST, V.submesh_list(['Body', 'Pants'])); mm.set('mLockMeshToAttachment', L.BOOL, False)
+        g2.remove('texDiv'); g2.remove('isSingleParticle')
+        g2.set('rate', L.EMBED, V.vfloat(40.0)); g2.set('lifetime', L.OPTION, L.Option(L.F32, 0.15))
+        g2.set('particleLifetime', L.EMBED, V.vfloat(0.35)); g2.set('bindWeight', L.EMBED, V.vfloat(0.0))
+        g2.set('birthScale0', L.EMBED, V.vvec3((1.0, 1.0, 1.0))); g2.set('birthColor', L.EMBED, V.vcolor(HI + (0.6,)))
+        V.set_curve_color(g2, [0, 0.4, 1], [(1, 1, 1, 1), (0.6, 0.9, 0.7, 0.6), (0.3, 0.6, 0.4, 0.0)])
+        add(dash, [g2, V.emitter('MV_DashRing', T('shock_ring'), blend=4, life=0.35, bind=0.0, rotation=(-90, -90, 0), ground=True,
+                                 scale=(25, 25, 1), scale_curve=([0, 1], [(1,) * 3, (4.4,) * 3]),
+                                 color_curve=([0, 0.1, 1], [HI + (0.0,), FLOW + (1.0,), DEEP + (0.0,)]), pass_=-2780)])
+    # ---- R cast: anime impact frame at the chain break + god rays behind the eye
+    BREAK = 0.30; EYE_T = 0.42; EYE_L = 1.45
+    add('Yunara_Base_R_Cast', [
+        V.emitter('MV_ImpactFrameR', T('manga_burst'), blend=1, delay=BREAK - 0.01, life=0.12, pos=(0, 110, 0), scale=(240, 240, 1),
+                  color_curve=([0, 0.55, 1], [W1 + (0.95,), W1 + (0.85,), W1 + (0.0,)]), pass_=9600),
+        V.emitter('MV_ImpactLightR', T('manga_burst_light'), blend=4, delay=BREAK - 0.01, life=0.16, pos=(0, 110, 0),
+                  scale=(250, 250, 1), scale_curve=([0, 1], [(0.9,) * 3, (1.15,) * 3]),
+                  color_curve=([0, 0.3, 1], [HI + (0.9,), FLOW + (0.7,), DEEP + (0.0,)]), pass_=9601),
+        V.emitter('MV_EyeRays', T('god_rays'), blend=4, delay=EYE_T + 0.08, life=EYE_L - 0.1, pos=(0, 300, 0),
+                  scale=(210, 210, 1), spin=(18, 0, 0), scale_curve=([0, 0.15, 1], [(0.6,) * 3, (1.0,) * 3, (1.1,) * 3]),
+                  color_curve=([0, 0.15, 0.8, 1], [FLOW + (0.0,), HI + (0.55,), FLOW + (0.45,), DEEP + (0.0,)]), pass_=9098)])
+    # ---- R buff (15 s Metavision): tactical ground ring, centre circle, small eye above the head, rising motes
+    add('Yunara_Base_R_Buff_OnBase', [
+        V.emitter('MV_RGround', T('reticle'), blend=4, life=15.0, rotation=(-90, -90, 0), ground=True, scale=(105, 105, 1),
+                  color_curve=([0, 0.02, 0.97, 1], [FLOW + (0.0,), HI + (0.5,), FLOW + (0.42,), FLOW + (0.0,)]), pass_=-2770),
+        V.emitter('MV_RCircle', T('center_circle'), blend=4, life=15.0, rotation=(-90, -90, 0), ground=True, scale=(72, 72, 1),
+                  color_curve=([0, 0.02, 0.97, 1], [FLOW + (0.0,), FLOW + (0.35,), FLOW + (0.3,), FLOW + (0.0,)]), pass_=-2769),
+        V.emitter('MV_ROverEye', T('eye'), blend=4, life=15.0, pos=(0, 262, 0), scale=(30, 15, 1), uniform=False,
+                  scale_curve=([0, 0.03, 0.06, 1], [(1, 0.05, 1), (1, 1.15, 1), (1, 1, 1), (1, 1, 1)]),
+                  color_curve=([0, 0.02, 0.97, 1], [FLOW + (0.0,), W1 + (0.9,), W1 + (0.85,), W1 + (0.0,)]), pass_=9050),
+        V.emitter('MV_RMotes', SPARK, blend=4, single=False, rate=16, emitter_life=15.0, life=1.2, bind=0.0, pos=(0, 8, 0),
+                  spawn_radius=32, scale=(4.5, 4.5, 4.5), scale_curve=([0, 1], [(1,) * 3, (0.25,) * 3]),
+                  velocity=V.vvec3((0, 170, 0), rand=[None, (0.7, 1.3), None]),
+                  color_curve=([0, 0.4, 1], [HI + (0.9,), FLOW + (0.75,), DEEP + (0.0,)]), pass_=703, importance=2)])
+    return added
+
+
 def preview_card():
     W, H = 640, 360
     bg = Image.new('RGBA', (W, H), (12, 12, 30, 255))
@@ -438,6 +583,7 @@ def main(game):
     step_write_skn()
     print('ult seam conditions:', step_ult_bead_seams(b))
     print('ult cast emitters  :', step_ult_cast(b))
+    print('polish emitters    :', step_vfx_polish(b))
     data = L.write(b)
     L.read(data)                                              # sanity: must parse again
     files['data/characters/yunara/skins/skin0.bin'] = data

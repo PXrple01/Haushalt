@@ -62,7 +62,7 @@ def emitter(name, texture, *, blend=4, life=1.0, rate=1.0, single=True, emitter_
             color=(1, 1, 1, 1), color_curve=None, rotation=None, spin=None, velocity=None,
             accel=None, drag=None, spawn_radius=None, mesh=None, ground=False, pass_=100,
             direction_oriented=False, dir_scale=None, local_orientation=False, importance=3,
-            backface=False, extra=None):
+            backface=False, extra=None, primitive=None):
     """Builds a complete VfxEmitterDefinitionData. Curves: (times, values) over the particle's life."""
     f = [F('emitterName', L.STRING, name),
          F('rate', L.EMBED, vfloat(rate)),
@@ -106,6 +106,8 @@ def emitter(name, texture, *, blend=4, life=1.0, rate=1.0, single=True, emitter_
         f.append(F('drag', L.EMBED, vvec3(drag)))
     if spawn_radius:
         f.append(F('SpawnShape', L.STRUCT, L.Struct('VfxShapeCylinder', [F('radius', L.F32, float(spawn_radius))], L.STRUCT)))
+    if primitive is not None:
+        f.append(F('primitive', L.STRUCT, primitive))
     if mesh:
         f.append(F('primitive', L.STRUCT, L.Struct('VfxPrimitiveMesh', [
             F('mMesh', L.EMBED, L.Struct('VfxMeshDefinitionData', [F('mSimpleMeshName', L.STRING, mesh)], L.EMBED))], L.STRUCT)))
@@ -171,3 +173,18 @@ def add_resource(b, resolver_path, key, target_path):
     r = b.entry(resolver_path).struct
     m = r.field('resourceMap').value
     m.items.append((L.fnv1a(key), L.fnv1a(target_path)))
+
+
+def clone_emitter(b, sys_path, name, new_name):
+    src = find_emitter(b.entry(sys_path).struct, name)
+    em = copy.deepcopy(src)
+    em.set('emitterName', L.STRING, new_name)
+    return em
+
+
+def set_curve_color(em, times, values):
+    em.set('Color', L.EMBED, vcolor(values[0], times, values))
+
+
+def submesh_list(names):
+    return L.List(L.HASH, [L.fnv1a(n) for n in names])

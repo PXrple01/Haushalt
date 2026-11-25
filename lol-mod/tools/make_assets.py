@@ -352,7 +352,7 @@ def make_light_fx():
     rays = sum(np.exp(-(((a - k * np.pi / 4 + np.pi) % (np.pi / 2 if k % 2 == 0 else np.pi / 2)) - np.pi / 4) ** 2 / 0.0006) *
                (0.9 if k % 2 == 0 else 0.5) for k in range(2)) * np.exp(-r * 2.2)
     glow = np.exp(-(r / 0.16) ** 2) + 0.35 * np.exp(-(r / 0.45) ** 2)
-    i = np.clip(glow + rays, 0, 1)
+    i = np.clip((glow + rays) * smoothstep(1.0, 0.7, r), 0, 1)
     save(np.stack([np.clip(0.75 + 0.25 * i, 0, 1), np.clip(0.7 + 0.3 * i, 0, 1), np.ones_like(i), i], -1), 'flash_star')
     # shockwave ring
     ring = np.exp(-((r - 0.86) / 0.025) ** 2) + 0.35 * np.exp(-((r - 0.74) / 0.12) ** 2) * (r < 0.86)
@@ -388,7 +388,66 @@ def make_pitch_lines(size=1024):
     save(np.concatenate([rgb, i[..., None]], -1), 'pitch_lines')
 
 
+def make_polish_fx():
+    # goal-net hexagons with a circular falloff (crit impacts, W)
+    s = 512
+    y, x = np.mgrid[0:s, 0:s].astype(float) / (s - 1) * 2 - 1
+    size = 1.0 / 9.0
+    qf = (np.sqrt(3) / 3 * x - y / 3) / size
+    rf = (2.0 / 3.0 * y) / size
+    cube = np.stack([qf, -qf - rf, rf], -1)
+    rc = np.round(cube)
+    dd = np.abs(rc - cube)
+    fix = np.argmax(dd, -1)                              # cube rounding correction
+    rc_sum = rc.sum(-1)
+    for ax in range(3):
+        m = fix == ax
+        rc[..., ax] = np.where(m, rc[..., ax] - rc_sum, rc[..., ax])
+    dist = np.max(np.abs(cube - rc), -1)                 # 0 at hex centres, 0.5 on the edges
+    lines = smoothstep(0.445, 0.492, dist)
+    r = np.hypot(x, y)
+    fall = smoothstep(1.0, 0.55, r) * (0.35 + 0.65 * smoothstep(0.15, 0.6, r))
+    i = np.clip(lines * fall + 0.25 * np.exp(-((r - 0.9) / 0.05) ** 2), 0, 1)
+    save(np.stack([np.ones_like(i), np.ones_like(i), np.ones_like(i), i], -1), 'hex_net')
+    # anime impact frame: radial speed lines around a clear centre (alpha-blended dark lines)
+    s = 1024
+    y, x = np.mgrid[0:s, 0:s].astype(float) / (s - 1) * 2 - 1
+    r = np.hypot(x, y); a = np.arctan2(y, x)
+    rng = np.random.default_rng(5)
+    n = 140
+    ang = np.sort(rng.uniform(-np.pi, np.pi, n)); wid = rng.uniform(0.004, 0.016, n); start = rng.uniform(0.32, 0.62, n)
+    m = np.zeros_like(r)
+    for a0, w0, s0 in zip(ang, wid, start):
+        da = np.abs((a - a0 + np.pi) % (2 * np.pi) - np.pi)
+        width = w0 * smoothstep(s0, 1.2, r)
+        m = np.maximum(m, (da < width) * smoothstep(s0, s0 + 0.15, r))
+    m *= smoothstep(1.0, 0.82, r)                         # round falloff: no square edges
+    save(np.stack([np.full_like(m, 0.02), np.full_like(m, 0.04), np.full_like(m, 0.06), m], -1), 'manga_burst')
+    save(np.stack([np.ones_like(m), np.ones_like(m), np.ones_like(m), m * 0.9], -1), 'manga_burst_light')
+    # soft god rays behind the METAVISION eye
+    s = 512
+    y, x = np.mgrid[0:s, 0:s].astype(float) / (s - 1) * 2 - 1
+    r = np.hypot(x, y); a = np.arctan2(y, x)
+    rays = sum(np.exp(-(((a - k_ * np.pi / 8 + np.pi) % (np.pi / 4)) - np.pi / 8) ** 2 / 0.004) * (0.6 + 0.4 * (k_ % 2)) for k_ in range(2))
+    i = np.clip(((rays * 0.8 + 0.35) * np.exp(-r * 2.4) * smoothstep(0.0, 0.12, r) + 0.5 * np.exp(-(r / 0.18) ** 2)) * smoothstep(1.0, 0.75, r), 0, 1)
+    save(np.stack([np.ones_like(i), np.ones_like(i), np.ones_like(i), i], -1), 'god_rays')
+    # pitch centre circle (ground decal for Q / W / ult aura)
+    img = Image.new('L', (1024, 1024), 0); d = ImageDraw.Draw(img); c = 512
+    for rad, wdt in ((430, 10), (300, 5)):
+        d.ellipse([c - rad, c - rad, c + rad, c + rad], outline=255, width=wdt)
+    d.line([c, c - 500, c, c + 500], fill=255, width=6)
+    d.ellipse([c - 14, c - 14, c + 14, c + 14], fill=255)
+    for k_ in range(24):
+        aa = np.radians(k_ * 15); r0, r1 = 445, 470 if k_ % 3 else 490
+        d.line([c + r0 * np.cos(aa), c + r0 * np.sin(aa), c + r1 * np.cos(aa), c + r1 * np.sin(aa)], fill=255, width=5)
+    a_ = np.asarray(img).astype(float) / 255
+    glow = np.asarray(img.filter(ImageFilter.GaussianBlur(8))).astype(float) / 255
+    i = np.clip(a_ + glow * 1.4, 0, 1)
+    save(np.stack([np.clip(0.75 + 0.25 * a_, 0, 1), np.ones_like(i), np.clip(0.8 + 0.2 * a_, 0, 1), i], -1), 'center_circle')
+
+
 if __name__ == '__main__':
+    make_polish_fx()
     make_ball_textures()
     make_ball_sprite('ball_sprite', glow=0.30, rim=0.22)
     make_ball_sprite('ball_sprite_flow', glow=0.75, rim=0.50, seam_emit=0.35)
