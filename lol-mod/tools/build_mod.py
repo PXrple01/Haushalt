@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.4.0'
+VERSION = '0.5.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -204,6 +204,51 @@ def outline_thickness(pos, vpart, joints):
     return th
 
 
+CUSTOM_SKL = 'ASSETS/Characters/Yunara/Skins/Base/MVFX_Striker.skl'
+CUSTOM_ANM_DIR = 'assets/characters/yunara/skins/base/animations/mvfx_striker/'
+ANIM_BIN = 'data/characters/yunara/animations/skin0.bin'
+
+
+def step_custom_skeleton(b, game):
+    """Model slots with their own proportions (tools/char/custom_skeleton.py): a byte-patched copy of Yunara's
+    skeleton at a new path, and every animation clip retargeted to it. The base skin's animation graph is
+    pointed at the new clips, so other Yunara skins keep the original files."""
+    lm = os.path.join(CHAR, f'{MODEL_SLOT}_landmarks.json')
+    if not os.path.exists(lm):
+        return "Yunara's skeleton"
+    skl = os.path.join(game, 'assets/characters/yunara/skins/base/yunara_base.skl')
+    anm_dir = os.path.join(game, 'anm')
+    if not (os.path.exists(skl) and os.path.isdir(anm_dir) and os.path.exists(os.path.join(game, ANIM_BIN))):
+        raise SystemExit(f'model slot {MODEL_SLOT} has its own skeleton: run tools/fetch_wad.py + tools/extract_wad.py '
+                         f'into {game} first (see README)')
+    sys.path.insert(0, os.path.join(HERE, 'char'))
+    import custom_skeleton as CS
+    import tempfile
+    tmp = tempfile.mkdtemp()
+    CS.build_skeleton(skl, os.path.join(CHAR, 'yunara_joints.json'), lm, tmp, MODEL_SLOT)
+    files[CUSTOM_SKL.lower()] = open(os.path.join(tmp, f'{MODEL_SLOT}.skl'), 'rb').read()
+    STATE['joints'] = json.load(open(os.path.join(tmp, f'{MODEL_SLOT}_joints.json')))
+    os.makedirs(BUILD, exist_ok=True)
+    json.dump(STATE['joints'], open(os.path.join(BUILD, f'{MODEL_SLOT}_joints.json'), 'w'))   # for make_promo.sh
+    params = json.load(open(os.path.join(tmp, f'{MODEL_SLOT}_retarget.json')))
+    b.entry(SKIN).struct.get('skinMeshProperties').field('skeleton').value = CUSTOM_SKL
+    graph = bytearray(open(os.path.join(game, ANIM_BIN), 'rb').read())
+    moved = kept = 0
+    for f in sorted(os.listdir(anm_dir)):
+        raw = open(os.path.join(anm_dir, f), 'rb').read()
+        out = CS.retarget_compressed(raw, params)[0] if raw[:8] == b'r3d2canm' else CS.retarget_uncompressed(raw, params)[0]
+        old = struct.pack('<Q', int(f[:-4], 16))
+        if graph.count(old) >= 1:
+            new_path = CUSTOM_ANM_DIR + f
+            graph = graph.replace(old, struct.pack('<Q', xxhash.xxh64(new_path.encode()).intdigest()))
+            files[new_path] = out; moved += 1
+        else:                     # not in the base graph: override in place so this skin never plays a stretched clip
+            files[int(f[:-4], 16)] = out; kept += 1
+    L.read(bytes(graph))                                      # sanity: must parse again
+    files[ANIM_BIN] = bytes(graph)
+    return f'custom skeleton, {moved} clips re-linked, {kept} overridden in place'
+
+
 def step_character(b):
     """Replaces Yunara's body with the original anime striker (Body = body/head/hands/boots, Pants = hair),
     plus an inverted-hull ink outline (League culls back faces, as its double-sided cloth shows)."""
@@ -211,7 +256,7 @@ def step_character(b):
     slot = MODEL_SLOT
     d = np.load(os.path.join(CHAR, f'{slot}_rigged.npz'))
     ink = json.load(open(os.path.join(CHAR, f'{slot}_ink.json')))
-    joints = json.load(open(os.path.join(CHAR, 'yunara_joints.json')))
+    joints = STATE.get('joints') or json.load(open(os.path.join(CHAR, 'yunara_joints.json')))
     tris, part = d['tris'], d['part']
     vpart = np.full(len(d['pos']), -1)
     for k in range(7):
@@ -413,8 +458,8 @@ def step_ult_cast(b):
 
 # ------------------------------------------------------------------ packaging
 def wad_bytes(entries):
-    """WAD v3.3, uncompressed entries, sorted by path hash."""
-    items = sorted(((xxhash.xxh64(p.lower().encode()).intdigest(), d) for p, d in entries.items()))
+    """WAD v3.3, uncompressed entries, sorted by path hash (keys: game path, or an int path hash)."""
+    items = sorted(((p if isinstance(p, int) else xxhash.xxh64(p.lower().encode()).intdigest(), d) for p, d in entries.items()))
     header = b'RW' + bytes([3, 3]) + b'\0' * 256 + struct.pack('<Q', 0) + struct.pack('<I', len(items))
     toc_size = 32 * len(items)
     offset = len(header) + toc_size
@@ -598,6 +643,7 @@ def main(game):
     print('recolor            :', step_recolor(b, game))
     print('football missiles  :', step_ball_projectiles(b))
     print('football beads     :', step_bead_balls(b, game))
+    print('skeleton           :', step_custom_skeleton(b, game))
     print('striker model      :', step_character(b))
     step_write_skn()
     print('ult seam conditions:', step_ult_bead_seams(b))
@@ -608,7 +654,7 @@ def main(game):
     files['data/characters/yunara/skins/skin0.bin'] = data
     wad = wad_bytes(files)
     info = {'Name': 'Flow Striker (Yunara)', 'Author': 'Flow Striker Project', 'Version': VERSION,
-            'Description': 'Original anime football striker model (v2: fingers, cleats, baked anime lighting, ink outline), football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
+            'Description': 'Original anime football striker (high-detail model with its own skeleton + retargeted animations, baked anime lighting, ink outline), football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
             'Heading': '', 'Home': ''}
     out = os.path.join(BUILD, f'FlowStriker_Yunara_v{VERSION}.fantome')
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:

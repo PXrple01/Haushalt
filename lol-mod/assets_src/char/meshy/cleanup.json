@@ -1,0 +1,81 @@
+{
+ "cleanup": [
+  {
+   "box": [
+    615,
+    2855,
+    775,
+    3020
+   ],
+   "why": "brand-like swoosh on the back of the jersey (AI texture artefact)"
+  }
+ ],
+ "sleeve_crests": [
+  {
+   "center": [
+    -26.6,
+    146.6,
+    -5.9
+   ],
+   "out": [
+    -0.77,
+    0.64,
+    0.0
+   ],
+   "up": [
+    0.64,
+    0.77,
+    0.0
+   ],
+   "size": 8.0,
+   "radius": 7.0,
+   "min_abs_x": 22.5,
+   "why": "AI patch with pseudo lettering -> the project's own crest",
+   "stray_box": [
+    [
+     -34,
+     138,
+     -14
+    ],
+    [
+     -17,
+     160,
+     10
+    ]
+   ]
+  },
+  {
+   "center": [
+    29.2,
+    145.8,
+    -3.1
+   ],
+   "out": [
+    0.77,
+    0.64,
+    0.0
+   ],
+   "up": [
+    -0.64,
+    0.77,
+    0.0
+   ],
+   "size": 8.0,
+   "radius": 9.0,
+   "min_abs_x": 19.0,
+   "why": "AI patch -> the project's own crest",
+   "stray_box": [
+    [
+     17,
+     138,
+     -14
+    ],
+    [
+     34,
+     160,
+     10
+    ]
+   ]
+  }
+ ]
+}

@@ -3,17 +3,17 @@
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
 Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.4.0 enthält
+## Was Version 0.5.0 enthält
 
 | Teil | Änderung |
 |---|---|
-| Outfit | dunkelblaues Trikot + Shorts, lange dunkelblaue Sporthose darunter (Stutzen darübergezogen) |
-| Effekte v0.4 | Fußball-Geschosse mit Glanz + Funkenspur (immer rund), Treffer mit Blitz, Ring, Funken und abprallendem Ball, Krits mit Anime-Aufprallbild + Tornetz, Q mit Lichtsäule + Aura, Sprint mit Nachbildern, Ult mit Speedlines beim Kettenbruch + Lichtstrahlen hinter dem Auge, 15-s-Aura mit Taktik-Ring und kleinem METAVISION-Auge über dem Kopf |
-| Modell v2 | echte Finger (bewegen sich mit den Animationen), Fußballschuhe mit Stollen, Armband, Schienbeinschoner, vollere Frisur; Gewichte für Oberkörper/Hände aus Yunaras Original übernommen |
-| Licht & Textur | in Blender Cycles gebackenes Licht mit Haar-Schatten auf der Stirn, 3-stufige Anime-Schattierung, Nähte, Seitenteile, eigenes Vereinswappen, Strähnen mit Glanzlichtern, detaillierte Augen |
+| Modell (neu in v0.5) | viel detaillierterer Anime-Stürmer (eigenes Design, mit Meshy erzeugt): dunkelgrüne, zur Seite gestylte Haare, bernsteinfarbene Augen, dunkelblaues Trikot mit weißer Schärpe und Wappen, lange dunkelblaue Strumpfhose unter den Shorts, weiße Stutzen mit grünen Streifen, schwarze Stollenschuhe – mit seinen eigenen Anime-Proportionen |
+| Eigenes Skelett (neu) | die Knochen sitzen an den Gelenken des Stürmers; alle 72 Animationen von Yunara werden beim Bauen darauf umgerechnet (gleiche Bewegungen, Bein- und Armlängen angepasst, Füße bleiben am Boden) |
+| Licht & Textur (neu) | Licht mit echten Schatten und Umgebungsverdeckung vom 680.000-Dreiecke-Originalmodell gebacken, 3-stufige Anime-Schattierung (kühle Stoffschatten, warme Hautschatten), flach beleuchtetes Gesicht mit Haarschatten, feine Randlicht-Kante in Flow-Grün; eigenes Vereinswappen auf beiden Ärmeln, KI-Artefakte (markenähnliches Logo, Fantasie-Abzeichen) entfernt |
+| Ladebildschirm & Icons | neu gerendert mit dem neuen Modell (Volleyschuss + Porträt) |
 | Konturlinie | Anime-Outline als Hülle im Modell (Riot blendet Rückseiten aus – sieht man an Yunaras doppelseitigem Stoff) |
-| Ladebildschirm & Icons | eigener Ladebildschirm (Volleyschuss) und eigene Porträt-Icons für Minimap/Fähigkeitsleiste |
-| Modell (v0.2) | eigener Anime-Fußballstürmer statt Yunara: dunkelgrüne, zur Seite gestylte Frisur, bernsteinfarbene Augen, dunkelgrünes Trikot mit weißer Schärpe und Nummer 8, schwarze Shorts, weiße Stutzen, schwarze Schuhe mit neongrüner Sohle – an Yunaras Skelett gebunden, nutzt ihre Animationen |
+| Effekte v0.4 | Fußball-Geschosse mit Glanz + Funkenspur (immer rund), Treffer mit Blitz, Ring, Funken und abprallendem Ball, Krits mit Anime-Aufprallbild + Tornetz, Q mit Lichtsäule + Aura, Sprint mit Nachbildern, Ult mit Speedlines beim Kettenbruch + Lichtstrahlen hinter dem Auge, 15-s-Aura mit Taktik-Ring und kleinem METAVISION-Auge über dem Kopf |
+| Älteres Modell | der selbst gebaute Stürmer v2 (ohne Meshy) ist weiter im Projekt: `{"model": "striker2"}` in `assets_src/char/model.json` |
 | Perlen um den Körper | werden zu 8 echten 3D-Fußbällen (schwarz-weiß) |
 | Normale Angriffe, Krits, Q-Angriffe, W | Geschosse sind drehende Fußbälle |
 | Q / W | Fußbälle mit dunkelgrünem „Flow“-Leuchten |
@@ -25,17 +25,21 @@ Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind s
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.4.0.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.5.0.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
+
+Der Mod ist für den Standard-Skin gedacht. Wenn du einen anderen Yunara-Skin spielen willst, schalte ihn vorher ab.
 
 Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risiko. Nach LoL-Patches kann ein Update nötig sein.
 
 ## Vorschau
 
-![Ladebildschirm](previews/striker_v0.4_loadscreen.png)
+![Ladebildschirm](previews/striker_v0.5_loadscreen.png)
 
-![Posen](previews/striker_v0.4_poses.png)
+![Rundum-Ansicht](previews/striker_v0.5_turnaround.png)
+
+![Posen mit Yunaras umgerechneten Animationen](previews/striker_v0.5_poses.png)
 
 ![Effekte (Simulation)](previews/effects_v0.4.gif)
 
@@ -43,10 +47,15 @@ Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risik
 
 ```bash
 tools/fetch_game_files.sh /tmp/yunara
+git clone https://github.com/CommunityDragon/CDTB /tmp/cdtb
+python3 tools/fetch_wad.py /tmp/yunara/Yunara.wad.client /tmp/cdtb
+python3 tools/extract_wad.py /tmp/yunara/Yunara.wad.client /tmp/yunara
 cd tools && python3 make_assets.py && python3 build_mod.py /tmp/yunara
 ```
 
-Benötigt: Python 3, `pip install numpy pillow xxhash`. Ergebnis liegt in `build/`.
+Benötigt: Python 3, `pip install numpy pillow xxhash pyritofile pyzstd`. Ergebnis liegt in `build/`.
+Die Zeilen 2–4 holen Yunaras Skelett und Animationen aus Riots Spielarchiv; der Build rechnet sie auf das Skelett des
+Stürmers um. Riots Dateien landen nie im Repository.
 
 ## Aufbau
 
@@ -64,3 +73,9 @@ Benötigt: Python 3, `pip install numpy pillow xxhash`. Ergebnis liegt in `build
 - `tools/vfxsim.py`, `tools/vfx_preview.py` – Effekt-Simulator für Vorschau-GIFs (Näherung, nicht das Spiel)
 - `tools/char/import_model.py` + [MODEL_SWAP.md](MODEL_SWAP.md) – anderes Modell einsetzen
 - `tools/fetch_wad.py` – lädt Yunaras Spielarchiv direkt von Riots Update-Server (für Skelett/Animationen)
+- `tools/extract_wad.py` – holt daraus Skelett, Animationsgraph und alle Animationen für den Build
+- `tools/char/meshy_prep.py`, `meshy_repose.py`, `meshy_bake.py`, `meshy_texture.py` – Pipeline für das Meshy-Modell:
+  reduzieren (682.000 → 26.000 Dreiecke), Arme/Beine in Yunaras Grundpose drehen, Licht vom Originalmodell backen,
+  Anime-Schattierung + Textur-Aufräumen (siehe [MODEL_SWAP.md](MODEL_SWAP.md))
+- `tools/char/custom_skeleton.py` – eigenes Skelett (Yunaras Datei, nur Gelenkpositionen geändert) und Umrechnung der
+  Animationen (alle drei Riot-Formate, Rotationen bleiben bitgenau)

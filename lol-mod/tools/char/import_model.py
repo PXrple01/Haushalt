@@ -1,6 +1,11 @@
 """Model slot importer: turns any humanoid model (.glb/.gltf/.fbx/.obj) into the mod's model assets.
 
   python3 import_model.py <model file> <name> <joints.json> <yunara_base.skn> [--repose]
+         [--custom-skeleton] [--albedo <png>]
+
+--custom-skeleton: <joints.json> is a model-specific skeleton (custom_skeleton.py) and the model is already
+re-posed and scaled (meshy_repose.py): no fitting, no transfer of Yunara's artist weights, rigid hands.
+A .blend model file is read from its object named 'lo'. --albedo replaces the model's own texture.
 
 Steps: import -> join meshes -> League space (model faces -Y in Blender / +Z in glTF) -> scale to
 Yunara's height, feet on the ground -> optional arm re-pose to Yunara's A-pose (needs a rig with
@@ -30,8 +35,12 @@ ARM_NAMES = {'L': ['mixamorig:LeftArm', 'LeftArm', 'upperarm_l', 'UpperArm.L', '
 
 def import_any(path):
     ext = os.path.splitext(path)[1].lower()
-    if ext in ('.glb', '.gltf'):
-        bpy.ops.import_scene.gltf(filepath=path)
+    if ext == '.blend':
+        with bpy.data.libraries.load(path) as (src, dst):
+            dst.objects = ['lo']
+        bpy.context.scene.collection.objects.link(dst.objects[0])
+    elif ext in ('.glb', '.gltf'):
+        bpy.ops.import_scene.gltf(filepath=path, merge_vertices=True)
     elif ext == '.fbx':
         bpy.ops.import_scene.fbx(filepath=path)
     elif ext == '.obj':
@@ -107,8 +116,12 @@ def fit_to_yunara(ob, ref_height):
     print(f'  scaled x{s:.3f} to {ref_height:.1f} units')
 
 
-def build_atlas(ob, out_png):
+def build_atlas(ob, out_png, albedo=None):
     """Single texture: reuse a lone base-colour image, else bake every material's colour into an atlas."""
+    if albedo:
+        from PIL import Image
+        Image.open(albedo).convert('RGB').resize((ATLAS, ATLAS), Image.LANCZOS).save(out_png)
+        print('  using the given albedo', albedo); return
     mats = [m for m in ob.data.materials if m]
     imgs = []
 
@@ -244,8 +257,22 @@ def parts_by_connectivity(ob):
     return part
 
 
+def custom_deform():
+    """Deform bones for a model-specific skeleton: no Yunara-specific tail positions, rigid hands."""
+    for s in ('L', 'R'):
+        for f in ('Thumb', 'Index', 'Middle', 'Ring', 'Pinky'):
+            for k in (1, 2, 3):
+                R.DEFORM.pop(f'{s}_{f}{k}', None)
+        R.DEFORM[f'{s}_Hand'] = ('ext', f'{s}_Middle3', 1.15)
+    R.DEFORM['Pelvis'] = ('off', (0.0, -9.0, 0.0))
+    R.DEFORM['Head'] = ('off', (0.0, 44.0, 0.0))
+
+
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    argv = sys.argv[1:]
+    albedo = argv[argv.index('--albedo') + 1] if '--albedo' in argv else None
+    custom = '--custom-skeleton' in argv
+    args = [a for i, a in enumerate(argv) if not a.startswith('--') and not (i and argv[i - 1] == '--albedo')]
     src, name, joints_path, yunara_skn = args[:4]
     joints = json.load(open(joints_path))
     out_dir = os.path.join(ROOT, 'assets_src', 'char')
@@ -258,9 +285,12 @@ def main():
     import lolskn
     ys = lolskn.read(yunara_skn); body = [m for m in ys.submeshes if m['name'] == 'Body'][0]
     ref_h = float(ys.verts['pos'][body['vstart']:body['vstart'] + body['vcount'], 1].max())
-    fit_to_yunara(ob, ref_h)
+    if custom:
+        custom_deform()
+    else:
+        fit_to_yunara(ob, ref_h)
     png = os.path.join(out_dir, f'{name}_albedo.png'); ink = os.path.join(out_dir, f'{name}_ink.json')
-    build_atlas(ob, png)
+    build_atlas(ob, png, albedo)
     reserve_ink(ob, png, ink)
     parts_by_connectivity(ob)
     # rig: same armature, bone heat, then Yunara's artist weights for upper body + hands
@@ -276,7 +306,7 @@ def main():
         if nm not in ob.vertex_groups:
             ob.vertex_groups.new(name=nm)
     print('  geometric weights for', geometric_fallback(ob, joints), 'vertices bone heat could not solve')
-    R.export(ob, joints, os.path.join(out_dir, f'{name}_rigged.npz'), yunara_skn)
+    R.export(ob, joints, os.path.join(out_dir, f'{name}_rigged.npz'), None if custom else yunara_skn)
     print('model slot written:', name)
 
 
