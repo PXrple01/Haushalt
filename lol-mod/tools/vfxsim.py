@@ -196,10 +196,16 @@ class Camera:
         return np.stack([self.W / 2 + (q @ self.right) * self.f / z * -1 * -1, self.H / 2 - (q @ self.up) * self.f / z], -1), z
 
 
-def _sprite(img, rgba, size_px, angle, stretch=None):
+def _sprite(img, rgba, size_px, angle, stretch=None, erosion=None):
     tex = img
     w = max(2, int(size_px[0])); h = max(2, int(size_px[1]))
     im = tex.resize((w, h), Image.BILINEAR)
+    if erosion is not None:                       # (drive, map): texels whose map value is below drive vanish
+        drive, emap = erosion
+        m = np.asarray(Image.fromarray((emap * 255).astype(np.uint8)).resize((w, h), Image.BILINEAR)).astype(np.float32) / 255
+        a_ = np.asarray(im).astype(np.float32).copy()
+        a_[..., 3] *= np.clip((m - drive) / 0.04 + 0.5, 0, 1)
+        im = Image.fromarray(a_.astype(np.uint8), 'RGBA')
     if angle:
         im = im.rotate(angle, resample=Image.BILINEAR, expand=True)
     a = np.asarray(im).astype(np.float32) / 255
@@ -303,7 +309,8 @@ def render_frame(emitters, cam, t, background):
         px_per_unit = cam.f / z
         if e.ground or e.flat:
             w = 2 * sc[0] * px_per_unit; h = w * abs(math.sin(math.radians(56)))
-            spr = _sprite(e.tex, col, (w, h), 0)
+            ero = (float(e.erosion[0].at(age)[0]), e.erosion[1]) if e.erosion is not None else None
+            spr = _sprite(e.tex, col, (w, h), 0, erosion=ero)
         else:
             w = 2 * sc[0] * px_per_unit
             h = w if (e.uniform or sc[1] == 0) else 2 * sc[1] * px_per_unit
@@ -312,6 +319,7 @@ def render_frame(emitters, cam, t, background):
                 v2, _ = cam.project(p['pos'] + p['vel'] * 0.01)
                 d = v2 - np.array([sx, sy]); ang = -math.degrees(math.atan2(d[1], d[0])) + 90
                 h = max(h, np.linalg.norm(p['vel']) * e.dscale * 2 * sc[0] * px_per_unit + h)
-            spr = _sprite(e.tex, col, (w, h), ang)
+            ero = (float(e.erosion[0].at(age)[0]), e.erosion[1]) if e.erosion is not None else None
+            spr = _sprite(e.tex, col, (w, h), ang, erosion=ero)
         composite(canvas, spr, sx, sy, e.blend == 4, z)
     return np.clip(canvas, 0, 1)

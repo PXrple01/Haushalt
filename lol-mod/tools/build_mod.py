@@ -686,6 +686,26 @@ def step_ult_stadium(b):
     return len(ems)
 
 
+ULT_VARIANT = os.environ.get('ULT_VARIANT', '')       # '' = hologram stadium (default) | puzzle | neuro | manga | radar
+KEEP_CAST = ('MV_Chain', 'MV_Burst', 'MV_ImpactLightR')
+
+
+def step_ult_variant(b):
+    """Proposal builds: the chain burst stays, the eye + stadium make room for one of ult_variants.py."""
+    import ult_variants as UV
+    for n, im in UV.textures(ROOT).items():
+        put_tex(MV + 'mvfx_' + n + '.tex', im)
+    for name, (p, u, t) in UV.meshes(ROOT).items():
+        files[MV + name] = scb_bytes(p, u, t, name[:-4])
+    cast = b.entry(PART + 'Yunara_Base_R_Cast').struct
+    f = cast.field('complexEmitterDefinitionData')
+    f.value.items = [e for e in f.value.items
+                     if not str(e.get('emitterName')).startswith('MV_') or str(e.get('emitterName')).startswith(KEEP_CAST)]
+    ems = UV.emitters(ULT_VARIANT, MV)
+    V.add_emitters(cast, ems)
+    return f'{ULT_VARIANT}: {len(ems)} emitters'
+
+
 # ------------------------------------------------------------------ packaging
 def wad_bytes(entries):
     """WAD v3.3, uncompressed entries, sorted by path hash (keys: game path, or an int path hash)."""
@@ -903,14 +923,19 @@ def main(game, variant='full'):
     if fx:
         print('ult seam conditions:', step_ult_bead_seams(b))
         print('ult cast emitters  :', step_ult_cast(b))
-        print('ult stadium        :', step_ult_stadium(b))
+        if not ULT_VARIANT:
+            print('ult stadium        :', step_ult_stadium(b))
         print('polish emitters    :', step_vfx_polish(b))
         print('Q flow (white-violet):', step_q_flow(b, game))
+        if ULT_VARIANT:
+            print('ult variant        :', step_ult_variant(b))
     data = L.write(b)
     L.read(data)                                              # sanity: must parse again
     files['data/characters/yunara/skins/skin0.bin'] = data
     wad = wad_bytes(files)
     name, fname = VARIANTS[variant]
+    if ULT_VARIANT:
+        name, fname = f'{name} [Ult: {ULT_VARIANT}]', fname.replace('.fantome', f'_ult-{ULT_VARIANT}.fantome')
     info = {'Name': name, 'Author': 'Flow Striker Project', 'Version': VERSION,
             'Description': 'Original anime football striker (high-detail model with its own skeleton + retargeted animations, baked anime lighting, ink outline), football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
             'Heading': '', 'Home': ''}
