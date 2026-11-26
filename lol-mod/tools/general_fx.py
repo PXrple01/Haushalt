@@ -20,7 +20,7 @@ import os
 
 import lolbin as L
 import vfxlib as V
-from stadium_fx import holo, fade, quad, box, cone, combine
+from vfxshapes import holo, fade, quad, box, cone, combine
 
 F = L.Field
 FLOW = (0.10, 0.65, 0.30); HI = (0.62, 0.98, 0.72); DEEP = (0.02, 0.36, 0.16); WH = (1.0, 1.0, 1.0)

@@ -22,7 +22,7 @@ import general_fx as G  # noqa: E402
 import posebin, viz_tex  # noqa: E402
 from animtest import Skeleton  # noqa: E402
 from model_view import Model  # noqa: E402
-from ult_video import char_layer, font, wrap, FPS, W, H, VW, VH  # noqa: E402
+from video_common import char_layer, font, wrap, FPS, W, H, VW, VH  # noqa: E402
 
 CLIP = {'idle1': '477dc1765be45513', 'run_base': 'd9764325bfc64c9f', 'recall': '6c9eb02e478956e1',
         'respawn': '378116753af20c85', 'death': 'de545b9140d5b108'}

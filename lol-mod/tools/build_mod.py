@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.9.0'
+VERSION = '0.10.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -515,9 +515,8 @@ def step_ult_bead_seams(b):
 
 
 def step_ult_cast(b):
-    """R activation: chains wrap around -> burst -> the METAVISION eye opens -> dissolves into light lines."""
-    for n in ('chain_metal', 'eye', 'eye_text', 'eye_backing', 'reticle', 'flash_star', 'shock_ring',
-              'light_dot', 'pitch_lines'):
+    """R activation: chains wrap around his body and burst (then the Ego beast rises, see step_ult_beast)."""
+    for n in ('chain_metal', 'reticle', 'flash_star', 'shock_ring', 'light_dot'):
         put_tex(MV + 'mvfx_' + n + '.tex', gen(n))
     rp, ru, rt = make_assets.chain_ring(radius=64.0, count=20)
     files[MV + 'mvfx_chain_ring.scb'] = scb_bytes(rp, ru, rt, 'mvfx_chain_ring')
@@ -566,40 +565,8 @@ def step_ult_cast(b):
                          scale=(7, 7, 7), velocity=V.vvec3((1200, 900, 1200), rand=[(-1, 1), (-0.4, 1), (-1, 1)]),
                          drag=(3.0, 3.0, 3.0), direction_oriented=True, dir_scale=0.004,
                          color_curve=([0, 0.6, 1], [HI + (1.0,), FLOW + (0.8,), DEEP + (0.0,)]), pass_=9032))
-    # ---- the METAVISION eye
-    EYE_T = 0.42; EYE_L = 1.45; EYE_POS = (0, 300, 0); EYE_S = (145, 72, 1)
-    opening = ([0.0, 0.09, 0.15, 1.0], [(1, 0.02, 1), (1, 1.12, 1), (1, 1, 1), (1.03, 1.03, 1)])
-    ems.append(V.emitter('MV_EyeBacking', T('eye_backing'), blend=1, delay=EYE_T, life=EYE_L, pos=EYE_POS,
-                         scale=EYE_S, uniform=False, scale_curve=opening, color_curve=fade((1.0, 1.0, 1.0)), pass_=9100))
-    ems.append(V.emitter('MV_EyeReticle', T('reticle'), blend=4, delay=EYE_T + 0.05, life=EYE_L - 0.05, pos=EYE_POS,
-                         scale=(165, 165, 1), scale_curve=([0, 0.15, 1], [(1.35,) * 3, (1.0,) * 3, (0.97,) * 3]),
-                         spin=(32, 0, 0), color_curve=fade(tuple(x * 0.75 for x in FLOW), 0.12, 0.8), pass_=9101))
-    ems.append(V.emitter('MV_Eye', T('eye'), blend=4, delay=EYE_T, life=EYE_L, pos=EYE_POS, scale=EYE_S,
-                         uniform=False, scale_curve=opening, pass_=9102,
-                         color_curve=([0.0, 0.08, 0.16, 0.84, 0.92, 1.0],
-                                      [(0.5, 0.4, 1, 0), (1, 1, 1, 1), (1, 1, 1, 1), (0.9, 0.85, 1, 1), (1, 1, 1, 1), (1, 1, 1, 0)])))
-    ems.append(V.emitter('MV_EyeTextFlare', T('eye_text'), blend=4, delay=EYE_T + 0.16, life=0.45, pos=EYE_POS,
-                         scale=EYE_S, uniform=False, pass_=9103,
-                         color_curve=([0, 0.15, 1], [(1, 1, 1, 0), (1, 1, 1, 1), FLOW + (0,)])))
-    ems.append(V.emitter('MV_PupilFlash', T('flash_star'), blend=4, delay=EYE_T + 0.16, life=0.32,
-                         pos=(0, 305, 0), scale=(50, 50, 1), scale_curve=([0, 0.25, 1], [(0.2,) * 3, (1.4,) * 3, (0.8,) * 3]),
-                         color_curve=([0, 0.25, 1], [(1, 1, 1, 1), HI + (1,), FLOW + (0,)]), pass_=9104))
-    # ---- dissolve into light lines that rain down and draw a pitch on the ground
-    END = EYE_T + EYE_L - 0.12
-    ems.append(V.emitter('MV_EyeEndFlash', T('flash_star'), blend=4, delay=END, life=0.28, pos=EYE_POS,
-                         scale=(110, 110, 1), scale_curve=([0, 1], [(0.5,) * 3, (1.5,) * 3]),
-                         color_curve=([0, 0.2, 1], [(1, 1, 1, 0.9), HI + (0.7,), FLOW + (0,)]), pass_=9105))
-    ems.append(V.emitter('MV_LightLines', T('light_dot'), blend=4, single=False, rate=1100, emitter_life=0.05,
-                         delay=END, life=0.6, bind=0.0, pos=EYE_POS, spawn_radius=110, scale=(6, 6, 6),
-                         velocity=V.vvec3((750, 950, 750), rand=[(-1, 1), (-1.0, 0.25), (-1, 1)]),
-                         drag=(1.5, 1.5, 1.5), direction_oriented=True, dir_scale=0.006,
-                         color_curve=([0, 0.5, 1], [HI + (1,), FLOW + (0.9,), DEEP + (0,)]), pass_=9106))
-    ems.append(V.emitter('MV_PitchLines', T('pitch_lines'), blend=4, delay=END + 0.15, life=1.0, bind=0.0,
-                         rotation=(-90, -90, 0), ground=True, scale=(235, 235, 1),
-                         scale_curve=([0, 0.2, 1], [(0.82,) * 3, (1.0,) * 3, (1.04,) * 3]),
-                         color_curve=([0, 0.12, 0.6, 1], [HI + (0,), (1, 1, 1, 1), FLOW + (0.8,), DEEP + (0,)]), pass_=-2890))
     cast = b.entry(PART + 'Yunara_Base_R_Cast').struct
-    # Yunara's own ground cast symbols are replaced by the pitch + shockwave
+    # Yunara's own ground cast symbols are replaced by the shockwave
     f = cast.field('complexEmitterDefinitionData')
     drop = {'Blend_FLoor1', 'decalDark_backer4', 'decalDark_backer5', 'decalDark_backer6'}
     f.value.items = [e for e in f.value.items if e.get('emitterName') not in drop]
@@ -720,49 +687,25 @@ def step_q_flow(b, game):
     return f'{len(qsys)} systems white-violet ({stats["const"] + stats["anim"]} colours), {len(swapped)} textures, {n} flow emitters'
 
 
-def step_ult_stadium(b):
-    """METAVISION builds a hologram stadium during the ult cast (see stadium_fx.py)."""
-    import stadium_fx as S
-    for n in S.TEXTURES:
-        put_tex(MV + 'mvfx_' + n + '.tex', gen(n))
-    put_tex(MV + 'mvfx_ball_albedo.tex', gen('ball_albedo'))
-    for name, (p, u, t) in S.meshes(ROOT).items():
-        files[MV + name] = scb_bytes(p, u, t, name[:-4])
-    tmpl = V.find_emitter(b.entry(PART + 'Yunara_Base_Q_AA_Crit_Tar').struct, 'Distort3')
-    ems = S.emitters(MV, tmpl)
-    V.add_emitters(b.entry(PART + 'Yunara_Base_R_Cast').struct, ems)
-    return len(ems)
+KEEP_CAST = ('MV_Chain', 'MV_Burst', 'MV_ImpactLightR')        # of the R cast only the chains + their burst stay
 
 
-ULT_VARIANT = os.environ.get('ULT_VARIANT', '')       # '' = hologram stadium | puzzle neuro manga radar | beast echoes popup stage
-KEEP_CAST = ('MV_Chain', 'MV_Burst', 'MV_ImpactLightR')
-
-
-def step_ult_variant(b):
-    """Proposal builds: the chain burst stays, the eye + stadium make room for one of ult_variants(2).py."""
-    import ult_variants as UV1
-    import ult_variants2 as UV2
-    if ULT_VARIANT in UV2.VARIANTS:
-        UV = UV2
-        tx, ms = UV2.textures(ROOT, ULT_VARIANT), UV2.meshes(ROOT, ULT_VARIANT)
-    else:
-        UV = UV1
-        tx, ms = UV1.textures(ROOT), UV1.meshes(ROOT)
-    for n, im in tx.items():
+def step_ult_beast(b):
+    """The ult: the chains burst on the cast, then the Ego beast rises behind him and stays for the 15 s of the R buff
+    (tools/ult_beast.py: animated mesh particle in a persistent system on his layout bone)."""
+    import ult_beast as UB
+    for n, im in UB.textures(ROOT).items():
         put_tex(MV + 'mvfx_' + n + '.tex', im)
-    for name, (p, u, t) in ms.items():
-        files[MV + name] = scb_bytes(p, u, t, name[:-4])
-    if UV is UV2:                                      # animated meshes (skn + skl + anm), e.g. the Ego beast
-        for path, data in UV2.anim_files(ROOT, ULT_VARIANT)[0].items():
-            files[path.lower()] = data
+    anim, total = UB.anim_files(ROOT)
+    for path, data in anim.items():
+        files[path.lower()] = data
     cast = b.entry(PART + 'Yunara_Base_R_Cast').struct
     f = cast.field('complexEmitterDefinitionData')
     f.value.items = [e for e in f.value.items
                      if not str(e.get('emitterName')).startswith('MV_') or str(e.get('emitterName')).startswith(KEEP_CAST)]
-    ems = UV.emitters(ULT_VARIANT, MV)
-    V.add_emitters(cast, ems)
-    pack_used_gen(ems)
-    return f'{ULT_VARIANT}: {len(ems)} emitters'
+    st = UB.install(b, SKIN, RES, MV, R_SPELL)
+    pack_used_gen([st])
+    return f'Ego beast: {len(st.get("complexEmitterDefinitionData").items)} emitters, animated clip {total:.2f} s'
 
 
 def _strings(v, out):
@@ -820,6 +763,19 @@ def step_screen_chains(b):
         put_tex(MV + 'mvfx_' + n + '.tex', im)
     n = SC.install(b, SKIN, RES, R_SPELL)
     return f'{n} emitters, camera-bound + owner-only on the R buff'
+
+
+def step_prune(b):
+    """Drops files of our particle folder that no bin references any more (e.g. textures of removed effects)."""
+    used = set()
+    for e in b.entries:
+        if e.struct is not None:
+            _strings(e.struct, used)
+    used = {u.lower() for u in used}
+    drop = [p for p in list(files) if isinstance(p, str) and p.startswith(MV) and p not in used]
+    for p in drop:
+        del files[p]
+    return f'{len(drop)} unused files removed'
 
 
 # ------------------------------------------------------------------ packaging
@@ -968,26 +924,20 @@ def step_vfx_polish(b):
         add(dash, [g2, V.emitter('MV_DashRing', T('shock_ring'), blend=4, life=0.35, bind=0.0, rotation=(-90, -90, 0), ground=True,
                                  scale=(25, 25, 1), scale_curve=([0, 1], [(1,) * 3, (4.4,) * 3]),
                                  color_curve=([0, 0.1, 1], [HI + (0.0,), FLOW + (1.0,), DEEP + (0.0,)]), pass_=-2780)])
-    # ---- R cast: anime impact frame at the chain break + god rays behind the eye
-    BREAK = 0.30; EYE_T = 0.42; EYE_L = 1.45
+    # ---- R cast: anime impact frame at the chain break
+    BREAK = 0.30
     add('Yunara_Base_R_Cast', [
         V.emitter('MV_ImpactFrameR', T('manga_burst'), blend=1, delay=BREAK - 0.01, life=0.12, pos=(0, 110, 0), scale=(240, 240, 1),
                   color_curve=([0, 0.55, 1], [W1 + (0.95,), W1 + (0.85,), W1 + (0.0,)]), pass_=9600),
         V.emitter('MV_ImpactLightR', T('manga_burst_light'), blend=4, delay=BREAK - 0.01, life=0.16, pos=(0, 110, 0),
                   scale=(250, 250, 1), scale_curve=([0, 1], [(0.9,) * 3, (1.15,) * 3]),
-                  color_curve=([0, 0.3, 1], [HI + (0.9,), FLOW + (0.7,), DEEP + (0.0,)]), pass_=9601),
-        V.emitter('MV_EyeRays', T('god_rays'), blend=4, delay=EYE_T + 0.08, life=EYE_L - 0.1, pos=(0, 300, 0),
-                  scale=(210, 210, 1), spin=(18, 0, 0), scale_curve=([0, 0.15, 1], [(0.6,) * 3, (1.0,) * 3, (1.1,) * 3]),
-                  color_curve=([0, 0.15, 0.8, 1], [FLOW + (0.0,), HI + (0.55,), FLOW + (0.45,), DEEP + (0.0,)]), pass_=9098)])
+                  color_curve=([0, 0.3, 1], [HI + (0.9,), FLOW + (0.7,), DEEP + (0.0,)]), pass_=9601)])
     # ---- R buff (15 s Metavision): tactical ground ring, centre circle, small eye above the head, rising motes
     add('Yunara_Base_R_Buff_OnBase', [
         V.emitter('MV_RGround', T('reticle'), blend=4, life=15.0, rotation=(-90, -90, 0), ground=True, scale=(105, 105, 1),
                   color_curve=([0, 0.02, 0.97, 1], [FLOW + (0.0,), HI + (0.5,), FLOW + (0.42,), FLOW + (0.0,)]), pass_=-2770),
         V.emitter('MV_RCircle', T('center_circle'), blend=4, life=15.0, rotation=(-90, -90, 0), ground=True, scale=(72, 72, 1),
                   color_curve=([0, 0.02, 0.97, 1], [FLOW + (0.0,), FLOW + (0.35,), FLOW + (0.3,), FLOW + (0.0,)]), pass_=-2769),
-        V.emitter('MV_ROverEye', T('eye'), blend=4, life=15.0, pos=(0, 262, 0), scale=(30, 15, 1), uniform=False,
-                  scale_curve=([0, 0.03, 0.06, 1], [(1, 0.05, 1), (1, 1.15, 1), (1, 1, 1), (1, 1, 1)]),
-                  color_curve=([0, 0.02, 0.97, 1], [FLOW + (0.0,), W1 + (0.9,), W1 + (0.85,), W1 + (0.0,)]), pass_=9050),
         V.emitter('MV_RMotes', SPARK, blend=4, single=False, rate=16, emitter_life=15.0, life=1.2, bind=0.0, pos=(0, 8, 0),
                   spawn_radius=32, scale=(4.5, 4.5, 4.5), scale_curve=([0, 1], [(1,) * 3, (0.25,) * 3]),
                   velocity=V.vvec3((0, 170, 0), rand=[None, (0.7, 1.3), None]),
@@ -1039,21 +989,18 @@ def main(game, variant='full'):
     if fx:
         print('ult seam conditions:', step_ult_bead_seams(b))
         print('ult cast emitters  :', step_ult_cast(b))
-        if not ULT_VARIANT:
-            print('ult stadium        :', step_ult_stadium(b))
         print('polish emitters    :', step_vfx_polish(b))
         print('Q flow (white-violet):', step_q_flow(b, game))
-        if ULT_VARIANT:
-            print('ult variant        :', step_ult_variant(b))
+        print('ult (Ego beast)    :', step_ult_beast(b))
         print('screen chains      :', step_screen_chains(b))
         print('general moments    :', step_general(b, game))
+    if fx:
+        print('prune              :', step_prune(b))
     data = L.write(b)
     L.read(data)                                              # sanity: must parse again
     files['data/characters/yunara/skins/skin0.bin'] = data
     wad = wad_bytes(files)
     name, fname = VARIANTS[variant]
-    if ULT_VARIANT:
-        name, fname = f'{name} [Ult: {ULT_VARIANT}]', fname.replace('.fantome', f'_ult-{ULT_VARIANT}.fantome')
     info = {'Name': name, 'Author': 'Flow Striker Project', 'Version': VERSION,
             'Description': 'Original anime football striker (own model + skeleton, retargeted animations, facial expressions + blinking), football beads + projectiles, white-violet Q flow with aura, METAVISION ult with chains on your own screen corners, recall goal celebration, footstep marks, respawn kick-off, death whistle. Replaces the base skin.',
             'Heading': '', 'Home': ''}

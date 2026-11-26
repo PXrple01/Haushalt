@@ -88,26 +88,50 @@ def smooth(x):
 
 
 # ---------------------------------------------------------------- choreography
-# (clip, start s in the clip, length s, speed): the clips follow each other, 0.15 s cross-fades
+# The beast lives for the whole ult (the R buff lasts 15 s). Segments follow each other with 0.15 s cross-fades:
+# (clip, start s in the clip, length s in the clip, speed, label for synced effects)
 SEQUENCE = [
-    ('arise', 0.75, 1.08, 1.8),    # claws its way up out of the pool, from all fours to standing
-    ('scream', 0.55, 1.45, 1.65),  # rears up, crouches wide and roars
-    ('slam', 0.55, 1.55, 2.0),     # rears back and hurls itself head first at the striker
+    ('arise', 0.75, 1.08, 1.8, 'rise'),       # claws its way up out of the pool, from all fours to standing
+    ('scream', 0.55, 1.45, 1.65, 'roar'),     # rears up, crouches wide and roars
+    ('alert', 0.0, 2.4, 1.0, None),           # crouched, menacing, looks around
+    ('pound', 1.38, 1.37, 1.4, 'pound'),      # beats its chest
+    ('look', 0.0, 2.0, 1.0, None),            # breathes heavily, looks over the field
+    ('stomp2', 0.0, 1.4, 1.4, 'stomp'),       # stamps the ground twice
+    ('swipe', 0.0, 1.0, 1.0, 'swipe'),        # rips the air with an uppercut claw
+    ('alert', 2.0, 2.0, 1.0, None),
+    ('shout', 2.3, 1.9, 1.45, 'shout'),       # spreads its arms and bellows
+    ('look', 4.0, 2.0, 1.0, None),
+    ('stomp', 0.0, 1.4, 1.4, 'stomp'),        # angry ground stomp
+    ('idle', 0.0, 0.81, 1.0, None),           # crouches, ready ...
+    ('slam', 0.55, 1.55, 2.0, 'dive'),        # ... and hurls itself head first into the striker
 ]
 FADE = 0.15
 RISE = 0.45                        # seconds to climb out of the ground
-DIVE = 0.50                        # last seconds: lunge into the striker and shrink away
+DIVE = 0.55                        # last seconds: lunge into the striker and shrink away
+LENGTH = 14.95                     # the R buff (15 s) ends right after
 
 
 def timeline():
+    """[(start, end, clip, clip start, speed, label)], total. The idle segments stretch so the clip ends at LENGTH."""
+    raw = sum(ln / sp for _, _, ln, sp, _ in SEQUENCE) - FADE * (len(SEQUENCE) - 1)
     t, out = 0.0, []
-    for clip, s0, ln, sp in SEQUENCE:
-        out.append((t, t + ln / sp, clip, s0, sp)); t += ln / sp - FADE
-    return out, t + FADE
+    for clip, s0, ln, sp, label in SEQUENCE:
+        d = ln / sp
+        out.append((t, t + d, clip, s0, sp, label)); t += d - FADE
+    total = t + FADE
+    if abs(total - LENGTH) > 0.05:
+        raise ValueError(f'choreography is {total:.2f} s, expected {LENGTH} s (raw {raw:.2f})')
+    return out, total
+
+
+def event_times(label, at=0.5):
+    """Output times of the segments with this label (at = fraction into the segment)."""
+    segs, _ = timeline()
+    return [a + (b - a) * at for a, b, _, _, _, lb in segs if lb == label]
 
 
 def root_motion(t, total):
-    """Choreography of the extra root joint: (translation, uniform scale)."""
+    """Choreography of the extra root joint: (translation, uniform scale). The beast stays BEHIND him (+z, world)."""
     rise = smooth(t / RISE)
     y = -HEIGHT * 0.95 * (1 - rise)
     z = BEHIND
@@ -126,9 +150,9 @@ def compose(beast):
     n = int(round(total * FPS)) + 1
     frames = []
     for k in range(n):
-        t = k / FPS
+        t = min(k / FPS, total)
         pose = None
-        for a, b, clip, s0, sp in segs:
+        for a, b, clip, s0, sp, _ in segs:
             if a - 1e-6 <= t <= b + 1e-6:
                 p = beast.sample(clip, s0 + (t - a) * sp)
                 if pose is None:
@@ -137,7 +161,7 @@ def compose(beast):
                     f = smooth((t - a) / FADE)
                     pose = [blend(x, y, f) for x, y in zip(pose, p)]
         if pose is None:
-            a, b, clip, s0, sp = segs[-1]
+            a, b, clip, s0, sp, _ = segs[-1]
             pose = beast.sample(clip, s0 + (b - a) * sp)
         tr, s = root_motion(t, total)
         frames.append([(tr, np.array([s, s, s]), np.array([0, 0, 0, 1.0]))] + pose)

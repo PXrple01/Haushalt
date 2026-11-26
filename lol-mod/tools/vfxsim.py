@@ -171,6 +171,15 @@ class Emitter:
                 while self.emitted >= 1:
                     self.spawn(t, rng, origin); self.emitted -= 1
         acc = self.acc.const[:3]; drag = self.drag.const[:3]
+        # bound particles follow their emitter (bindWeight): shift them by how far the origin moved this step
+        org = np.asarray(origin, float)
+        last = getattr(self, '_last_origin', None)
+        if last is not None and self.bind > 0:
+            d = (org - last) * self.bind
+            if np.any(d):
+                for p in self.particles:
+                    p['pos'] = p['pos'] + d
+        self._last_origin = org.copy()
         alive = []
         for p in self.particles:
             age = t - p['t0']

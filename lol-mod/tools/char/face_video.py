@@ -19,7 +19,7 @@ ROOT = os.path.join(HERE, '..', '..')
 import posebin, viz_tex  # noqa: E402
 from animtest import Skeleton  # noqa: E402
 from model_view import Model  # noqa: E402
-from ult_video import font, wrap, FPS, W, H  # noqa: E402
+from video_common import font, wrap, FPS, W, H  # noqa: E402
 import build_mod as BM  # noqa: E402
 
 FACE_DE = {None: 'neutral', 'focus': 'konzentriert', 'shout': 'Kampfschrei', 'grin': 'Grinsen', 'laugh': 'Lachen',

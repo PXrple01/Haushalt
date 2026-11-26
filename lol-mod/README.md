@@ -1,20 +1,20 @@
 # Flow Striker – Custom-Skin-Mod für Yunara (League of Legends)
 
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
-Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind selbst erstellt.
+Alle neuen Grafiken (Fußball, Ketten, Ego-Bestie, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.9.0 enthält
+## Was Version 0.10.0 enthält
 
 | Teil | Änderung |
 |---|---|
+| Die Ult: Ego-Bestie (neu in v0.10) | die Ego-Bestie ist jetzt **die** Ult (alle anderen Ult-Vorschläge sind entfernt). Beim Drücken von R zerspringen die Ketten um seinen Körper, das Biest kriecht hinter ihm aus einem Schattenpool und **bleibt die ganzen 15 Sekunden hinter ihm**: es folgt ihm überallhin, dreht sich aber nie mit, wenn er sich dreht. Dabei verhält es sich wie ein Biest – 12 Bewegungen aus Meshys Katalog zu einer Choreografie verbunden: brüllen (die Ketten an seinen Klauen zerspringen), geduckt lauern und sich umsehen, auf die Brust trommeln, schwer atmen, aufstampfen (Schockwellen + Staub), Klauenhieb, mit ausgebreiteten Armen brüllen, wieder stampfen – zum Ult-Ende stürzt es sich kopfüber in ihn, genau wenn die Bildschirm-Ketten zerspringen |
 | Erwachte Ult-Form (neu in v0.9) | während der Ult verändert sich der Stürmer selbst: lila glühende Haarspitzen, leuchtende Trikot-Säume und -Nähte, eine Kapitänsbinde mit „C“ am linken Oberarm, dazu violette Funken aus Haaren und Schultern. Technisch eine zweite Textur auf einer eingeblendeten Modell-Ebene (Riots `materialOverride` + Buff-Bedingung, wie die Metavision-Augen) |
-| Ego-Bestie animiert (v0.9) | das Biest ist jetzt ein echtes animiertes Modell (Meshy: Modell, Textur, Skelett, 7 Bewegungen) als animiertes Effekt-Modell wie bei Riot (Aurora, Ambessa …): es kriecht aus dem Schattenpool, richtet sich auf, brüllt geduckt, holt aus und wirft sich kopfüber in ihn hinein. Obsidian-violette Haut mit grün glühenden Adern, Augen und Hornspitzen. Eigene Schreiber für Skelett (`.skl`) und Animation (`.anm`), mit Riots Dateien gegengeprüft |
+| Ego-Bestie animiert (v0.9) | das Biest ist ein echtes animiertes Modell (Meshy: Modell, Textur, Skelett, Bewegungen) als animiertes Effekt-Modell wie bei Riot (Aurora, Ambessa …): es kriecht aus dem Schattenpool, richtet sich auf, brüllt geduckt, holt aus und wirft sich kopfüber in ihn hinein. Obsidian-violette Haut mit grün glühenden Adern, Augen und Hornspitzen. Eigene Schreiber für Skelett (`.skl`) und Animation (`.anm`), mit Riots Dateien gegengeprüft |
 | Dribbeln (v0.9) | beim Laufen tippt er bei jedem Bodenkontakt einen Ball an, abwechselnd links und rechts; der Ball läuft ihm voraus und kommt zum nächsten Fuß zurück |
 | Ego-Anzeige (v0.9) | über dem Kopf eine Leiste mit 8 Rauten – eine pro Q-Ladung (Yunaras Q sammelt bis zu 8, sichtbar an ihren 8 Perlen = bei uns die Fußbälle); füllt sich von Grün zu Violett, bei voll lodert die Leiste |
 | Kontrolllauf Animationen (v0.9) | alle 72 Animationen neu geprüft (Verdrehung von Hüfte/Knie/Knöchel, Falten/Quetschungen im Modell, schlimmstes Bild jeder Animation von zwei Seiten). Das „verdrehte Bein“ im Vorschauvideo war ein Fehler des Vorschau-Renderers (zeichnete Rückseiten), nicht des Modells – behoben. Riots Comic-Schlageffekt (Hand/Unterarm für 2–3 Bilder bis x1,8–3,1 vergrößert) auf höchstens +25 % begrenzt |
 | Vorschau (v0.9) | Video „Mimik + Blinzeln“: jede Animation mit dem Gesicht, das sie im Spiel zeigt |
 | Ketten am Bildschirm (v0.8) | während der ganzen Ult (15 s) hängen in den vier Ecken **deines eigenen Bildschirms** Ketten: sie schießen hinein, bohren sich mit Pflöcken ins Bild und werden ruckartig festgezogen, zucken danach immer wieder unter Spannung, Licht läuft über die Glieder, Funken knistern; kurz vor Ult-Ende glühen sie auf und sprengen sich weg. Nur du siehst sie (gleiche Technik wie Riots Bildschirm-Effekte bei Vi, Yone und Aatrox: an die Kamera geheftet, nur für den Besitzer sichtbar) |
-| Neue Ult-Vorschläge (v0.8) | vier neue, von Blue Lock inspirierte eigene Ults als Pakete `*_ult-beast` (Ego-Bestie: Meshy-Schattenwesen steigt hinter ihm auf, brüllt, sprengt seine Ketten, stürzt in ihn), `*_ult-echoes` (Zukunfts-Echos: 4 Hologramm-Kopien von ihm in Aktionsposen, nur die richtige Zukunft bleibt), `*_ult-popup` (Aufklapp-Spielfeld wie ein Pop-up-Buch), `*_ult-stage` (Weltbühne No.1: Spotlight, Kamerablitze, Ranglisten-Säule) – jeweils mit Vorschauvideo. Alles räumlich Verteilte steht fest in der Welt und dreht sich nicht mit, wenn er sich dreht |
 | Recall: Torjubel (v0.8) | beim Zurückkehren baut sich ein Tor aus Licht um ihn auf, er jongliert den Ball, am Ende bauscht sich das Netz, Konfetti fliegt |
 | Laufspuren (v0.8) | bei jedem Schritt (genau auf den Bodenkontakt der Laufanimation) Kreide-Striche und Rasen-Fetzen |
 | Q: Flow-Aura (v0.8) | während Q steigen weiß-violette Funken von Haaren, Schultern und Füßen auf, dazu leuchtende Nachbild-Fußabdrücke |
@@ -24,9 +24,7 @@ Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind s
 | Ladebildschirm (v0.8) | neues Anime-Keyart (Volley mit grün glühendem Ball, Flutlicht, berstende Ketten), mit Meshy aus dem eigenen Render erzeugt |
 | Gesichtsausdrücke (v0.7) | 7 Ausdrücke aus Meshy-Bildbearbeitungen des eigenen Gesichts: konzentriert (Angriffe, E), Kampfschrei (Krits, W, R-W), Grinsen (Spott, Witz, Rückkehr), Lachen (Tanz), Schmerz (Tod, Hochgeschleudert); werden pro Animation über Riots Submesh-Events eingeblendet. Q-Flow: weiß-violett leuchtende Augen mit Muster-Iris, Ult: grüne Metavision-Augen |
 | Textur-Fehler behoben (v0.7) | Farbschmierer an Texturnähten (z. B. lila Strich auf dem Unterarm), Flecken auf Arm- und Handgelenkbändern, Nahtlinien (Kanten-Padding), einfarbige Bänder |
-| Ult-Vorschläge (v0.7) | vier alternative Ults als eigene Pakete in `build/` (`*_ult-puzzle`, `*_ult-neuro`, `*_ult-manga`, `*_ult-radar`) mit Vorschauvideo; das Hauptpaket behält das Hologramm-Stadion |
 | Farben (neu in v0.6) | Stürmer in Blau-Lila: königsblaues Trikot, violette Akzente (Kragen, Ärmelsäume, Stutzenstreifen, Schnürsenkel, Wappen), tiefviolette Shorts, indigo Strumpfhose, dunkelblaue Haare mit violettem Schimmer; Bernsteinaugen bleiben. Effekte bleiben dunkelgrün |
-| Ult: Hologramm-Stadion (neu) | METAVISION baut beim Aktivieren ein Stadion aus grünen Hologrammen: vier Flutlichtmasten wachsen aus dem Boden und schalten flackernd ihre Lichtkegel auf den Stürmer, ringsum blitzen Handykameras wie auf der Tribüne; fünf Geister-Verteidiger bauen sich Scan für Scan auf, bekommen Zielmarkierungen und zerspringen in Splitter; dann erscheint ein Holo-Tor, ein Ball wird hineingeschossen, das Netz beult aus, Lichtblitz + Lichtbrechung + Konfetti. Masten und Verteidiger mit Meshy modelliert, Hologramm-Look mit Riots Fresnel-Rand und Auflöse-Effekt |
 | Q als Flow-Zustand (neu in v0.6.1) | alle Q-Effekte in Weiß → Lavendel → Violett mit weichen Übergängen (helle Kerne weiß, verblassende Ränder violett): Licht wird in den Stürmer gesogen und bricht aus, danach leuchtender weiß-violetter Konturrand um den ganzen Körper, aufsteigende Lichtschleier, violetter Schein, Funkeln, Konturen-Nachbilder beim Bewegen, Lichtspuren hinter Händen und kreisenden Bällen; Q-Bälle und Q-Treffer weiß-violett |
 | Animationen geprüft (v0.6.1) | alle 72 Animationen Bild für Bild am Modell geprüft (Vorschauvideo); Riots extreme Dehn-Effekte (Arme/Beine/Wirbelsäule bis +80 %) auf ±10 % begrenzt, damit nichts gestreckt oder kaputt aussieht |
 | Ult-Aura (neu) | alle ~1,4 s gleitet ein Scanner-Ring über den Stürmer („METAVISION liest das Spiel“) |
@@ -35,20 +33,20 @@ Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind s
 | Licht & Textur (neu) | Licht mit echten Schatten und Umgebungsverdeckung vom 680.000-Dreiecke-Originalmodell gebacken, 3-stufige Anime-Schattierung (kühle Stoffschatten, warme Hautschatten), flach beleuchtetes Gesicht mit Haarschatten, feine Randlicht-Kante in Flow-Grün; eigenes Vereinswappen auf beiden Ärmeln, KI-Artefakte (markenähnliches Logo, Fantasie-Abzeichen) entfernt |
 | Ladebildschirm & Icons | neu gerendert mit dem neuen Modell (Volleyschuss + Porträt) |
 | Konturlinie | Anime-Outline als Hülle im Modell (Riot blendet Rückseiten aus – sieht man an Yunaras doppelseitigem Stoff) |
-| Effekte v0.4 | Fußball-Geschosse mit Glanz + Funkenspur (immer rund), Treffer mit Blitz, Ring, Funken und abprallendem Ball, Krits mit Anime-Aufprallbild + Tornetz, Q mit Lichtsäule + Aura, Sprint mit Nachbildern, Ult mit Speedlines beim Kettenbruch + Lichtstrahlen hinter dem Auge, 15-s-Aura mit Taktik-Ring und kleinem METAVISION-Auge über dem Kopf |
+| Effekte v0.4 | Fußball-Geschosse mit Glanz + Funkenspur (immer rund), Treffer mit Blitz, Ring, Funken und abprallendem Ball, Krits mit Anime-Aufprallbild + Tornetz, Q mit Lichtsäule + Aura, Sprint mit Nachbildern, Ult mit Speedlines beim Kettenbruch, 15-s-Aura mit Taktik-Ring |
 | Älteres Modell | der selbst gebaute Stürmer v2 (ohne Meshy) ist weiter im Projekt: `{"model": "striker2"}` in `assets_src/char/model.json` |
 | Perlen um den Körper | werden zu 8 echten 3D-Fußbällen (schwarz-weiß) |
 | Normale Angriffe, Krits, Q-Angriffe, W | Geschosse sind drehende Fußbälle |
 | Q / W | Fußbälle mit dunkelgrünem „Flow“-Leuchten |
 | Alle Effekte | Farben auf Dunkelgrün umgestellt |
 | Ult (R) aktiv | die 8 Fußbälle bekommen leuchtende Nähte |
-| Ult-Aktivierung | Ketten um den Körper → werden gesprengt (Blitz, Splitter, Schockwelle) → über dem Kopf öffnet sich ein Auge, der Ring um die Pupille ist der Schriftzug **METAVISION** → zerfällt in Lichtlinien, die ein Spielfeld auf den Boden zeichnen |
+| Ult-Aktivierung | Ketten um den Körper → werden gesprengt (Blitz, Splitter, Schockwelle) → die Ego-Bestie steigt hinter ihm auf |
 | W während der Ult | Fußball mit leuchtenden Nähten |
 
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.9.0.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.10.0.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
 
@@ -77,19 +75,15 @@ Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risik
 
 ![Neues Ladebild (v0.8)](previews/loadscreen_v0.8.png)
 
-Vorschauvideos v0.9 (Simulation): `build/Ult2_1_Ego-Bestie.mp4` (animiertes Biest), `Ult2_2_Zukunfts-Echos.mp4`,
-`Ult2_3_Aufklapp-Spielfeld.mp4`, `Ult2_4_Weltbuehne-No1.mp4` (jeweils mit erwachter Form, Bildschirm-Ketten und Ult-Ende),
-`Extras_v0.9.mp4` (Dribbeln, Ego-Anzeige, erwachte Form, Recall, Respawn, Tod) und `Mimik_Blinzeln_v0.9.mp4`.
+Vorschauvideos (Simulation): `build/Ult_Ego-Bestie_v0.10.mp4` (die ganze Ult, 16 s: er läuft und dreht sich, das Biest
+bleibt hinter ihm), `Extras_v0.9.mp4` (Dribbeln, Ego-Anzeige, erwachte Form, Recall, Respawn, Tod) und
+`Mimik_Blinzeln_v0.9.mp4`.
 
 ![Ladebildschirm](previews/striker_v0.6_loadscreen.png)
 
 ![Rundum-Ansicht](previews/striker_v0.6_turnaround.png)
 
 ![Posen mit Yunaras umgerechneten Animationen](previews/striker_v0.6_poses.png)
-
-![Ult: Hologramm-Stadion (Simulation)](previews/effects_v0.6_ult_stadium.gif)
-
-![Ult nah (Simulation)](previews/effects_v0.6_ult_closeup.gif)
 
 ![Q – Flow-Zustand (Simulation)](previews/effects_v0.6.1_q_flow.gif)
 
@@ -128,8 +122,9 @@ Stürmers um. Riots Dateien landen nie im Repository.
 - `tools/char/import_model.py` + [MODEL_SWAP.md](MODEL_SWAP.md) – anderes Modell einsetzen
 - `tools/fetch_wad.py` – lädt Yunaras Spielarchiv direkt von Riots Update-Server (für Skelett/Animationen)
 - `tools/extract_wad.py` – holt daraus Skelett, Animationsgraph und alle Animationen für den Build
-- `tools/stadium_fx.py` – Hologramm-Stadion der Ult (Masten, Verteidiger, Tor, Lichtkegel, Zeitachse);
-  `tools/char/vfx_mesh.py` macht aus Meshy-Modellen leichte Effekt-Meshes (`assets_src/vfx/`)
+- `tools/ult_beast.py` – die Ult: Ego-Bestie als dauerhaftes System am R-Buff (folgt ihm, dreht sich nicht mit) + die
+  Effekte zu ihren Aktionen; `tools/vfxshapes.py` – gemeinsame Formen und Hologramm-Look;
+  `tools/char/vfx_mesh.py` macht aus Meshy-Modellen leichte Effekt-Meshes
 - `tools/char/anim_video.py` + `posebin.py` + `tools/ltk_pose_dump/` (C#, LeagueToolkit) – Vorschauvideo: jede Animation
   exakt ausgewertet am Modell, danach die Effekte
 - `tools/bcn.py` – DXT1/DXT5-Kodierung der Texturen (wie Riot), `tools/validate_bin.py` – prüft Bins gegen Riots Klassenschema
@@ -138,14 +133,12 @@ Stürmers um. Riots Dateien landen nie im Repository.
   Anime-Schattierung + Textur-Aufräumen (siehe [MODEL_SWAP.md](MODEL_SWAP.md))
 - `tools/screen_chains.py` – Ketten-Overlay an den Bildschirmecken (Kamera-gebunden, nur für den Spieler, am R-Buff);
   `tools/char/screen_overlay.py` simuliert es für die Videos
-- `tools/ult_variants2.py` – die vier neuen Ult-Vorschläge (`ULT_VARIANT=beast|echoes|popup|stage`);
-  `tools/char/echo_meshes.py` friert den Stürmer in vier Posen als Effekt-Meshes ein
 - `tools/general_fx.py` – Recall-Torjubel, Laufspuren, Dribbeln, Ego-Anzeige, Q-Aura + Nachbild-Abdrücke, Aura der
   erwachten Form, Respawn-Anstoß, Tod-Abpfiff
   (Riots Partikel-Events in den Animationen bzw. Buff-Bedingungen); `tools/char/extras_video.py` – Vorschauvideo
 - `tools/lolrig.py` – schreibt Skelette (`.skl`) und Animationen (`.anm` v4) im Riot-Layout; `tools/animmesh.py` liest sie
-  für die Vorschau; `tools/beast_anim.py` + `tools/char/beast_extract.py` – Meshy-Biest (Rig + Bewegungen) → animiertes
-  Effekt-Modell mit eigener Choreografie
+  für die Vorschau; `tools/beast_anim.py` + `tools/char/beast_extract.py` – Meshy-Biest (Rig + 12 Bewegungen) → animiertes
+  Effekt-Modell mit 15-s-Choreografie; `tools/char/beast_video.py` – Vorschauvideo der ganzen Ult
 - `tools/char/awakened.py` – Textur der erwachten Form + Liste der betroffenen Dreiecke
 - `tools/char/anim_check.py` – Kontrolllauf aller Animationen (Gelenk-Verdrehung, Falten/Quetschungen);
   `tools/char/face_video.py` – Video Mimik + Blinzeln
