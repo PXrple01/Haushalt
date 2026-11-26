@@ -81,7 +81,17 @@ def main():
     # Blender -> League axes for positions and normals
     p = maps['pos']; maps['pos'] = np.stack([p[..., 0], p[..., 2], -p[..., 1]], -1)
     n = maps['nrm'] * 2 - 1; maps['nrm'] = np.stack([n[..., 0], n[..., 2], -n[..., 1]], -1)
-    np.savez_compressed(out, **{k_: v.astype(np.float16) if k_ != 'mask' else v for k_, v in maps.items()})
+    # UV coverage of the high-poly source (texels Meshy actually painted for an island)
+    from PIL import Image as _I, ImageDraw as _D
+    me = hi.data; me.calc_loop_triangles(); nt = len(me.loop_triangles)
+    lp = np.zeros(nt * 3, np.int32); me.loop_triangles.foreach_get('loops', lp)
+    uvs = np.zeros(len(me.loops) * 2, np.float32); me.uv_layers.active.data.foreach_get('uv', uvs)
+    uvs = uvs.reshape(-1, 2)[lp].reshape(nt, 3, 2)
+    cov = _I.new('L', (res, res), 0); dr = _D.Draw(cov)
+    for t in uvs:
+        dr.polygon([(t[0][0] * res, (1 - t[0][1]) * res), (t[1][0] * res, (1 - t[1][1]) * res), (t[2][0] * res, (1 - t[2][1]) * res)], fill=255)
+    maps['mask_hi'] = np.asarray(cov) > 0
+    np.savez_compressed(out, **{k_: v.astype(np.float16) if not k_.startswith('mask') else v for k_, v in maps.items()})
     print('bake written', out)
 
 

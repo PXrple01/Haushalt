@@ -114,6 +114,7 @@
     0.27,
     0.8
    ]
-  }
+  },
+  "landmarks": "assets_src/char/meshy_striker_landmarks.json"
  }
 }

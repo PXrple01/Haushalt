@@ -285,6 +285,8 @@ def main():
     import lolskn
     ys = lolskn.read(yunara_skn); body = [m for m in ys.submeshes if m['name'] == 'Body'][0]
     ref_h = float(ys.verts['pos'][body['vstart']:body['vstart'] + body['vcount'], 1].max())
+    # (a global recalc_face_normals made it worse on this layered mesh: 349 -> 2106 inward faces by ray parity;
+    #  holes.py measures real see-through spots instead - only the open jersey hem shows any)
     if custom:
         custom_deform()
     else:
@@ -307,6 +309,8 @@ def main():
             ob.vertex_groups.new(name=nm)
     print('  geometric weights for', geometric_fallback(ob, joints), 'vertices bone heat could not solve')
     R.export(ob, joints, os.path.join(out_dir, f'{name}_rigged.npz'), None if custom else yunara_skn)
+    # (tried: limiting arm weights on the torso / smoothing torso weights -> both stretched more than bone heat;
+    #  Riot's own Yunara stretches as much in these frames, see the README animation notes)
     print('model slot written:', name)
 
 
