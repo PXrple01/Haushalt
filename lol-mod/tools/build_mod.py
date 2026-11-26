@@ -203,6 +203,82 @@ CUSTOM_ANM_DIR = 'assets/characters/yunara/skins/base/animations/mvfx_striker/'
 ANIM_BIN = 'data/characters/yunara/animations/skin0.bin'
 
 
+FACE_CLIPS = {            # animation clip (graph name) -> expression shown for the whole clip
+    'focus': ['attack1', 'attack2', 'spell1_attack1', 'spell1_attack2', 'spell3_base', 'spell4_e', 'channel', 'channel_wndup'],
+    'shout': ['crit1', 'crit2', 'spell1_crit1', 'spell1_crit2', 'spell2', 'spell4_w'],
+    'grin': ['taunt', 'joke_loop', 'respawn', 'run_homeguard_in', 'recall_winddown'],
+    'laugh': ['laugh', 'dance_loop'],
+    'pain': ['death', 'knockup'],
+}
+
+
+def step_expressions(b, game):
+    """Expressions: every listed clip shows its face layer while it plays (Riot's own SubmeshVisibility events,
+    as Yunara uses for her beads - the layer is hidden again when the clip ends). Glowing eyes follow the buffs:
+    Q flow -> white-violet, R Metavision -> green (persistent conditions, like Yunara's Q/R bead effects)."""
+    faces = STATE.get('faces') or []
+    if not faces:
+        return 'no expression layers'
+    raw = files.get(ANIM_BIN) or open(os.path.join(game, ANIM_BIN), 'rb').read()
+    g = L.read(raw)
+    cm = g.entries[0].struct.field('mClipDataMap').value
+    by_hash = {k: clip for k, clip in cm.items}
+    added = 0
+    for face, clips in FACE_CLIPS.items():
+        layer = 'Face_' + face.capitalize()
+        if layer not in faces:
+            continue
+        for name in clips:
+            clip = by_hash.get(L.fnv1a(name))
+            if clip is None:
+                print('   ! clip not in graph:', name); continue
+            ev = L.Struct('SubmeshVisibilityEventData',
+                          [L.Field('mShowSubmeshList', L.LIST, L.List(L.HASH, [L.fnv1a(layer)]))], L.STRUCT)
+            f = clip.field('mEventDataMap')
+            if f is None:
+                clip.fields.append(L.Field('mEventDataMap', L.MAP, L.Map(L.HASH, L.STRUCT, [])))
+                f = clip.field('mEventDataMap')
+            f.value.items.append((L.fnv1a('MV_Face_' + face), ev))
+            added += 1
+    data = L.write(g); L.read(data)
+    files[ANIM_BIN] = data
+    import copy
+    skin = b.entry(SKIN).struct
+    conds = skin.field('PersistentEffectConditions').value
+    q_spell = L.fnv1a('Characters/Yunara/Spells/YunaraQAbility/YunaraQ')
+    def has_spell(st, h):
+        for f_ in st.fields:
+            if f_.hash == L.fnv1a('Spell') and f_.value == h:
+                return True
+            v = f_.value
+            subs_ = [v] if isinstance(v, L.Struct) else (v.items if isinstance(v, L.List) else [])
+            if any(isinstance(x, L.Struct) and has_spell(x, h) for x in subs_):
+                return True
+        return False
+    q_cond = next((c for c in conds.items if c.field('OwnerCondition') and
+                   c.get('OwnerCondition').type_hash == L.fnv1a('AllTrueMaterialDriver') and has_spell(c, q_spell)
+                   and not any(f_.hash == L.fnv1a('SubmeshVisibilityBoolDriver') for d_ in c.get('OwnerCondition').get('mDrivers').items for f_ in [L.Field(d_.type_hash, 0, 0)])), None)
+    shown = []
+    for face, spell in (('Flow', 'Characters/Yunara/Spells/YunaraQAbility/YunaraQ'), ('Meta', R_SPELL)):
+        layer = 'Face_' + face
+        if layer not in faces or q_cond is None:
+            continue
+        c = copy.deepcopy(q_cond)
+        def retarget(st):
+            for f_ in st.fields:
+                if f_.hash == L.fnv1a('Spell'):
+                    f_.value = L.fnv1a(spell)
+                v = f_.value
+                for x in ([v] if isinstance(v, L.Struct) else (v.items if isinstance(v, L.List) else [])):
+                    if isinstance(x, L.Struct):
+                        retarget(x)
+        retarget(c)
+        c.fields = [f_ for f_ in c.fields if f_.hash != L.fnv1a('PersistentVfxs')]
+        c.fields.append(L.Field('SubmeshesToShow', L.LIST2, L.List(L.HASH, [L.fnv1a(layer)], L.LIST2)))
+        conds.items.append(c); shown.append(layer)
+    return f'{added} clip events, buff layers {shown}'
+
+
 def step_custom_skeleton(b, game):
     """Model slots with their own proportions (tools/char/custom_skeleton.py): a byte-patched copy of Yunara's
     skeleton at a new path, and every animation clip retargeted to it. The base skin's animation graph is
@@ -252,6 +328,9 @@ def step_character(b):
     ink = json.load(open(os.path.join(CHAR, f'{slot}_ink.json')))
     joints = STATE.get('joints') or json.load(open(os.path.join(CHAR, 'yunara_joints.json')))
     tris, part = d['tris'], d['part']
+    fpath = os.path.join(CHAR, f'{slot}_faces.npz')
+    FACES = np.load(fpath) if os.path.exists(fpath) else None
+    us = np.array([0.5, 1.0], np.float32) if FACES is not None else np.array([1.0, 1.0], np.float32)  # body: left half
     vpart = np.full(len(d['pos']), -1)
     for k in range(7):
         vpart[np.unique(tris[part == k])] = k
@@ -265,7 +344,7 @@ def step_character(b):
         used = np.unique(t)
         remap = np.full(len(d['pos']), -1, np.int64); remap[used] = np.arange(len(used))
         nv = np.zeros(len(used), s.verts.dtype)
-        nv['pos'] = d['pos'][used]; nv['nrm'] = d['nrm'][used]; nv['uv'] = d['uv'][used]
+        nv['pos'] = d['pos'][used]; nv['nrm'] = d['nrm'][used]; nv['uv'] = d['uv'][used] * us
         nv['infl'] = d['infl'][used]; nv['w'] = d['w'][used]
         if 'col' in nv.dtype.names:
             nv['col'] = 255
@@ -280,7 +359,7 @@ def step_character(b):
         sv['pos'] = d['pos'][sv_used] + d['nrm'][sv_used] * th[sv_used, None]
         sv['nrm'] = d['nrm'][sv_used]; sv['infl'] = d['infl'][sv_used]; sv['w'] = d['w'][sv_used]
         skin_like = np.isin(vpart[sv_used], (1, 4))
-        sv['uv'] = np.where(skin_like[:, None], np.array(ink['ink_skin'], np.float32), np.array(ink['ink_dark'], np.float32))
+        sv['uv'] = np.where(skin_like[:, None], np.array(ink['ink_skin'], np.float32) * us, np.array(ink['ink_dark'], np.float32) * us)
         if 'col' in sv.dtype.names:
             sv['col'] = 255
         if 'tan' in sv.dtype.names:
@@ -289,6 +368,23 @@ def step_character(b):
         allv = np.concatenate([nv, sv]); alli = np.concatenate([idx, sidx])
         subs.append(dict(name=name, vstart=vcount, vcount=len(allv), istart=icount, icount=len(alli)))
         new_v.append(allv); new_i.append(alli + vcount); vcount += len(allv); icount += len(alli)
+    faces = []
+    if FACES is not None:                     # expression overlays (face_expressions.py), hidden until shown
+        src = FACES['src']
+        for fname in [str(x) for x in FACES['names']]:
+            fv = np.zeros(len(src), s.verts.dtype)
+            fv['pos'] = FACES['pos_' + fname]; fv['nrm'] = d['nrm'][src]
+            uvf = FACES['uv_' + fname]; fv['uv'] = np.stack([0.5 + uvf[:, 0] * 0.5, uvf[:, 1]], 1)
+            fv['infl'] = d['infl'][src]; fv['w'] = d['w'][src]
+            if 'col' in fv.dtype.names:
+                fv['col'] = 255
+            if 'tan' in fv.dtype.names:
+                fv['tan'] = (1.0, 0.0, 0.0, 1.0)
+            fi = FACES['tris'].reshape(-1).astype(np.int64)
+            name = 'Face_' + fname.capitalize()
+            subs.append(dict(name=name, vstart=vcount, vcount=len(fv), istart=icount, icount=len(fi)))
+            new_v.append(fv); new_i.append(fi + vcount); vcount += len(fv); icount += len(fi); faces.append(name)
+    STATE['faces'] = faces
     for m in s.submeshes:                     # dragon head, tail and the football beads stay
         if m['name'] in ('Body', 'Pants'):
             continue
@@ -299,14 +395,26 @@ def step_character(b):
     assert vcount < 65536, vcount
     s.submeshes, s.verts = subs, np.concatenate(new_v)
     s.indices = np.concatenate(new_i).astype(np.uint16)
-    put_tex(STRIKER_TEX, Image.open(os.path.join(CHAR, f'{slot}_albedo.png')))
+    albedo = Image.open(os.path.join(CHAR, f'{slot}_albedo.png')).convert('RGB')
+    if FACES is not None:                     # one texture: body atlas left, expression tiles right
+        both = Image.new('RGB', (albedo.width * 2, albedo.height))
+        both.paste(albedo, (0, 0)); both.paste(Image.open(os.path.join(CHAR, f'{slot}_faces.png')).convert('RGB').resize(albedo.size), (albedo.width, 0))
+        albedo = both
+    put_tex(STRIKER_TEX, albedo)
     # loading screen + HUD portraits (same paths and layout as the originals: DXT, no mip chain)
     put_tex('assets/characters/yunara/skins/base/yunaraloadscreen_0.tex', Image.open(os.path.join(CHAR, 'loadscreen.png')), False)
     put_tex('assets/characters/yunara/hud/yunara_square_0.tex', Image.open(os.path.join(CHAR, 'icon_square.png')), False)
     put_tex('assets/characters/yunara/hud/yunara_circle_0.tex', Image.open(os.path.join(CHAR, 'icon_circle.png')), False)
     smp = b.entry(SKIN).struct.get('skinMeshProperties')
     smp.set('texture', L.PATH, xxhash.xxh64(STRIKER_TEX.encode()).intdigest())
-    return f"{vcount} verts total, {len(tris)} model tris + ink shell"
+    if faces:
+        for key in ('initialSubmeshToHide', 'initialSubmeshShadowsToHide', 'initialSubmeshMouseOversToHide'):
+            smp.set(key, L.STRING, ((smp.get(key) or '') + ' ' + ' '.join(faces)).strip())
+        order = (smp.get('submeshRenderOrder') or '').split()
+        if 'Body' in order:
+            order = order[:order.index('Body') + 1] + faces + order[order.index('Body') + 1:]
+            smp.set('submeshRenderOrder', L.STRING, ' '.join(order))
+    return f"{vcount} verts total, {len(tris)} model tris + ink shell, {len(faces)} expression layers"
 
 
 def step_write_skn():
@@ -788,6 +896,7 @@ def main(game, variant='full'):
     if model:
         print('skeleton           :', step_custom_skeleton(b, game))
         print('striker model      :', step_character(b))
+        print('expressions        :', step_expressions(b, game))
     else:
         put_tex(STRIKER_TEX, Image.open(os.path.join(CHAR, f'{MODEL_SLOT}_albedo.png')))   # used by effect afterimages
     step_write_skn()
