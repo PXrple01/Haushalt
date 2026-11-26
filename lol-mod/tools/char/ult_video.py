@@ -157,8 +157,14 @@ def main():
         while fs > 22 and dr.textlength(title, font=font(fs)) > W - 965:
             fs -= 2
         dr.text((950, 72), title, font=font(fs), fill=(255, 255, 255))
-        for j, line in enumerate(wrap(dr, sub.replace('-|', '-').replace('|', ' '), font(17, True), W - 975)):
-            dr.text((950, 140 + j * 26), line, font=font(17, True), fill=(190, 205, 195))
+        fsz = 17
+        while True:                                   # the caption must end above the face label (y 356)
+            lines = wrap(dr, sub.replace('-|', '-').replace('|', ' '), font(fsz, True), W - 975)
+            if 140 + len(lines) * (fsz + 9) <= 350 or fsz <= 12:
+                break
+            fsz -= 1
+        for j, line in enumerate(lines):
+            dr.text((950, 140 + j * (fsz + 9)), line, font=font(fsz, True), fill=(190, 205, 195))
         dr.text((950, 690 - 18), 'Simulation (nicht der Spiel-Renderer)', font=font(13, True), fill=(110, 125, 118))
         dr.text((950, 356), 'Gesicht: Ausdruck + Metavision-Augen', font=font(15, True), fill=(150, 170, 160))
         dr.text((30, 8), f'R gedrückt bei {CAST_AT:.1f} s' if tf < 0 else f'R  +{tf:.2f} s', font=font(18, True), fill=(160, 220, 180))
