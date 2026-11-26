@@ -49,7 +49,7 @@ SCRIPT = [
     (13.4, TOTAL, 'idle1', None, 0, 0),
 ]
 LABELS = {'rise': 'steigt aus dem Schattenpool', 'roar': 'brüllt - seine Ketten zerspringen', 'pound': 'trommelt auf die Brust',
-          'stomp': 'stampft auf', 'swipe': 'Klauenhieb', 'shout': 'breitet die Arme aus und brüllt', 'dive': 'stürzt sich in ihn hinein',
+          'stomp': 'stampft auf', 'swipe': 'Klauenhieb', 'prowl': 'schleicht hinter ihm entlang', 'shout': 'breitet die Arme aus und brüllt', 'dive': 'stürzt sich in ihn hinein',
           None: 'lauert hinter ihm, sieht sich um'}
 
 
@@ -146,7 +146,7 @@ def main():
         if tb < 0:
             act = 'R gleich ...'
         elif tb < total:
-            lab = next((lb for s0, s1, _, _, _, lb in segs if s0 <= tb < s1), None)
+            lab = next((lb for s0, s1, _, _, _, lb, _, _ in segs if s0 <= tb < s1), None)
             act = 'Biest: ' + LABELS.get(lab, LABELS[None])
         else:
             act = 'Ult vorbei'

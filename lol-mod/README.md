@@ -3,11 +3,12 @@
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
 Alle neuen Grafiken (Fußball, Ketten, Ego-Bestie, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.10.0 enthält
+## Was Version 0.11.0 enthält
 
 | Teil | Änderung |
 |---|---|
-| Die Ult: Ego-Bestie (neu in v0.10) | die Ego-Bestie ist jetzt **die** Ult (alle anderen Ult-Vorschläge sind entfernt). Beim Drücken von R zerspringen die Ketten um seinen Körper, das Biest kriecht hinter ihm aus einem Schattenpool und **bleibt die ganzen 15 Sekunden hinter ihm**: es folgt ihm überallhin, dreht sich aber nie mit, wenn er sich dreht. Dabei verhält es sich wie ein Biest – 12 Bewegungen aus Meshys Katalog zu einer Choreografie verbunden: brüllen (die Ketten an seinen Klauen zerspringen), geduckt lauern und sich umsehen, auf die Brust trommeln, schwer atmen, aufstampfen (Schockwellen + Staub), Klauenhieb, mit ausgebreiteten Armen brüllen, wieder stampfen – zum Ult-Ende stürzt es sich kopfüber in ihn, genau wenn die Bildschirm-Ketten zerspringen |
+| Ego-Bestie lebendiger (neu in v0.11) | das Biest steht nicht mehr steif da: es **schleicht** hinter ihm nach links und rechts hin und her (echter Lauf-Zyklus, dreht sich weich in die Laufrichtung und wieder zurück), **atmet** sichtbar (Brustkorb hebt sich, Hüfte federt), **sieht sich um** (Kopf und Hals drehen und neigen sich), wiegt Schultern und Arme leicht – auch während der Aktionen läuft eine leichte Grundbewegung weiter. Die Adern **pulsieren wie ein Herzschlag**, dunkler Rauch umhüllt es und grüne Glut steigt auf. Die Ausrichtung bleibt fest in der Welt: dreht er sich, dreht sich das Biest nicht mit |
+| Die Ult: Ego-Bestie (v0.10) | die Ego-Bestie ist jetzt **die** Ult (alle anderen Ult-Vorschläge sind entfernt). Beim Drücken von R zerspringen die Ketten um seinen Körper, das Biest kriecht hinter ihm aus einem Schattenpool und **bleibt die ganzen 15 Sekunden hinter ihm**: es folgt ihm überallhin, dreht sich aber nie mit, wenn er sich dreht. Dabei verhält es sich wie ein Biest – 12 Bewegungen aus Meshys Katalog zu einer Choreografie verbunden: brüllen (die Ketten an seinen Klauen zerspringen), geduckt lauern und sich umsehen, auf die Brust trommeln, schwer atmen, aufstampfen (Schockwellen + Staub), Klauenhieb, mit ausgebreiteten Armen brüllen, wieder stampfen – zum Ult-Ende stürzt es sich kopfüber in ihn, genau wenn die Bildschirm-Ketten zerspringen |
 | Erwachte Ult-Form (neu in v0.9) | während der Ult verändert sich der Stürmer selbst: lila glühende Haarspitzen, leuchtende Trikot-Säume und -Nähte, eine Kapitänsbinde mit „C“ am linken Oberarm, dazu violette Funken aus Haaren und Schultern. Technisch eine zweite Textur auf einer eingeblendeten Modell-Ebene (Riots `materialOverride` + Buff-Bedingung, wie die Metavision-Augen) |
 | Ego-Bestie animiert (v0.9) | das Biest ist ein echtes animiertes Modell (Meshy: Modell, Textur, Skelett, Bewegungen) als animiertes Effekt-Modell wie bei Riot (Aurora, Ambessa …): es kriecht aus dem Schattenpool, richtet sich auf, brüllt geduckt, holt aus und wirft sich kopfüber in ihn hinein. Obsidian-violette Haut mit grün glühenden Adern, Augen und Hornspitzen. Eigene Schreiber für Skelett (`.skl`) und Animation (`.anm`), mit Riots Dateien gegengeprüft |
 | Dribbeln (v0.9) | beim Laufen tippt er bei jedem Bodenkontakt einen Ball an, abwechselnd links und rechts; der Ball läuft ihm voraus und kommt zum nächsten Fuß zurück |
@@ -46,7 +47,7 @@ Alle neuen Grafiken (Fußball, Ketten, Ego-Bestie, Spielfeld-Linien) sind selbst
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.10.0.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.11.0.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
 
@@ -75,8 +76,8 @@ Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risik
 
 ![Neues Ladebild (v0.8)](previews/loadscreen_v0.8.png)
 
-Vorschauvideos (Simulation): `build/Ult_Ego-Bestie_v0.10.mp4` (die ganze Ult, 16 s: er läuft und dreht sich, das Biest
-bleibt hinter ihm), `Extras_v0.9.mp4` (Dribbeln, Ego-Anzeige, erwachte Form, Recall, Respawn, Tod) und
+Vorschauvideos (Simulation): `build/Ult_Ego-Bestie_v0.11.mp4` (die ganze Ult, 16 s: er läuft und dreht sich, das Biest
+bleibt hinter ihm, schleicht, atmet und sieht sich um), `Extras_v0.9.mp4` (Dribbeln, Ego-Anzeige, erwachte Form, Recall, Respawn, Tod) und
 `Mimik_Blinzeln_v0.9.mp4`.
 
 ![Ladebildschirm](previews/striker_v0.6_loadscreen.png)
@@ -137,8 +138,8 @@ Stürmers um. Riots Dateien landen nie im Repository.
   erwachten Form, Respawn-Anstoß, Tod-Abpfiff
   (Riots Partikel-Events in den Animationen bzw. Buff-Bedingungen); `tools/char/extras_video.py` – Vorschauvideo
 - `tools/lolrig.py` – schreibt Skelette (`.skl`) und Animationen (`.anm` v4) im Riot-Layout; `tools/animmesh.py` liest sie
-  für die Vorschau; `tools/beast_anim.py` + `tools/char/beast_extract.py` – Meshy-Biest (Rig + 12 Bewegungen) → animiertes
-  Effekt-Modell mit 15-s-Choreografie; `tools/char/beast_video.py` – Vorschauvideo der ganzen Ult
+  für die Vorschau; `tools/beast_anim.py` + `tools/char/beast_extract.py` – Meshy-Biest (Rig + 13 Bewegungen inkl. Laufen) → animiertes
+  Effekt-Modell mit 15-s-Choreografie (Schleichwege, Drehungen, prozedurales Atmen/Umsehen); `tools/char/beast_video.py` – Vorschauvideo der ganzen Ult
 - `tools/char/awakened.py` – Textur der erwachten Form + Liste der betroffenen Dreiecke
 - `tools/char/anim_check.py` – Kontrolllauf aller Animationen (Gelenk-Verdrehung, Falten/Quetschungen);
   `tools/char/face_video.py` – Video Mimik + Blinzeln

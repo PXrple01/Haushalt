@@ -9,8 +9,10 @@ follows him everywhere:
   - every other emitter in the system has no sideways offset (only height), so nothing depends on his facing.
     Effects at the beast's head use a height that lines up with it on screen (League's camera looks down ~56 deg:
     being 160 units further back looks like ~240 units higher).
-Timeline (seconds after R): rise + roar, crouch and watch, chest pound, look over the field, stomps, claw swipe,
-watch, arms-spread bellow, look, stomp, crouch, then it hurls itself into him as the screen chains burst (14.6).
+Timeline (seconds after R): rise + roar, crouch and watch, prowl out to his left and watch, prowl back, chest pound,
+stomps, prowl to his right and crouch, back, claw swipe, arms-spread bellow, look, stomp, crouch, then it hurls itself
+into him as the screen chains burst (14.6). A procedural layer (breathing, head looking around, sway) runs on top, its
+veins pulse like a heartbeat and it keeps smoking, so it never stands frozen.
 """
 import math
 import os
@@ -146,14 +148,37 @@ def emitters(T):
                          color_curve=([0, 0.004, nt(dive), nt(total - 0.04), 1], [WH + (0,), WH + (1,), WH + (1,), (0.8, 0.6, 1.0, 0.9), VIO + (0,)]),
                          extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.30, 0.10, 0.55)), **WORLD))
     keys = [(0.0, FLOW, 0.0), (0.3, HI, 0.55)]
+    beat = 0.9                                                         # its veins pulse like a heartbeat
+    while beat < total - 0.8:
+        keys += [(beat, HI, 0.78), (beat + 0.12, HI, 0.5), (beat + 0.24, HI, 0.68), (beat + 0.5, HI, 0.5)]
+        beat += 1.15
     for t, c, a in [(roar, WH, 0.95)] + [(p, HI, 0.85) for p in pounds] + [(s_, HI, 0.85) for s_ in stomps] + \
                    [(swipe, LAV, 0.9), (shout, WH, 1.0), (dive, VIO, 0.9), (total - 0.05, WH, 1.0)]:
         keys += [(t - 0.06, HI, 0.55), (t, c, a), (t + 0.25, HI, 0.55)]
     keys += [(total, WH, 0.0)]
     keys.sort(key=lambda k: k[0])
+    dedup = []                                                          # actions override heartbeat keys nearby
+    for k in keys:
+        if dedup and k[0] - dedup[-1][0] < 0.03:
+            if k[2] >= dedup[-1][2]:
+                dedup[-1] = k
+            continue
+        dedup.append(k)
+    keys = dedup
     ems.append(V.emitter('MVB_BeastGlow', T('beast_glow'), blend=4, life=total, bind=1.0, primitive=anim_mesh, scale=(1.01, 1.01, 1.01),
                          backface=True, pass_=9311, color_curve=([nt(k[0]) for k in keys], [k[1] + (k[2],) for k in keys]),
                          extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.06, 0.40, 0.18)), **WORLD))
+    # ---- a shadow beast: it smokes all the time (left behind in the world, so it trails when he moves) + embers
+    ems.append(V.emitter('MVB_Shroud', T('smoke_puff'), blend=1, single=False, rate=14, emitter_life=total - 0.6, delay=0.5, life=1.4,
+                         bind=0.0, pos=(0, BA.BEHIND * SCREEN_UP * 0.55, 0), spawn_radius=150,
+                         scale=V.vvec3((34, 34, 34), rand=[(0.6, 1.5), None, None]), scale_curve=([0, 1], [(0.7,) * 3, (1.7,) * 3]),
+                         velocity=V.vvec3((0, 70, 0), rand=[None, (0.4, 1.4), None]),
+                         rotation=V.vvec3((180, 0, 0), rand=[(-1, 1), None, None]), spin=V.vvec3((25, 0, 0), rand=[(-1, 1), None, None]),
+                         color_curve=fade(WH, 0.2, 0.55, 0.55), pass_=9301))
+    ems.append(V.emitter('MVB_Embers', T('light_dot'), blend=4, single=False, rate=10, emitter_life=total - 0.6, delay=0.5, life=1.6,
+                         bind=0.0, pos=(0, BA.BEHIND * SCREEN_UP * 0.8, 0), spawn_radius=160, scale=V.vvec3((2.6, 2.6, 2.6), rand=[(0.6, 1.4), None, None]),
+                         velocity=V.vvec3((20, 110, 20), rand=[(-1, 1), (0.5, 1.4), (-1, 1)]), drag=(0.6, 0.6, 0.6),
+                         color_curve=([0, 0.2, 0.7, 1], [HI + (0,), HI + (0.9,), VIO + (0.7,), VIO + (0,)]), pass_=9302))
     # ---- roar: rings at its head, its wrist chains burst
     for j in range(3):
         ems.append(_ring(f'MVB_Roar{j}', T, roar + 0.08 * j, HEAD_Y, HI if j % 2 else VIO, 9320 + j))
