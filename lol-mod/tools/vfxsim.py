@@ -118,6 +118,10 @@ class Emitter:
         self.flat = isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_QUAD and not self.ground
         if isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_MESH:
             mm = _get(prim, 'mMesh'); self.mesh = meshes.get((_get(mm, 'mSimpleMeshName') or '').lower())
+            if self.mesh is None and mm is not None:          # animated mesh (skn + skl + anm): a provider(age)
+                f = mm.field(L.fnv1a('mMeshName'))
+                if f is not None:
+                    self.mesh = meshes.get(str(f.value).lower())
         self.attached = isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_ATTACHED
         sf = em.field(L.fnv1a('stencilMode'))
         self.stencil = bool(sf is not None and sf.value)
@@ -243,7 +247,7 @@ def composite(canvas, spr, cx, cy, additive, z=None):
 
 def render_mesh(canvas, e, p, age, t, cam):
     """Point-splat a mesh particle: texture alpha x colour, alpha erosion, fresnel rim, additive or alpha."""
-    P0, UV, N0 = e.mesh
+    P0, UV, N0 = e.mesh(t - p['t0']) if callable(e.mesh) else e.mesh
     sc = p['bscale'][:3] * e.scale.at(age)[:3]
     col = p['bcol'][:4] * e.col.at(age)[:4]
     R = euler(p['rot'][:3] + p['spin'][:3] * (t - p['t0']))

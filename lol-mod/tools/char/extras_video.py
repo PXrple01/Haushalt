@@ -32,7 +32,7 @@ BLINK = {38, 39, 40, 41}                       # idle1 frames with the eyes clos
 # (title, lines, clip, clip start frame, seconds, run?, q?, systems [(key, bone or None)])
 SEGMENTS = [
     ('Blinzeln', 'Er blinzelt regelmäßig im Stehen|und Laufen - das Gesicht wirkt lebendig.', 'idle1', 22, 2.2, False, False, []),
-    ('Laufspuren', 'Bei jedem Schritt Kreide-Striche|und Rasen-Fetzen am Fuß.', 'run_base', 0, 3.0, True, False, [('MV_G_Step', 'steps')]),
+    ('Laufspuren + Dribbeln', 'Bei jedem Schritt Kreide-Striche und Rasen-Fetzen am Fuß - und er dribbelt: jeder Bodenkontakt tippt den Ball an, abwechselnd links und rechts.', 'run_base', 0, 3.4, True, False, [('MV_G_Step', 'steps'), ('MV_G_Dribble', 'dribble')]),
     ('Q: Flow-Aura', 'Weiß-violette Funken steigen von Haaren,|Schultern und Füßen auf - dazu leuchtende|Nachbild-Fußabdrücke am Boden.', 'run_base', 0, 3.0, True, True,
      [('MV_G_QAuraBig', 'C_Buffbone_Glb_Head_Loc'), ('MV_G_QAura', 'L_Shoulder'), ('MV_G_QAura', 'R_Shoulder'),
       ('MV_G_QAura', 'L_Buffbone_Glb_Foot_Loc'), ('MV_G_QAura', 'R_Buffbone_Glb_Foot_Loc'),
@@ -40,12 +40,26 @@ SEGMENTS = [
     ('Recall: Torjubel', 'Ein Tor aus Licht baut sich um ihn auf,|der Ball springt auf seinem Fuß ...', 'recall', 0, 3.2, False, False, [('MV_G_Recall', None)]),
     ('Recall: Torjubel', '... am Ende bauscht sich das Netz,|Konfetti fliegt - und er ist weg.', 'recall', 205, 2.0, False, False, [('MV_G_Recall', None)]),
     ('Respawn: Anstoß', 'Ein Mittelkreis zeichnet sich auf den Boden,|ein Flutlicht fällt auf ihn, der Ball liegt|auf dem Anstoßpunkt.', 'respawn', 0, 2.6, False, False, [('MV_G_Respawn', None)]),
+    ('Ego-Anzeige', 'Über dem Kopf: 8 Rauten, eine pro Q-Ladung (wie Yunaras 8 Perlen). Grün füllt sich zu Violett - bei voll lodert die ganze Leiste.', 'idle1', 0, 4.2, False, False, [('EGO', 'timed')]),
+    ('Ult: Erwachte Form', 'Während der Ult (15 s): lila glühende Haarspitzen, leuchtende Trikot-Säume und -Nähte, Kapitänsbinde mit C am linken Arm, grüne Metavision-Augen und aufsteigende violette Funken.', 'idle1', 30, 3.0, False, False,
+     [('MV_G_AwakeAuraBig', 'C_Buffbone_Glb_Head_Loc'), ('MV_G_AwakeAura', 'L_Shoulder'), ('MV_G_AwakeAura', 'R_Shoulder'), ('AWAKE', 'flag')]),
+    ('Ult: Erwachte Form', 'Auch in Bewegung.', 'run_base', 0, 2.4, True, False,
+     [('MV_G_AwakeAuraBig', 'C_Buffbone_Glb_Head_Loc'), ('MV_G_AwakeAura', 'L_Shoulder'), ('MV_G_AwakeAura', 'R_Shoulder'), ('AWAKE', 'flag'), ('MV_G_Step', 'steps'), ('MV_G_Dribble', 'dribble')]),
     ('Tod: Abpfiff', 'Pfiff-Wellen, eine graue Schockwelle,|der Ball rollt davon und das|Augenleuchten erlischt.', 'death', 0, 3.0, False, False,
      [('MV_G_Death', 'C_Buffbone_Glb_Head_Loc'), ('MV_G_DeathGround', None)]),
 ]
 
 
-def emitters_for(b, key, tex, meshes):
+def _yaw(v, deg):
+    """champion-local (x, z) -> game world for a champion facing yaw deg (180 = south, towards the camera)."""
+    a = np.radians(deg); c, s_ = np.cos(a), np.sin(a)
+    v = np.array(v, float)
+    x, z = v[..., 0].copy(), v[..., 2].copy()
+    v[..., 0] = x * c + z * s_; v[..., 2] = -x * s_ + z * c
+    return v
+
+
+def emitters_for(b, key, tex, meshes, yaw=180.0):
     st = b.entry(G.PART + key).struct
     out = []
     for em in st.get('complexEmitterDefinitionData').items:
@@ -53,11 +67,12 @@ def emitters_for(b, key, tex, meshes):
         if e.tex is None:
             continue
         lo = em.get('isLocalOrientation')
-        if lo != 0:                                   # facing-relative: the champion faces the camera (south)
+        if lo != 0:                                   # facing-relative offsets / velocities turn with the champion
             for v in (e.pos, e.vel):
-                v.const = v.const * np.array([-1.0, 1, -1])[:len(v.const)] if len(v.const) >= 3 else v.const
+                if len(v.const) >= 3:
+                    v.const = _yaw(v.const[None, :3], yaw)[0]
                 if v.vals is not None and v.vals.shape[1] >= 3:
-                    v.vals = v.vals * np.array([-1.0, 1, -1])
+                    v.vals = _yaw(v.vals, yaw)
         out.append(e)
     return out
 
@@ -81,19 +96,34 @@ def main():
     names = [j.name for j in sk.skl.joints]
     M = Model()
     clips = {k: posebin.PoseClip(os.path.join(work, 'poses_ours', h + '.pose')) for k, h in CLIP.items()}
-    frames_dir = os.path.join(work, 'extras_frames'); os.makedirs(frames_dir, exist_ok=True)
+    frames_dir = os.environ.get('FRAMES_DIR') or os.path.join(work, 'extras_frames'); os.makedirs(frames_dir, exist_ok=True)
     rng = np.random.default_rng(2)
     k_out = 0
-    for title, lines, cname, f0, secs, run, q, systems in SEGMENTS:
+    only = [int(x) for x in os.environ.get('SEGS', '').split(',') if x]
+    stride = int(os.environ.get('STRIDE', '1'))       # >1: quick check, keep only every n-th frame
+    for si, (title, lines, cname, f0, secs, run, q, systems) in enumerate(SEGMENTS):
+        if only and si not in only:
+            continue
         clip = clips[cname]
         n = int(secs * FPS)
         span = RUN_SPEED * secs if run else 0.0
         pre = f0 / FPS if cname == 'recall' else 0.0      # the recall effect has been running since frame 0
         attached = []                                     # (emitters, bone or None)
+        awake = any(bn == 'flag' and key == 'AWAKE' for key, bn in systems)
+        yaw = 90.0 if run else 180.0
+        timed = []                                        # Ego meter: (start time, emitters)
+        if any(bn == 'timed' for _, bn in systems):
+            timed.append((0.0, emitters_for(b, 'MV_G_EgoFrame', tex, meshes)))
+            for k in range(1, 9):
+                timed.append((0.35 * k, emitters_for(b, f'MV_G_EgoPip{k}', tex, meshes)))
+            timed.append((0.35 * 8 + 0.05, emitters_for(b, 'MV_G_EgoFull', tex, meshes)))
+            for t0, es in timed:
+                for e in es:
+                    e.delay += t0
         for key, bone in systems:
-            if bone == 'steps':
+            if bone in ('steps', 'dribble', 'timed', 'flag'):
                 continue
-            ems = emitters_for(b, key, tex, meshes)
+            ems = emitters_for(b, key, tex, meshes, yaw)
             for tt in np.arange(0.0, pre, 1 / FPS):
                 for e in ems:
                     e.step(tt, 1 / FPS, rng, np.zeros(3))
@@ -109,9 +139,11 @@ def main():
                 extra.append('blink')
             if q:
                 extra.append('flow')
+            if awake:
+                extra.append('meta')
             if cname == 'death':
                 face = 'pain'
-            P, T, C = M.skin(sk, G_, face, tuple(extra))
+            P, T, C = M.skin(sk, G_, face, tuple(extra), awake=awake)
             tx = -span / 2 + RUN_SPEED * t if run else 0.0
             if run:
                 P = rot_y(P, 90)                       # running to the right
@@ -121,9 +153,12 @@ def main():
                 if run:
                     p = rot_y(p[None], 90)[0]; p[0] += tx
                 return p * np.array([1.0, 1, -1])        # sim -> game coordinates (vfxsim mirrors z back)
-            cam = S.Camera(VW, VH, target=(tx, 110, 0), dist=1000 if not run else 760, pitch=40, yaw=0, fov=42)   # follows the runner
-            bg, zb = char_layer(cam, P, T, C, M.tex, VW, VH)
-            S.DEPTH['zb'] = zb
+            close = any(bn in ('timed', 'flag') for _, bn in systems)
+            cam = S.Camera(VW, VH, target=(tx, 150 if close and not run else 110, 0), dist=620 if close and not run else (1000 if not run else 760),
+                           pitch=40 if not close else 22, yaw=0, fov=42)   # follows the runner
+            if i % stride == 0:
+                bg, zb = char_layer(cam, P, T, C, M.tex, VW, VH)
+                S.DEPTH['zb'] = zb
             live = []
             for ems, bone in attached:
                 origin = bone_pos(bone) if bone else np.array([tx, 0.0, 0.0])
@@ -132,21 +167,33 @@ def main():
                 for e in ems:
                     e.step(t + pre, 1 / FPS, rng, origin)
                 live += ems
-            # footstep events at the contact frames of the run cycle
-            if any(bn == 'steps' for _, bn in systems):
+            # footstep / dribble events at the contact frames of the run cycle
+            kinds = [bn for _, bn in systems if bn in ('steps', 'dribble')]
+            if kinds:
                 for side, frs in G.STEPS['run_base'].items():
                     if fr in frs and fr != last_fr:
-                        es = emitters_for(b, 'MV_G_Step', tex, meshes)
-                        o = bone_pos(f'{side}_Buffbone_Glb_Foot_Loc'); o[1] = 0.0
-                        for e in es:
-                            e.delay += t                   # the event starts the system now (its own time 0)
-                            e.step(t, 0.0, rng, o)
-                        steps.append((t, es, o))
+                        for kind in kinds:
+                            if kind == 'steps':
+                                es = emitters_for(b, 'MV_G_Step', tex, meshes, yaw)
+                                o = bone_pos(f'{side}_Buffbone_Glb_Foot_Loc'); o[1] = 0.0
+                            else:
+                                es = emitters_for(b, f'MV_G_Dribble{side}', tex, meshes, yaw)
+                                o = bone_pos('C_Buffbone_Glb_Layout_Loc'); o[1] = 0.0
+                            for e in es:
+                                e.delay += t               # the event starts the system now (its own time 0)
+                                e.step(t, 0.0, rng, o)
+                            steps.append((t, es, o))
                 for t0, es, o in steps:
                     for e in es:
                         e.step(t, 1 / FPS, rng, o)
                     live += es
+            for t0, es in timed:
+                for e in es:
+                    e.step(t, 1 / FPS, rng, bone_pos('C_Buffbone_Glb_Layout_Loc'))
+                live += es
             last_fr = fr
+            if i % stride:
+                continue
             view = S.render_frame(live, cam, t + pre, bg) if live else bg
             hd = G_[names.index('Head')][:3, 3] * np.array([-1, 1, 1.])
             if run:

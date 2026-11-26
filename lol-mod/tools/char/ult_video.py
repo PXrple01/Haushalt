@@ -63,7 +63,7 @@ def char_layer(cam, P, T, cuv, tex, w, h):
         if x1 < x0 or y1 < y0:
             continue
         dd = (ys[1] - ys[2]) * (xs[0] - xs[2]) + (xs[2] - xs[1]) * (ys[0] - ys[2])
-        if dd <= 1e-9:
+        if dd >= -1e-9:           # back face (front faces have a negative signed area on this y-down screen)
             continue
         gx, gy = np.meshgrid(np.arange(x0, x1 + 1) + 0.5, np.arange(y0, y1 + 1) + 0.5)
         w0 = ((ys[1] - ys[2]) * (gx - xs[2]) + (xs[2] - xs[1]) * (gy - ys[2])) / dd
@@ -133,7 +133,7 @@ def main():
                     e.step(tf, 1 / FPS, rng, np.zeros(3))
             continue
         G = posebin.globals_at(sk, clip, fr % clip.n)
-        P, T, C = M.skin(sk, G, face, extra)
+        P, T, C = M.skin(sk, G, face, extra, awake=(tf >= 0 and tf < 15.0))
         bg, zb = char_layer(cam, P, T, C, M.tex, VW, VH)
         S.DEPTH['zb'] = zb
         if tf >= 0 and not ending:

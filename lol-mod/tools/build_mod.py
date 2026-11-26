@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.8.0'
+VERSION = '0.9.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -40,6 +40,8 @@ files = {}            # game path -> bytes
 STATE = {}
 CHAR = os.path.join(ROOT, 'assets_src', 'char')
 STRIKER_TEX = 'assets/characters/yunara/skins/base/mvfx_striker_tx_cm.tex'
+AWAKE_TEX = 'assets/characters/yunara/skins/base/mvfx_striker_awake_tx_cm.tex'
+AWAKE_OFFSET = 0.06                     # the awakened overlay sits this far out along the normal
 # which model sits in the slot (see tools/char/import_model.py); default: the original striker
 _slot_cfg = os.path.join(CHAR, 'model.json')
 MODEL_SLOT = json.load(open(_slot_cfg))['model'] if os.path.exists(_slot_cfg) else 'striker2'
@@ -293,7 +295,8 @@ def step_expressions(b, game):
                         retarget(x)
         retarget(c)
         c.fields = [f_ for f_ in c.fields if f_.hash != L.fnv1a('PersistentVfxs')]
-        c.fields.append(L.Field('SubmeshesToShow', L.LIST2, L.List(L.HASH, [L.fnv1a(layer)], L.LIST2)))
+        show = [layer] + (['Awake'] if face == 'Meta' and STATE.get('awake') else [])
+        c.fields.append(L.Field('SubmeshesToShow', L.LIST2, L.List(L.HASH, [L.fnv1a(x) for x in show], L.LIST2)))
         conds.items.append(c); shown.append(layer)
     return f'{added} clip events, buff layers {shown}'
 
@@ -404,6 +407,22 @@ def step_character(b):
             subs.append(dict(name=name, vstart=vcount, vcount=len(fv), istart=icount, icount=len(fi)))
             new_v.append(fv); new_i.append(fi + vcount); vcount += len(fv); icount += len(fi); faces.append(name)
     STATE['faces'] = faces
+    awp = os.path.join(CHAR, f'{slot}_awake.npz')
+    if os.path.exists(awp):                   # awakened ult form (char/awakened.py): own texture via materialOverride
+        sel = d['tris'][np.load(awp)['tris']]
+        uv_ = np.unique(sel.reshape(-1)); rm = {int(v): k for k, v in enumerate(uv_)}
+        av = np.zeros(len(uv_), s.verts.dtype)
+        av['pos'] = d['pos'][uv_] + d['nrm'][uv_] * AWAKE_OFFSET; av['nrm'] = d['nrm'][uv_]
+        av['uv'] = d['uv'][uv_]; av['infl'] = d['infl'][uv_]; av['w'] = d['w'][uv_]
+        if 'col' in av.dtype.names:
+            av['col'] = 255
+        if 'tan' in av.dtype.names:
+            av['tan'] = (1.0, 0.0, 0.0, 1.0)
+        ai = np.vectorize(rm.get)(sel).reshape(-1).astype(np.int64)
+        subs.append(dict(name='Awake', vstart=vcount, vcount=len(av), istart=icount, icount=len(ai)))
+        new_v.append(av); new_i.append(ai + vcount); vcount += len(av); icount += len(ai)
+        put_tex(AWAKE_TEX, Image.open(os.path.join(CHAR, f'{slot}_awake.png')))
+        STATE['awake'] = True
     for m in s.submeshes:                     # dragon head, tail and the football beads stay
         if m['name'] in ('Body', 'Pants'):
             continue
@@ -426,13 +445,23 @@ def step_character(b):
     put_tex('assets/characters/yunara/hud/yunara_circle_0.tex', Image.open(os.path.join(CHAR, 'icon_circle.png')), False)
     smp = b.entry(SKIN).struct.get('skinMeshProperties')
     smp.set('texture', L.PATH, xxhash.xxh64(STRIKER_TEX.encode()).intdigest())
-    if faces:
+    hidden = faces + (['Awake'] if STATE.get('awake') else [])
+    if hidden:
         for key in ('initialSubmeshToHide', 'initialSubmeshShadowsToHide', 'initialSubmeshMouseOversToHide'):
-            smp.set(key, L.STRING, ((smp.get(key) or '') + ' ' + ' '.join(faces)).strip())
+            smp.set(key, L.STRING, ((smp.get(key) or '') + ' ' + ' '.join(hidden)).strip())
         order = (smp.get('submeshRenderOrder') or '').split()
         if 'Body' in order:
-            order = order[:order.index('Body') + 1] + faces + order[order.index('Body') + 1:]
+            order = order[:order.index('Body') + 1] + (['Awake'] if STATE.get('awake') else []) + faces + order[order.index('Body') + 1:]
             smp.set('submeshRenderOrder', L.STRING, ' '.join(order))
+    if STATE.get('awake'):                    # same field types as Riot's (Ahri: list of embeds, texture = path hash)
+        ov = L.Struct('SkinMeshDataProperties_MaterialOverride', [
+            L.Field('texture', L.PATH, xxhash.xxh64(AWAKE_TEX.encode()).intdigest()),
+            L.Field('submesh', L.STRING, 'Awake')], L.EMBED)
+        f = smp.field('materialOverride')
+        if f is None:
+            smp.fields.append(L.Field('materialOverride', L.LIST, L.List(L.EMBED, [ov])))
+        else:
+            f.value.items.append(ov)
     return f"{vcount} verts total, {len(tris)} model tris + ink shell, {len(faces)} expression layers"
 
 
@@ -723,6 +752,9 @@ def step_ult_variant(b):
         put_tex(MV + 'mvfx_' + n + '.tex', im)
     for name, (p, u, t) in ms.items():
         files[MV + name] = scb_bytes(p, u, t, name[:-4])
+    if UV is UV2:                                      # animated meshes (skn + skl + anm), e.g. the Ego beast
+        for path, data in UV2.anim_files(ROOT, ULT_VARIANT)[0].items():
+            files[path.lower()] = data
     cast = b.entry(PART + 'Yunara_Base_R_Cast').struct
     f = cast.field('complexEmitterDefinitionData')
     f.value.items = [e for e in f.value.items
@@ -759,7 +791,8 @@ def pack_used_gen(structs):
             n = v[len(MV) + len('mvfx_'):-4]
             if os.path.exists(os.path.join(GEN, n + '.png')):
                 put_tex(v, gen(n))
-    missing = sorted(v for v in used if v.lower().startswith(MV) and v.lower().endswith(('.tex', '.scb')) and v.lower() not in files)
+    missing = sorted(v for v in used if v.lower().startswith(MV) and v.lower().endswith(('.tex', '.scb', '.skn', '.skl', '.anm'))
+                     and v.lower() not in files)
     assert not missing, f'missing assets: {missing}'
 
 

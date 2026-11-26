@@ -28,6 +28,9 @@ ROOTLIKE = ['Root', 'C_Buffbone_Glb_Center_Loc', 'L_Hip_Snap', 'R_Hip_Snap', 'Bu
 # limbs that reads as motion; on a model with sleeves, shorts and socks it reads as broken. Body bones keep their
 # length within about +-15 % (soft limit, tanh), timing and direction stay exactly as animated.
 STRETCH_LIMIT = 0.10
+SCALE_LIMIT = 0.25          # Riot's impact smears scale hands/forearms up to x1.8-3.1 for a few frames; on the striker
+                            # that looks bloated, so scales above 1 are softly limited to +25 % (beads keep theirs:
+                            # they are hidden with scale 0)
 
 
 def segments(P, head_top):
@@ -146,6 +149,20 @@ def _xf(params, h):
     return f
 
 
+def _scale_limiter(params, h):
+    p = params.get(str(h))
+    name = p.get('name', '') if p else ''
+    if not name or name.startswith('Bead'):
+        return None
+
+    def f(v):
+        v = np.array(v, np.float64)
+        big = v > 1.0
+        v[big] = 1.0 + SCALE_LIMIT * np.tanh((v[big] - 1.0) / SCALE_LIMIT)
+        return v
+    return f
+
+
 def retarget_uncompressed(raw, params):
     ver = struct.unpack_from('<I', raw, 8)[0]
     tracks, frames = struct.unpack_from('<II', raw, 28)
@@ -168,16 +185,17 @@ def retarget_uncompressed(raw, params):
         if k not in key:
             key[k] = len(pal); pal.append(v)
         return key[k]
-    xfs = {}
+    xfs, sls = {}, {}
     newfr = fr.copy()
     for f in range(frames):
         for t in range(tracks):
             h = int(track_hash[f, t])
             if h not in xfs:
-                xfs[h] = _xf(params, h)
+                xfs[h] = _xf(params, h); sls[h] = _scale_limiter(params, h)
             tv = vecs[fr[f, t, 0]]
             newfr[f, t, 0] = add(xfs[h](tv) if xfs[h] else tv)
-            newfr[f, t, 1] = add(vecs[fr[f, t, 1]])
+            sv = vecs[fr[f, t, 1]]
+            newfr[f, t, 1] = add(sls[h](sv) if sls[h] else sv)
     if len(pal) > 65535:
         raise ValueError(f'vector palette overflow: {len(pal)}')
     new_vecs = np.array(pal, '<f4').tobytes()
@@ -204,6 +222,7 @@ def retarget_compressed(raw, params):
     raw = bytearray(raw)
     tracks, nkeys = struct.unpack_from('<II', raw, 24)
     tmin = np.array(struct.unpack_from('<3f', raw, 68), np.float64); tmax = np.array(struct.unpack_from('<3f', raw, 80), np.float64)
+    smin = np.array(struct.unpack_from('<3f', raw, 92), np.float64); smax = np.array(struct.unpack_from('<3f', raw, 104), np.float64)
     frames_o, _, hashes_o = struct.unpack_from('<3i', raw, 116)
     hashes = np.frombuffer(bytes(raw), '<u4', tracks, hashes_o + 12)
     keys = np.frombuffer(bytes(raw), np.dtype([('time', '<u2'), ('bits', '<u2'), ('v', '<u2', 3)]), nkeys, frames_o + 12).copy()
@@ -223,6 +242,20 @@ def retarget_compressed(raw, params):
     q = np.clip(np.round((new - nmin) / nspan * 65535.0), 0, 65535).astype('<u2')
     keys['v'][is_t] = q[is_t]
     struct.pack_into('<3f', raw, 68, *nmin.astype(np.float32)); struct.pack_into('<3f', raw, 80, *nmax.astype(np.float32))
+    # scale keys (type 2): same soft limit as the uncompressed clips; the range only ever shrinks, so it stays valid
+    is_s = (keys['bits'] >> 14) == 2
+    if is_s.any():
+        sspan = smax - smin
+        sval = smin + sspan / 65535.0 * keys['v'].astype(np.float64)
+        snew = sval.copy()
+        for j in np.unique(joint[is_s]):
+            lim = _scale_limiter(params, int(hashes[j]))
+            if lim:
+                m = is_s & (joint == j)
+                snew[m] = np.array([lim(v) for v in sval[m]])
+        sspan_ = np.where(sspan > 1e-9, sspan, 1.0)
+        sq = np.clip(np.round((snew - smin) / sspan_ * 65535.0), 0, 65535).astype('<u2')
+        keys['v'][is_s] = sq[is_s]
     raw[frames_o + 12: frames_o + 12 + keys.nbytes] = keys.tobytes()
     return bytes(raw), int(is_t.sum())
 

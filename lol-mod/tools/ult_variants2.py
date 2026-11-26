@@ -100,6 +100,29 @@ def smoke_puff(s=128):
     return Image.fromarray((np.dstack([rgb, a]) * 255).astype(np.uint8), 'RGBA')
 
 
+def beast_colour(root, s=1024):
+    """Epic green-violet skin for the animated beast from Meshy's base colour: obsidian to violet by brightness,
+    Meshy's own green (eyes, horn tips) boosted, plus glowing green veins (iso-lines of a smooth noise)."""
+    from scipy.ndimage import gaussian_filter
+    base = np.asarray(Image.open(os.path.join(root, 'assets_src', 'vfx', 'beast_basecolor.png')).convert('RGB').resize((s, s))).astype(np.float32) / 255
+    Lum = base.mean(-1)
+    t = np.clip(Lum * 2.2, 0, 1) ** 1.1
+    deep = np.array([0.05, 0.015, 0.09]); vio = np.array([0.46, 0.20, 0.80]); hi = np.array([0.78, 0.62, 1.0])
+    col = deep + (vio - deep) * t[..., None] + (hi - vio) * np.clip(t - 0.75, 0, 1)[..., None] * 2
+    green = np.clip((base[..., 1] - np.maximum(base[..., 0], base[..., 2])) * 6, 0, 1)
+    n = gaussian_filter(np.random.default_rng(14).random((s, s)), 22, mode='wrap'); n = (n - n.min()) / np.ptp(n)
+    n2 = gaussian_filter(np.random.default_rng(15).random((s, s)), 40, mode='wrap'); n2 = (n2 - n2.min()) / np.ptp(n2)
+    veins = (np.exp(-((n - 0.5) / 0.010) ** 2) + 0.7 * np.exp(-((n - 0.32) / 0.008) ** 2)) * np.clip((n2 - 0.45) * 4, 0, 1)
+    veins = np.clip(veins, 0, 1) * (Lum < 0.45)
+    glow = np.clip(np.maximum(green, veins * 0.9), 0, 1)
+    gcol = np.array([0.25, 1.0, 0.50])
+    col = col * (1 - glow[..., None]) + gcol * glow[..., None]
+    skin = Image.fromarray((np.dstack([np.clip(col, 0, 1), np.ones((s, s))]) * 255).astype(np.uint8), 'RGBA')
+    gl = np.clip(glow[..., None] * gcol + (t > 0.85)[..., None] * vio * 0.35, 0, 1)
+    glow_im = Image.fromarray((np.dstack([gl, np.clip(glow + 0.3 * (t > 0.85), 0, 1)]) * 255).astype(np.uint8), 'RGBA')
+    return skin, glow_im
+
+
 def eye_glow(s=128):
     y, x = np.mgrid[0:s, 0:s].astype(float) / (s - 1) * 2 - 1
     r = np.hypot(x * 0.8, y * 1.6)
@@ -213,8 +236,8 @@ def confetti(s=64):
 def textures(root, variant):
     tx = {}
     if variant == 'beast':
-        tx.update(beast_skin=beast_skin(), beast_erode=beast_erode(), shadow_pool=shadow_pool(), smoke_puff=smoke_puff(),
-                  eye_glow=eye_glow())
+        skin, glow = beast_colour(root)
+        tx.update(beast_skin2=skin, beast_glow=glow, shadow_pool=shadow_pool(), smoke_puff=smoke_puff())
     elif variant == 'echoes':
         import ult_variants as UV
         tx.update(tactic_arrow=UV.tactic_arrow(), along_erode=UV.along_erode())
@@ -256,6 +279,19 @@ def _strip(p0, p1, width, y=4.0, seg=16):
     return np.array(P, float), np.array(U, float), np.array(T)
 
 
+BEAST_BASE = 'assets/characters/yunara/skins/base/particles/mvfx/mvfx_v2_beast'
+
+
+def anim_files(root, variant):
+    """Animated meshes of a variant: {game path: bytes} (.skn/.skl/.anm) and the clip length."""
+    if variant != 'beast':
+        return {}, 0.0
+    import beast_anim as BA
+    b = BA.Beast(os.path.join(root, 'assets_src', 'vfx', 'beast_rig.npz'))
+    frames, total = BA.compose(b)
+    return BA.files(b, frames, BEAST_BASE), total
+
+
 def echo_pos(k):
     a = math.radians(ECHO_AT[k])
     return np.array([ECHO_R * math.sin(a), 0.0, ECHO_R * math.cos(a)])
@@ -263,17 +299,7 @@ def echo_pos(k):
 
 def meshes(root, variant):
     out = {}
-    if variant == 'beast':
-        P, U, T = load_vfx_mesh(root, 'beast')
-        P = P.copy(); P[:, 2] += BEAST_Z; P[:, 1] -= BEAST_PIVOT
-        out['mvfx_v2_beast.scb'] = (P, U, T)
-        eyes = []
-        for ex, ey, ez in EYES:
-            eyes.append(quad((ex - 11, ey - 6 - BEAST_PIVOT, ez + BEAST_Z - 2), (ex + 11, ey - 6 - BEAST_PIVOT, ez + BEAST_Z - 2),
-                             (ex + 11, ey + 6 - BEAST_PIVOT, ez + BEAST_Z - 2), (ex - 11, ey + 6 - BEAST_PIVOT, ez + BEAST_Z - 2),
-                             ((0, 1), (1, 1), (1, 0), (0, 0))))
-        out['mvfx_v2_beast_eyes.scb'] = combine(eyes)
-    elif variant == 'echoes':
+    if variant == 'echoes':
         for k in range(4):
             P, U, T = load_vfx_mesh(root, f'echo_{k}')
             out[f'mvfx_v2_echo_{k}.scb'] = (P + echo_pos(k), U, T)
@@ -313,57 +339,58 @@ def meshes(root, variant):
 def em_beast(T, M):
     ems = []
     t0 = START
-    ems.append(V.emitter('MVB_Pool', T('shadow_pool'), blend=1, delay=t0, life=2.3, ground=True, rotation=(-90, -90, 0),
+    ems.append(V.emitter('MVB_Pool', T('shadow_pool'), blend=1, delay=t0, life=2.45, ground=True, pos=(0, 0, 150), rotation=(-90, -90, 0),
                          scale=(240, 240, 1), scale_curve=([0, 0.1, 0.2, 1], [(0.2,) * 3, (1.08,) * 3, (1.0,) * 3, (1.02,) * 3]),
                          color_curve=fade(WH, 0.04, 0.85, 1.0), pass_=-2700, **WORLD))
-    ems.append(V.emitter('MVB_PoolRing', T('shock_ring'), blend=4, delay=t0, life=0.55, ground=True, rotation=(-90, -90, 0),
+    ems.append(V.emitter('MVB_PoolRing', T('shock_ring'), blend=4, delay=t0, life=0.55, ground=True, pos=(0, 0, 150), rotation=(-90, -90, 0),
                          scale=(60, 60, 1), scale_curve=([0, 1], [(1,) * 3, (5.5,) * 3]),
                          color_curve=([0, 0.1, 1], [VIO + (0,), FLOW + (1,), DEEP + (0,)]), pass_=-2690, **WORLD))
     ems.append(V.emitter('MVB_Smoke', T('smoke_puff'), blend=1, single=False, rate=70, emitter_life=1.6, delay=t0 + 0.02, life=1.1,
-                         pos=(0, 20, 0), spawn_radius=200, scale=V.vvec3((40, 40, 40), rand=[(0.6, 1.6), None, None]),
+                         pos=(0, 20, 150), spawn_radius=200, scale=V.vvec3((40, 40, 40), rand=[(0.6, 1.6), None, None]),
                          scale_curve=([0, 1], [(0.6,) * 3, (1.6,) * 3]), velocity=V.vvec3((0, 160, 0), rand=[None, (0.5, 1.5), None]),
                          rotation=V.vvec3((180, 0, 0), rand=[(-1, 1), None, None]), spin=V.vvec3((40, 0, 0), rand=[(-1, 1), None, None]),
                          color_curve=fade(WH, 0.15, 0.6, 0.7), pass_=9300, **WORLD))
-    RISE = t0 + 0.08; ROAR = t0 + 0.72; DIVE = t0 + 1.45; END = DIVE + 0.32
-    life = END - RISE
+    import beast_anim as BA
+    segs, total = BA.timeline()
+    RISE = t0 + 0.05                                                  # the animated beast is born here
+    sc0 = segs[1]
+    ROAR = RISE + sc0[0] + (1.2 - sc0[3]) / sc0[4]                     # the crouched roar inside the scream clip
+    DIVE = RISE + total - BA.DIVE; END = RISE + total
+    life = total
     nt = lambda t: (t - RISE) / life
-    sc = ([0, nt(RISE + 0.45), nt(ROAR), nt(ROAR + 0.06), nt(ROAR + 0.18), nt(DIVE), nt(END - 0.06), 1],
-          [(0.9,) * 3, (1.0,) * 3, (1.0,) * 3, (1.06,) * 3, (1.0,) * 3, (1.02,) * 3, (0.12,) * 3, (0.02,) * 3])
-    drive = ([0, nt(RISE + 0.5), nt(DIVE), 1], [1.0, 0.0, 0.0, 0.0])
-    ems.append(V.emitter('MVB_Beast', T('beast_skin'), blend=1, delay=RISE, life=life, pos=(0, BEAST_PIVOT, 0), mesh=M('v2_beast'),
-                         scale=(1, 1, 1), scale_curve=sc, backface=True, pass_=9310,
-                         color_curve=([0, 0.05, nt(DIVE), nt(END - 0.05), 1], [WH + (0,), WH + (1,), WH + (1,), VIO + (0.8,), VIO + (0,)]),
-                         extra=holo(T('beast_erode'), drive[0], drive[1], rim=(0.16, 0.55, 0.30)), **WORLD))
-    ems.append(V.emitter('MVB_BeastAura', T('holo_body'), blend=4, delay=RISE, life=life, pos=(0, BEAST_PIVOT, 0), mesh=M('v2_beast'),
-                         scale=(1.015, 1.015, 1.015), scale_curve=sc, backface=True, pass_=9311,
-                         color_curve=([0, nt(RISE + 0.3), nt(ROAR), nt(ROAR + 0.1), nt(ROAR + 0.3), nt(DIVE), nt(END), 1],
-                                      [DEEP + (0,), DEEP + (0.12,), DEEP + (0.12,), HI + (0.7,), DEEP + (0.15,), FLOW + (0.3,), WH + (1,), WH + (0,)]),
-                         extra=holo(T('beast_erode'), drive[0], drive[1], rim=(0.22, 0.75, 0.40)), **WORLD))
-    ems.append(V.emitter('MVB_Eyes', T('eye_glow'), blend=4, delay=RISE + 0.35, life=END - RISE - 0.35, pos=(0, BEAST_PIVOT, 0),
-                         mesh=M('v2_beast_eyes'), scale=(1, 1, 1), backface=True, pass_=9312,
-                         scale_curve=([0, (DIVE - RISE - 0.35) / (END - RISE - 0.35), 1], [(1,) * 3, (1.02,) * 3, (0.02,) * 3]),
-                         color_curve=([0, 0.1, (ROAR - RISE - 0.35) / (END - RISE - 0.35), (ROAR - RISE - 0.2) / (END - RISE - 0.35), 0.9, 1],
-                                      [HI + (0,), FLOW + (1,), HI + (1,), WH + (1,), HI + (1,), WH + (0,)]), **WORLD))
+    anim_mesh = L.Struct('VfxPrimitiveMesh', [F('mMesh', L.EMBED, L.Struct('VfxMeshDefinitionData', [
+        F('mMeshName', L.STRING, BEAST_BASE + '.skn'), F('mMeshSkeletonName', L.STRING, BEAST_BASE + '.skl'),
+        F('mAnimationName', L.STRING, BEAST_BASE + '.anm')], L.EMBED))], L.STRUCT)
+    drive = ([0, nt(RISE + 0.40), nt(END - 0.12), 1], [1.0, 0.0, 0.0, 0.6])        # builds up from the pool, frays at the end
+    ems.append(V.emitter('MVB_Beast', T('beast_skin2'), blend=1, delay=RISE, life=life, primitive=anim_mesh, scale=(1, 1, 1), backface=True, pass_=9310,
+                         color_curve=([0, 0.04, nt(DIVE), nt(END - 0.04), 1], [WH + (0,), WH + (1,), WH + (1,), (0.8, 0.6, 1.0, 0.9), VIO + (0,)]),
+                         extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.30, 0.10, 0.55)), **WORLD))
+    # emissive layer: veins, eyes and horn tips glow green, flare white-green on the roar, violet on the dive
+    ems.append(V.emitter('MVB_BeastGlow', T('beast_glow'), blend=4, delay=RISE, life=life, primitive=anim_mesh, scale=(1.01, 1.01, 1.01), backface=True, pass_=9311,
+                         color_curve=([0, nt(RISE + 0.3), nt(ROAR - 0.05), nt(ROAR + 0.05), nt(ROAR + 0.35), nt(DIVE), nt(END), 1],
+                                      [FLOW + (0,), HI + (0.55,), HI + (0.55,), WH + (0.95,), HI + (0.65,), VIO + (0.9,), WH + (1,), WH + (0,)]),
+                         extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.06, 0.40, 0.18)), **WORLD))
     # roar: shock rings at head height and on the ground, chains on its wrists burst
     for j in range(3):
-        ems.append(V.emitter(f'MVB_Roar{j}', T('shock_ring'), blend=4, delay=ROAR + 0.07 * j, life=0.45, bind=0.0, pos=(0, 420, 0),
+        ems.append(V.emitter(f'MVB_Roar{j}', T('shock_ring'), blend=4, delay=ROAR + 0.08 * j, life=0.45, bind=0.0, pos=(0, 300, 150),
                              scale=(50, 50, 1), scale_curve=([0, 1], [(1,) * 3, (7.0,) * 3]),
-                             color_curve=([0, 0.15, 1], [HI + (0,), FLOW + (0.9,), DEEP + (0,)]), pass_=9320 + j))
+                             color_curve=([0, 0.15, 1], [(HI if j % 2 else VIO) + (0,), (FLOW if j % 2 else VIO) + (0.9,), DEEP + (0,)]),
+                             pass_=9320 + j))
     ems.append(V.emitter('MVB_RoarGround', T('shock_ring'), blend=4, delay=ROAR, life=0.6, ground=True, rotation=(-90, -90, 0),
                          scale=(80, 80, 1), scale_curve=([0, 1], [(1,) * 3, (6.5,) * 3]),
-                         color_curve=([0, 0.1, 1], [VIO + (0,), VIO + (1,), DEEP + (0,)]), pass_=-2680, **WORLD))
+                         color_curve=([0, 0.1, 1], [VIO + (0,), VIO + (1,), DEEP + (0,)]), pass_=-2680, pos=(0, 0, 150), **WORLD))
     ems.append(V.emitter('MVB_ChainBurst', T('chain_metal'), blend=1, single=False, rate=500, emitter_life=0.06, delay=ROAR + 0.12,
-                         life=1.0, bind=0.0, pos=(0, 300, 0), spawn_radius=150, mesh=T('chain_link').replace('.tex', '.scb'),
+                         life=1.0, bind=0.0, pos=(0, 260, 150), spawn_radius=150, mesh=T('chain_link').replace('.tex', '.scb'),
                          backface=True, scale=V.vvec3((1.4, 1.4, 1.4), rand=[(0.7, 1.3), None, None]),
                          velocity=V.vvec3((700, 600, 700), rand=[(-1, 1), (0.1, 1.0), (-1, 1)]), accel=(0, -1500, 0),
                          rotation=V.vvec3((180, 180, 180), rand=[(-1, 1)] * 3), spin=V.vvec3((800, 600, 0), rand=[(-1, 1), (-1, 1), None]),
                          color_curve=([0, 0.1, 0.7, 1], [HI + (1,), WH + (1,), WH + (1,), FLOW + (0,)]), pass_=9330))
-    ems.append(V.emitter('MVB_ChainFlash', T('flash_star'), blend=4, delay=ROAR + 0.1, life=0.3, bind=0.0, pos=(0, 300, 0),
+    ems.append(V.emitter('MVB_ChainFlash', T('flash_star'), blend=4, delay=ROAR + 0.1, life=0.3, bind=0.0, pos=(0, 260, 150),
                          scale=(140, 140, 1), scale_curve=([0, 0.2, 1], [(0.3,) * 3, (1.3,) * 3, (1.6,) * 3]),
                          color_curve=([0, 0.2, 1], [WH + (1,), HI + (0.8,), FLOW + (0,)]), pass_=9331))
     # dive: an implosion ring and a flare on him, then dark wisps rise from him
     ems.append(V.emitter('MVB_Implode', T('shock_ring'), blend=4, delay=DIVE, life=0.32, pos=(0, 110, 0), scale=(60, 60, 1),
-                         scale_curve=([0, 1], [(6.0,) * 3, (0.4,) * 3]), color_curve=([0, 0.3, 1], [VIO + (0,), HI + (1,), WH + (1,)]),
+                         scale_curve=([0, 1], [(6.0,) * 3, (0.4,) * 3]), color_curve=([0, 0.3, 1], [VIO + (0,), VIO + (1,), HI + (1,)]),
                          pass_=9340))
     ems.append(V.emitter('MVB_Impact', T('flash_star'), blend=4, delay=END - 0.04, life=0.4, pos=(0, 110, 0), scale=(130, 130, 1),
                          scale_curve=([0, 0.2, 1], [(0.3,) * 3, (1.4,) * 3, (1.7,) * 3]),

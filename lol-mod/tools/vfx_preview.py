@@ -64,6 +64,32 @@ def load_meshes(fantome):
             tris[k] = struct.unpack_from('<3I', d, off); u = struct.unpack_from('<6f', d, off + 76)
             cuv[k] = [(u[0], u[3]), (u[1], u[4]), (u[2], u[5])]; off += 100
         out[pth] = S.mesh_samples(pos, tris, cuv)
+    # animated meshes (skn + skl + anm in a VfxMeshDefinitionData)
+    import animmesh
+    def get_path(pth):
+        h = xxhash.xxh64(pth.lower().encode()).intdigest()
+        if h not in toc:
+            return None
+        o, c = toc[h]; return wad[o:o + c]
+    for e in b.entries:
+        if e.struct is None:
+            continue
+        stack = [e.struct]
+        while stack:
+            st = stack.pop()
+            if st.type_hash == L.fnv1a('VfxMeshDefinitionData'):
+                fs = {f.hash: f.value for f in st.fields}
+                skn, skl, anm = (fs.get(L.fnv1a(k)) for k in ('mMeshName', 'mMeshSkeletonName', 'mAnimationName'))
+                if skn and skl and anm and skn.lower() not in out:
+                    parts = [get_path(x) for x in (skn, skl, anm)]
+                    if all(parts):
+                        out[skn.lower()] = animmesh.Provider(*parts)
+            for f in st.fields:
+                v = f.value
+                if hasattr(v, 'fields'):
+                    stack.append(v)
+                elif hasattr(v, 'items') and isinstance(v.items, list):
+                    stack += [x for x in v.items if hasattr(x, 'fields')]
     # the striker himself for attached-mesh glows (mirrored like the backdrop)
     d = np.load(os.path.join(HERE, '..', 'assets_src', 'char', 'meshy_striker_rigged.npz'))
     P = d['pos'].astype(float) * np.array([-1.0, 1, 1]); T = d['tris'][:, ::-1]
