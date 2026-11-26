@@ -163,7 +163,7 @@ def sys_recall(T, M):
 def sys_step(T, M):
     return [
         V.emitter('MVG_Chalk', T('g_chalk'), blend=1, life=0.75, ground=True, rotation=V.vvec3((-90, -90, 0), rand=[None, (0.6, 1.4), None]),
-                  scale=(11, 11, 1), color_curve=([0, 0.05, 0.5, 1], [CHALK + (0,), CHALK + (0.8,), CHALK + (0.5,), CHALK + (0,)]),
+                  scale=(15, 15, 1), color_curve=([0, 0.05, 0.5, 1], [CHALK + (0,), CHALK + (0.85,), CHALK + (0.55,), CHALK + (0,)]),
                   pass_=-2600, **WORLD),
         V.emitter('MVG_Grass', T('g_grass'), blend=1, single=False, rate=200, emitter_life=0.05, life=0.45, bind=0.0, spawn_radius=8,
                   scale=V.vvec3((3.2, 3.2, 3.2), rand=[(0.6, 1.3), None, None]), velocity=V.vvec3((90, 180, 90), rand=[(-1, 1), (0.4, 1), (-1, 1)]),

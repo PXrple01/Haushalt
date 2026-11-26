@@ -121,7 +121,7 @@ def main():
                 if run:
                     p = rot_y(p[None], 90)[0]; p[0] += tx
                 return p * np.array([1.0, 1, -1])        # sim -> game coordinates (vfxsim mirrors z back)
-            cam = S.Camera(VW, VH, target=(tx * 0.0, 120, 0), dist=1000 if not run else 1250, pitch=40, yaw=0, fov=42)
+            cam = S.Camera(VW, VH, target=(tx, 110, 0), dist=1000 if not run else 760, pitch=40, yaw=0, fov=42)   # follows the runner
             bg, zb = char_layer(cam, P, T, C, M.tex, VW, VH)
             S.DEPTH['zb'] = zb
             live = []
@@ -139,6 +139,7 @@ def main():
                         es = emitters_for(b, 'MV_G_Step', tex, meshes)
                         o = bone_pos(f'{side}_Buffbone_Glb_Foot_Loc'); o[1] = 0.0
                         for e in es:
+                            e.delay += t                   # the event starts the system now (its own time 0)
                             e.step(t, 0.0, rng, o)
                         steps.append((t, es, o))
                 for t0, es, o in steps:
