@@ -198,7 +198,7 @@ def main():
             hd = G_[names.index('Head')][:3, 3] * np.array([-1, 1, 1.])
             if run:
                 hd = rot_y(hd[None], 90)[0]; hd[0] += tx
-            fc = viz_tex.render(P, T, C, M.tex, None, size=(300, 300), yaw=10 if not run else 80, pitch=4,
+            fc = viz_tex.render(P, T, C, M.tex, None, size=(300, 300), yaw=10 if not run else -80, pitch=4,
                                 center=(hd[0], hd[1] + 8, hd[2]), scale=8.5, bg=(0.1, 0.12, 0.11))
             frame = Image.new('RGB', (W, H), (14, 17, 18))
             frame.paste(Image.fromarray((np.clip(view, 0, 1) * 255).astype(np.uint8)), (20, 40))
