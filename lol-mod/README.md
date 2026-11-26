@@ -3,10 +3,13 @@
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
 Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.6.1 enthält
+## Was Version 0.7.0 enthält
 
 | Teil | Änderung |
 |---|---|
+| Gesichtsausdrücke (neu in v0.7) | 7 Ausdrücke aus Meshy-Bildbearbeitungen des eigenen Gesichts: konzentriert (Angriffe, E), Kampfschrei (Krits, W, R-W), Grinsen (Spott, Witz, Rückkehr), Lachen (Tanz), Schmerz (Tod, Hochgeschleudert); werden pro Animation über Riots Submesh-Events eingeblendet. Q-Flow: weiß-violett leuchtende Augen mit Muster-Iris, Ult: grüne Metavision-Augen |
+| Textur-Fehler behoben (v0.7) | Farbschmierer an Texturnähten (z. B. lila Strich auf dem Unterarm), Flecken auf Arm- und Handgelenkbändern, Nahtlinien (Kanten-Padding), einfarbige Bänder |
+| Ult-Vorschläge (v0.7) | vier alternative Ults als eigene Pakete in `build/` (`*_ult-puzzle`, `*_ult-neuro`, `*_ult-manga`, `*_ult-radar`) mit Vorschauvideo; das Hauptpaket behält das Hologramm-Stadion |
 | Farben (neu in v0.6) | Stürmer in Blau-Lila: königsblaues Trikot, violette Akzente (Kragen, Ärmelsäume, Stutzenstreifen, Schnürsenkel, Wappen), tiefviolette Shorts, indigo Strumpfhose, dunkelblaue Haare mit violettem Schimmer; Bernsteinaugen bleiben. Effekte bleiben dunkelgrün |
 | Ult: Hologramm-Stadion (neu) | METAVISION baut beim Aktivieren ein Stadion aus grünen Hologrammen: vier Flutlichtmasten wachsen aus dem Boden und schalten flackernd ihre Lichtkegel auf den Stürmer, ringsum blitzen Handykameras wie auf der Tribüne; fünf Geister-Verteidiger bauen sich Scan für Scan auf, bekommen Zielmarkierungen und zerspringen in Splitter; dann erscheint ein Holo-Tor, ein Ball wird hineingeschossen, das Netz beult aus, Lichtblitz + Lichtbrechung + Konfetti. Masten und Verteidiger mit Meshy modelliert, Hologramm-Look mit Riots Fresnel-Rand und Auflöse-Effekt |
 | Q als Flow-Zustand (neu in v0.6.1) | alle Q-Effekte in Weiß → Lavendel → Violett mit weichen Übergängen (helle Kerne weiß, verblassende Ränder violett): Licht wird in den Stürmer gesogen und bricht aus, danach leuchtender weiß-violetter Konturrand um den ganzen Körper, aufsteigende Lichtschleier, violetter Schein, Funkeln, Konturen-Nachbilder beim Bewegen, Lichtspuren hinter Händen und kreisenden Bällen; Q-Bälle und Q-Treffer weiß-violett |
@@ -30,7 +33,7 @@ Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind s
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.6.1.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.7.0.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
 
