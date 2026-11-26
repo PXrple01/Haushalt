@@ -213,7 +213,14 @@ def _sprite(img, rgba, size_px, angle, stretch=None, erosion=None):
     return a
 
 
-DEPTH = {'zb': None}          # optional depth buffer of the backdrop (character): hides particles behind it
+DEPTH = {'zb': None}
+# League world: +z points away from the camera (up the screen). The preview camera looks down -z, so with
+# GAME_Z['on'] every particle/mesh position is mirrored in z before projecting (layouts then read like in game).
+GAME_Z = {'on': False}
+
+
+def _zf():
+    return np.array([1.0, 1.0, -1.0]) if GAME_Z['on'] else np.ones(3)          # optional depth buffer of the backdrop (character): hides particles behind it
 
 
 def composite(canvas, spr, cx, cy, additive, z=None):
@@ -240,8 +247,8 @@ def render_mesh(canvas, e, p, age, t, cam):
     sc = p['bscale'][:3] * e.scale.at(age)[:3]
     col = p['bcol'][:4] * e.col.at(age)[:4]
     R = euler(p['rot'][:3] + p['spin'][:3] * (t - p['t0']))
-    Pw = (P0 * sc) @ R.T + p['pos']
-    Nw = (N0 / np.where(sc == 0, 1, sc)) @ R.T; Nw /= np.linalg.norm(Nw, axis=1, keepdims=True) + 1e-9
+    Pw = ((P0 * sc) @ R.T + p['pos']) * _zf()
+    Nw = ((N0 / np.where(sc == 0, 1, sc)) @ R.T) * _zf(); Nw /= np.linalg.norm(Nw, axis=1, keepdims=True) + 1e-9
     scr, z = cam.project(Pw)
     ok = z > 1
     th, tw = e.tex.shape[:2] if isinstance(e.tex, np.ndarray) else (e.tex.size[1], e.tex.size[0])
@@ -271,15 +278,22 @@ def render_mesh(canvas, e, p, age, t, cam):
             ok[ok] &= DEPTH['zb'][yi[ok], xi[ok]] > 1e8                # only outside the body silhouette
         else:
             ok[ok] &= z[ok] < DEPTH["zb"][yi[ok], xi[ok]] + 3.0      # own surface passes, hidden back side not
-    layer = np.zeros((H, W, 3))
-    idx = yi[ok] * W + xi[ok]
-    for k in range(3):
-        flat = layer[..., k].reshape(-1)
-        np.maximum.at(flat, idx, out[ok, k])
+    layer = np.zeros((H, W, 3)); alay = np.zeros((H, W))
+    al = np.clip(inten * mask, 0, 1)
+    colr = rgb * mask[:, None] if e.blend != 4 else out
+    if e.blend != 4 and e.fresnel is not None:
+        colr = colr + (out - rgb * inten[:, None] * mask[:, None])
+    for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)):              # 2x2 splats: no holes between samples
+        xs, ys = np.clip(xi[ok] + dx, 0, W - 1), np.clip(yi[ok] + dy, 0, H - 1)
+        idx = ys * W + xs
+        for k in range(3):
+            flat = layer[..., k].reshape(-1)
+            np.maximum.at(flat, idx, colr[ok, k])
+        np.maximum.at(alay.reshape(-1), idx, al[ok])
     if e.blend == 4:
         canvas += layer
     else:
-        a = np.clip(layer.max(-1, keepdims=True) * 1.5, 0, 1)
+        a = alay[..., None]
         canvas[:] = canvas * (1 - a) + layer * a
 
 
@@ -291,7 +305,7 @@ def render_frame(emitters, cam, t, background):
             age = (t - p['t0']) / p['life']
             items.append((e, p, age))
     def depth(it):
-        return (it[0].ground is False, -float(cam.project(it[1]['pos'])[1]))
+        return (it[0].ground is False, -float(cam.project(it[1]['pos'] * _zf())[1]))
     items.sort(key=depth)
     for e, p, age in items:
         if e.tex is None:
@@ -303,7 +317,7 @@ def render_frame(emitters, cam, t, background):
         col = p['bcol'][:4] * e.col.at(age)[:4]
         if col[3] <= 0.003:
             continue
-        (sx, sy), z = cam.project(p['pos'])
+        (sx, sy), z = cam.project(p['pos'] * _zf())
         if z <= 1:
             continue
         px_per_unit = cam.f / z
@@ -316,7 +330,7 @@ def render_frame(emitters, cam, t, background):
             h = w if (e.uniform or sc[1] == 0) else 2 * sc[1] * px_per_unit
             ang = p['rot'][0] + p['spin'][0] * (t - p['t0'])
             if e.dir and np.linalg.norm(p['vel']) > 1:
-                v2, _ = cam.project(p['pos'] + p['vel'] * 0.01)
+                v2, _ = cam.project((p['pos'] + p['vel'] * 0.01) * _zf())
                 d = v2 - np.array([sx, sy]); ang = -math.degrees(math.atan2(d[1], d[0])) + 90
                 h = max(h, np.linalg.norm(p['vel']) * e.dscale * 2 * sc[0] * px_per_unit + h)
             ero = (float(e.erosion[0].at(age)[0]), e.erosion[1]) if e.erosion is not None else None

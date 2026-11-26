@@ -61,9 +61,12 @@ def emitter(name, texture, *, blend=4, life=1.0, rate=1.0, single=True, emitter_
             bind=1.0, pos=(0, 0, 0), scale=(50, 50, 1), scale_curve=None, uniform=True,
             color=(1, 1, 1, 1), color_curve=None, rotation=None, spin=None, velocity=None,
             accel=None, drag=None, spawn_radius=None, mesh=None, ground=False, pass_=100,
-            direction_oriented=False, dir_scale=None, local_orientation=False, importance=3,
-            backface=False, extra=None, primitive=None):
-    """Builds a complete VfxEmitterDefinitionData. Curves: (times, values) over the particle's life."""
+            direction_oriented=False, dir_scale=None, local_orientation=None, importance=3,
+            backface=False, extra=None, primitive=None, misc=1, linger=None, emitter_pos_curve=None):
+    """Builds a complete VfxEmitterDefinitionData. Curves: (times, values) over the particle's life.
+    local_orientation: None = engine default (particles turn with what they are attached to), False = world
+    orientation (Riot writes isLocalOrientation = 0 for that), True = explicitly local.
+    linger: seconds the particles stay after the system is destroyed (they fade out over that time)."""
     f = [F('emitterName', L.STRING, name),
          F('rate', L.EMBED, vfloat(rate)),
          F('particleLifetime', L.EMBED, vfloat(life)),
@@ -72,12 +75,14 @@ def emitter(name, texture, *, blend=4, life=1.0, rate=1.0, single=True, emitter_
          F('bindWeight', L.EMBED, vfloat(bind)),
          F('blendMode', L.U8, blend),
          F('pass', L.S16, pass_),
-         F('miscRenderFlags', L.U8, 1),
+         F('miscRenderFlags', L.U8, misc),
          F('alphaRef', L.U8, 0),
          F('texture', L.STRING, texture),
          F('birthColor', L.EMBED, vcolor(color)),
          F('isUniformScale', L.FLAG, 1 if uniform else 0),
          F('isRotationEnabled', L.FLAG, 1)]
+    if emitter_life == -1:                    # emits for as long as the system lives (persistent effects): no lifetime
+        f = [x for x in f if x.hash != L.fnv1a('lifetime')]
     if single:
         f.append(F('isSingleParticle', L.FLAG, 1))
     if delay:
@@ -119,8 +124,17 @@ def emitter(name, texture, *, blend=4, life=1.0, rate=1.0, single=True, emitter_
         f.append(F('isDirectionOriented', L.FLAG, 1))
         if dir_scale is not None:
             f.append(F('directionVelocityScale', L.F32, float(dir_scale)))
-    if local_orientation:
-        f.append(F('isLocalOrientation', L.FLAG, 1))
+    if local_orientation is not None:
+        f.append(F('isLocalOrientation', L.FLAG, 1 if local_orientation else 0))
+    if linger:
+        f.append(F('particleLinger', L.OPTION, L.Option(L.F32, float(linger))))
+        f.append(F('Linger', L.STRUCT, L.Struct('VfxLingerDefinitionData', [
+            F('UseSeparateLingerColor', L.FLAG, 1),
+            F('SeparateLingerColor', L.EMBED, vcolor((1, 1, 1, 1), [0.0, 1.0], [(1, 1, 1, 1), (1, 1, 1, 0)]))], L.STRUCT)))
+    if emitter_pos_curve:
+        t, v = emitter_pos_curve
+        f = [x for x in f if x.hash != L.fnv1a('EmitterPosition')]
+        f.append(F('EmitterPosition', L.EMBED, vvec3(v[0], t, v)))
     if backface and not ground:
         f.append(F('disableBackfaceCull', L.BOOL, True))
     if extra:

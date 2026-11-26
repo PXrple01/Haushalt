@@ -3,11 +3,20 @@
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
 Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.7.0 enthält
+## Was Version 0.8.0 enthält
 
 | Teil | Änderung |
 |---|---|
-| Gesichtsausdrücke (neu in v0.7) | 7 Ausdrücke aus Meshy-Bildbearbeitungen des eigenen Gesichts: konzentriert (Angriffe, E), Kampfschrei (Krits, W, R-W), Grinsen (Spott, Witz, Rückkehr), Lachen (Tanz), Schmerz (Tod, Hochgeschleudert); werden pro Animation über Riots Submesh-Events eingeblendet. Q-Flow: weiß-violett leuchtende Augen mit Muster-Iris, Ult: grüne Metavision-Augen |
+| Ketten am Bildschirm (neu in v0.8) | während der ganzen Ult (15 s) hängen in den vier Ecken **deines eigenen Bildschirms** Ketten: sie schießen hinein, bohren sich mit Pflöcken ins Bild und werden ruckartig festgezogen, zucken danach immer wieder unter Spannung, Licht läuft über die Glieder, Funken knistern; kurz vor Ult-Ende glühen sie auf und sprengen sich weg. Nur du siehst sie (gleiche Technik wie Riots Bildschirm-Effekte bei Vi, Yone und Aatrox: an die Kamera geheftet, nur für den Besitzer sichtbar) |
+| Neue Ult-Vorschläge (v0.8) | vier neue, von Blue Lock inspirierte eigene Ults als Pakete `*_ult-beast` (Ego-Bestie: Meshy-Schattenwesen steigt hinter ihm auf, brüllt, sprengt seine Ketten, stürzt in ihn), `*_ult-echoes` (Zukunfts-Echos: 4 Hologramm-Kopien von ihm in Aktionsposen, nur die richtige Zukunft bleibt), `*_ult-popup` (Aufklapp-Spielfeld wie ein Pop-up-Buch), `*_ult-stage` (Weltbühne No.1: Spotlight, Kamerablitze, Ranglisten-Säule) – jeweils mit Vorschauvideo. Alles räumlich Verteilte steht fest in der Welt und dreht sich nicht mit, wenn er sich dreht |
+| Recall: Torjubel (v0.8) | beim Zurückkehren baut sich ein Tor aus Licht um ihn auf, er jongliert den Ball, am Ende bauscht sich das Netz, Konfetti fliegt |
+| Laufspuren (v0.8) | bei jedem Schritt (genau auf den Bodenkontakt der Laufanimation) Kreide-Striche und Rasen-Fetzen |
+| Q: Flow-Aura (v0.8) | während Q steigen weiß-violette Funken von Haaren, Schultern und Füßen auf, dazu leuchtende Nachbild-Fußabdrücke |
+| Respawn: Anstoß (v0.8) | Mittelkreis zeichnet sich auf den Boden, Flutlichtkegel fällt auf ihn, Ball auf dem Anstoßpunkt |
+| Tod: Abpfiff (v0.8) | Pfiff-Wellen, Pfeifen-Symbol, graue Schockwelle, der Ball rollt davon, das Augenleuchten erlischt |
+| Blinzeln (v0.8) | eigene „Augen zu“-Ebene (Meshy-Bearbeitung des eigenen Gesichts), wird in Steh- und Laufanimationen regelmäßig kurz eingeblendet |
+| Ladebildschirm (v0.8) | neues Anime-Keyart (Volley mit grün glühendem Ball, Flutlicht, berstende Ketten), mit Meshy aus dem eigenen Render erzeugt |
+| Gesichtsausdrücke (v0.7) | 7 Ausdrücke aus Meshy-Bildbearbeitungen des eigenen Gesichts: konzentriert (Angriffe, E), Kampfschrei (Krits, W, R-W), Grinsen (Spott, Witz, Rückkehr), Lachen (Tanz), Schmerz (Tod, Hochgeschleudert); werden pro Animation über Riots Submesh-Events eingeblendet. Q-Flow: weiß-violett leuchtende Augen mit Muster-Iris, Ult: grüne Metavision-Augen |
 | Textur-Fehler behoben (v0.7) | Farbschmierer an Texturnähten (z. B. lila Strich auf dem Unterarm), Flecken auf Arm- und Handgelenkbändern, Nahtlinien (Kanten-Padding), einfarbige Bänder |
 | Ult-Vorschläge (v0.7) | vier alternative Ults als eigene Pakete in `build/` (`*_ult-puzzle`, `*_ult-neuro`, `*_ult-manga`, `*_ult-radar`) mit Vorschauvideo; das Hauptpaket behält das Hologramm-Stadion |
 | Farben (neu in v0.6) | Stürmer in Blau-Lila: königsblaues Trikot, violette Akzente (Kragen, Ärmelsäume, Stutzenstreifen, Schnürsenkel, Wappen), tiefviolette Shorts, indigo Strumpfhose, dunkelblaue Haare mit violettem Schimmer; Bernsteinaugen bleiben. Effekte bleiben dunkelgrün |
@@ -33,11 +42,17 @@ Alle neuen Grafiken (Fußball, Ketten, METAVISION-Auge, Spielfeld-Linien) sind s
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.7.0.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.8.0.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
 
 Der Mod ist für den Standard-Skin gedacht. Wenn du einen anderen Yunara-Skin spielen willst, schalte ihn vorher ab.
+
+### Ketten am Bildschirm prüfen
+
+Die Ketten hängen an der Kamera. Falls sie bei deiner Bildschirmauflösung nicht genau in den Ecken sitzen
+(z. B. bei Ultrawide-Monitoren), schick einen Screenshot während der Ult – die Position ist eine Zahl im Build
+(`tools/screen_chains.py`: `HALF_W`, `HALF_H`, `CHAIN_S`).
 
 ### Falls das Spiel abstürzt
 
@@ -53,6 +68,11 @@ wie im Original, Modell-Datei mit Riots Endmarke; Paket 11 statt 24 MB.
 Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risiko. Nach LoL-Patches kann ein Update nötig sein.
 
 ## Vorschau
+
+![Neues Ladebild (v0.8)](previews/loadscreen_v0.8.png)
+
+Vorschauvideos v0.8 (Simulation): `build/Ult2_1_Ego-Bestie.mp4`, `Ult2_2_Zukunfts-Echos.mp4`, `Ult2_3_Aufklapp-Spielfeld.mp4`,
+`Ult2_4_Weltbuehne-No1.mp4` (jeweils mit den Bildschirm-Ketten und dem Ult-Ende) und `Extras_v0.8.mp4`.
 
 ![Ladebildschirm](previews/striker_v0.6_loadscreen.png)
 
@@ -109,5 +129,13 @@ Stürmers um. Riots Dateien landen nie im Repository.
 - `tools/char/meshy_prep.py`, `meshy_repose.py`, `meshy_bake.py`, `meshy_texture.py` – Pipeline für das Meshy-Modell:
   reduzieren (682.000 → 26.000 Dreiecke), Arme/Beine in Yunaras Grundpose drehen, Licht vom Originalmodell backen,
   Anime-Schattierung + Textur-Aufräumen (siehe [MODEL_SWAP.md](MODEL_SWAP.md))
+- `tools/screen_chains.py` – Ketten-Overlay an den Bildschirmecken (Kamera-gebunden, nur für den Spieler, am R-Buff);
+  `tools/char/screen_overlay.py` simuliert es für die Videos
+- `tools/ult_variants2.py` – die vier neuen Ult-Vorschläge (`ULT_VARIANT=beast|echoes|popup|stage`);
+  `tools/char/echo_meshes.py` friert den Stürmer in vier Posen als Effekt-Meshes ein
+- `tools/general_fx.py` – Recall-Torjubel, Laufspuren, Q-Aura + Nachbild-Abdrücke, Respawn-Anstoß, Tod-Abpfiff
+  (Riots Partikel-Events in den Animationen bzw. Buff-Bedingungen); `tools/char/extras_video.py` – Vorschauvideo
+- `tools/check_package.py` – prüft ein fertiges Paket: WAD-Sortierung + Prüfsummen, Bins gegen das Klassenschema und
+  gegen alle Feld-Kombinationen, die Riot selbst in seinen Skins benutzt
 - `tools/char/custom_skeleton.py` – eigenes Skelett (Yunaras Datei, nur Gelenkpositionen geändert) und Umrechnung der
   Animationen (alle drei Riot-Formate, Rotationen bleiben bitgenau)

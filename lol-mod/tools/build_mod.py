@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.7.0'
+VERSION = '0.8.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -210,6 +210,10 @@ FACE_CLIPS = {            # animation clip (graph name) -> expression shown for 
     'laugh': ['laugh', 'dance_loop'],
     'pain': ['death', 'knockup'],
 }
+BLINKS = {                # clip -> frames where he blinks (eyes closed for BLINK_LEN frames; Riot's frame-ranged events)
+    'idle1': [38, 121], 'idle2': [55, 150], 'idlein': [70], 'run_base': [44], 'run_homeguard_base': [30],
+}
+BLINK_LEN = 4
 
 
 def step_expressions(b, game):
@@ -240,6 +244,21 @@ def step_expressions(b, game):
                 f = clip.field('mEventDataMap')
             f.value.items.append((L.fnv1a('MV_Face_' + face), ev))
             added += 1
+    if 'Face_Blink' in faces:
+        for name, frames in BLINKS.items():
+            clip = by_hash.get(L.fnv1a(name))
+            if clip is None:
+                print('   ! clip not in graph:', name); continue
+            f = clip.field('mEventDataMap')
+            if f is None:
+                clip.fields.append(L.Field('mEventDataMap', L.MAP, L.Map(L.HASH, L.STRUCT, [])))
+                f = clip.field('mEventDataMap')
+            for k, fr in enumerate(frames):
+                ev = L.Struct('SubmeshVisibilityEventData', [
+                    L.Field('mStartFrame', L.F32, float(fr)), L.Field('mEndFrame', L.F32, float(fr + BLINK_LEN)),
+                    L.Field('mShowSubmeshList', L.LIST, L.List(L.HASH, [L.fnv1a('Face_Blink')]))], L.STRUCT)
+                f.value.items.append((L.fnv1a(f'MV_Blink_{k}'), ev))
+                added += 1
     data = L.write(g); L.read(data)
     files[ANIM_BIN] = data
     import copy
@@ -686,16 +705,23 @@ def step_ult_stadium(b):
     return len(ems)
 
 
-ULT_VARIANT = os.environ.get('ULT_VARIANT', '')       # '' = hologram stadium (default) | puzzle | neuro | manga | radar
+ULT_VARIANT = os.environ.get('ULT_VARIANT', '')       # '' = hologram stadium | puzzle neuro manga radar | beast echoes popup stage
 KEEP_CAST = ('MV_Chain', 'MV_Burst', 'MV_ImpactLightR')
 
 
 def step_ult_variant(b):
-    """Proposal builds: the chain burst stays, the eye + stadium make room for one of ult_variants.py."""
-    import ult_variants as UV
-    for n, im in UV.textures(ROOT).items():
+    """Proposal builds: the chain burst stays, the eye + stadium make room for one of ult_variants(2).py."""
+    import ult_variants as UV1
+    import ult_variants2 as UV2
+    if ULT_VARIANT in UV2.VARIANTS:
+        UV = UV2
+        tx, ms = UV2.textures(ROOT, ULT_VARIANT), UV2.meshes(ROOT, ULT_VARIANT)
+    else:
+        UV = UV1
+        tx, ms = UV1.textures(ROOT), UV1.meshes(ROOT)
+    for n, im in tx.items():
         put_tex(MV + 'mvfx_' + n + '.tex', im)
-    for name, (p, u, t) in UV.meshes(ROOT).items():
+    for name, (p, u, t) in ms.items():
         files[MV + name] = scb_bytes(p, u, t, name[:-4])
     cast = b.entry(PART + 'Yunara_Base_R_Cast').struct
     f = cast.field('complexEmitterDefinitionData')
@@ -703,7 +729,64 @@ def step_ult_variant(b):
                      if not str(e.get('emitterName')).startswith('MV_') or str(e.get('emitterName')).startswith(KEEP_CAST)]
     ems = UV.emitters(ULT_VARIANT, MV)
     V.add_emitters(cast, ems)
+    pack_used_gen(ems)
     return f'{ULT_VARIANT}: {len(ems)} emitters'
+
+
+def _strings(v, out):
+    if isinstance(v, L.Struct):
+        for f in v.fields:
+            if f.type == L.STRING and isinstance(f.value, str):
+                out.add(f.value)
+            else:
+                _strings(f.value, out)
+    elif isinstance(v, L.List):
+        for x in v.items:
+            _strings(x, out)
+    elif isinstance(v, L.Option) and v.value is not None:
+        _strings(v.value, out)
+    return out
+
+
+def pack_used_gen(structs):
+    """Packs generated textures (assets_src/gen) that the given emitters/systems use and no step has packed yet;
+    then every mvfx asset they reference must be in the package."""
+    used = set()
+    for st in structs:
+        _strings(st, used)
+    for v in used:
+        if v.lower().startswith(MV) and v.endswith('.tex') and v.lower() not in files:
+            n = v[len(MV) + len('mvfx_'):-4]
+            if os.path.exists(os.path.join(GEN, n + '.png')):
+                put_tex(v, gen(n))
+    missing = sorted(v for v in used if v.lower().startswith(MV) and v.lower().endswith(('.tex', '.scb')) and v.lower() not in files)
+    assert not missing, f'missing assets: {missing}'
+
+
+def step_general(b, game):
+    """Recall goal celebration, footstep marks, respawn kick-off, death whistle, Q afterimage prints + flow aura."""
+    import general_fx as G
+    for n, im in G.textures().items():
+        put_tex(MV + 'mvfx_' + n + '.tex', im)
+    for name, (p, u, t) in G.meshes().items():
+        files[MV + name] = scb_bytes(p, u, t, name[:-4])
+    raw = files.get(ANIM_BIN) or open(os.path.join(game, ANIM_BIN), 'rb').read()
+    g = L.read(raw)
+    n0 = len(b.entries)
+    msg = G.install(b, g, SKIN, RES, MV)
+    data = L.write(g); L.read(data)
+    files[ANIM_BIN] = data
+    pack_used_gen([e.struct for e in b.entries[n0:]])
+    return msg
+
+
+def step_screen_chains(b):
+    """Chains in the corners of the player's own screen for the whole ult (camera-bound, owner only)."""
+    import screen_chains as SC
+    for n, im in SC.textures().items():
+        put_tex(MV + 'mvfx_' + n + '.tex', im)
+    n = SC.install(b, SKIN, RES, R_SPELL)
+    return f'{n} emitters, camera-bound + owner-only on the R buff'
 
 
 # ------------------------------------------------------------------ packaging
@@ -929,6 +1012,8 @@ def main(game, variant='full'):
         print('Q flow (white-violet):', step_q_flow(b, game))
         if ULT_VARIANT:
             print('ult variant        :', step_ult_variant(b))
+        print('screen chains      :', step_screen_chains(b))
+        print('general moments    :', step_general(b, game))
     data = L.write(b)
     L.read(data)                                              # sanity: must parse again
     files['data/characters/yunara/skins/skin0.bin'] = data
@@ -937,7 +1022,7 @@ def main(game, variant='full'):
     if ULT_VARIANT:
         name, fname = f'{name} [Ult: {ULT_VARIANT}]', fname.replace('.fantome', f'_ult-{ULT_VARIANT}.fantome')
     info = {'Name': name, 'Author': 'Flow Striker Project', 'Version': VERSION,
-            'Description': 'Original anime football striker (high-detail model with its own skeleton + retargeted animations, baked anime lighting, ink outline), football beads + projectiles, dark green Flow effects, METAVISION ult. Replaces the base skin.',
+            'Description': 'Original anime football striker (own model + skeleton, retargeted animations, facial expressions + blinking), football beads + projectiles, white-violet Q flow with aura, METAVISION ult with chains on your own screen corners, recall goal celebration, footstep marks, respawn kick-off, death whistle. Replaces the base skin.',
             'Heading': '', 'Home': ''}
     out = os.path.join(BUILD, fname)
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:

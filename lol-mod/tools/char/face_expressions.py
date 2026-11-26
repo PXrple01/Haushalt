@@ -28,10 +28,10 @@ RES, SPAN, CY = 1024, 40.0, 183.0
 SC = RES / SPAN
 BOX = (-12.5, 12.5, 163.0, 188.0)                  # face patch in model space: x0, x1, y0, y1
 TILE = 640
-EXPRESSIONS = ['focus', 'shout', 'grin', 'laugh', 'pain', 'flow', 'meta']
-EYES_ONLY = {'flow', 'meta'}
+EXPRESSIONS = ['focus', 'shout', 'grin', 'laugh', 'pain', 'blink', 'flow', 'meta']
+EYES_ONLY = {'blink', 'flow', 'meta'}
 EYE_BAND = (172.5, 184.5)                          # y range of eyes + brows
-OFFSET = {'face': 0.05, 'eyes': 0.10, 'meta': 0.13}       # meta (ult) wins over flow (Q) if both are on
+OFFSET = {'face': 0.05, 'eyes': 0.10, 'blink': 0.115, 'meta': 0.13}   # meta (ult) > blink > flow (Q) > expression
 
 
 def to_px(x, y):
@@ -146,7 +146,7 @@ def main():
     for name in EXPRESSIONS:
         ox, oy, s = slots[name]
         out[f'uv_{name}'] = np.stack([ox + u * s, oy + v * s], 1).astype(np.float32)   # atlas uv, v = row/height
-        out[f'pos_{name}'] = (pos + nrm * OFFSET['meta' if name == 'meta' else layers[name]]).astype(np.float32)
+        out[f'pos_{name}'] = (pos + nrm * OFFSET[name if name in OFFSET else layers[name]]).astype(np.float32)
     out['names'] = np.array(EXPRESSIONS)
     np.savez_compressed(os.path.join(CHAR, f'{slot}_faces.npz'), **out)
     json.dump({n: layers[n] for n in EXPRESSIONS}, open(os.path.join(CHAR, f'{slot}_faces.json'), 'w'))
