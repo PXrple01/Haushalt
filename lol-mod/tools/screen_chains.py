@@ -177,9 +177,8 @@ QUAD = dict(primitive=L.Struct('VfxPrimitiveArbitraryQuad', [], L.STRUCT), rotat
             backface=True, uniform=False)
 
 
-def _tugs():
-    """Particle-life scale keys (life = BURST): shoot in, spike, yank tight, then tugs until the burst."""
-    life = BURST
+def _tugs(life=BURST):
+    """Particle-life scale keys (life = burst time): shoot in, spike, yank tight, then tugs until the burst."""
     keys = [(0.0, 0.25), (0.16, 1.16), (0.27, 0.95), (0.36, 1.02), (0.45, 1.0)]
     rng = np.random.default_rng(21)
     t = 0.45
@@ -201,45 +200,47 @@ def _pulse(base, hi, n=11, life=BURST):
     return [x / life for x in t], v
 
 
-def emitters(T):
+def emitters(T, burst=BURST, glints=True, name='MVS_'):
+    """The whole overlay. burst: when the chains break (the penta uses a short version without the running light)."""
+    BURST = burst
     ems = []
     corners = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
-    tug = _tugs()
+    tug = _tugs(BURST)
     hold = ([0.0, 0.02, 0.985, 1.0], [WH + (0.0,), WH + (1.0,), WH + (1.0,), WH + (0.0,)])
     shade = ([0.0, 0.03, 0.97, 1.0], [WH + (0.0,), WH + (0.62,), WH + (0.62,), WH + (0.0,)])
-    glow = _pulse(FLOW, HI)
+    glow = _pulse(FLOW, HI, life=BURST)
     for k, (sx, sz) in enumerate(corners):
         C = (sx * HALF_W, 0.0, sz * HALF_H)
         out = np.array([sx, 0.0, sz]) / math.sqrt(2)                     # away from the screen centre
-        ems.append(V.emitter(f'MVS_Shade{k}', T('sc_corner_shade'), blend=1, life=BURST + 0.2, pos=C, scale=(150, 150, 0),
+        ems.append(V.emitter(f'{name}Shade{k}', T('sc_corner_shade'), blend=1, life=BURST + 0.2, pos=C, scale=(150, 150, 0),
                              color_curve=shade, pass_=9990, linger=0.3, **QUAD))
-        ems.append(V.emitter(f'MVS_Chain{k}', T('sc_chain_star'), blend=1, life=BURST, pos=C, scale=(CHAIN_S, CHAIN_S, 0),
+        ems.append(V.emitter(f'{name}Chain{k}', T('sc_chain_star'), blend=1, life=BURST, pos=C, scale=(CHAIN_S, CHAIN_S, 0),
                              scale_curve=tug, color_curve=hold, pass_=9993, linger=0.3, **QUAD))
-        ems.append(V.emitter(f'MVS_Glow{k}', T('sc_chain_glow'), blend=4, life=BURST, pos=C, scale=(CHAIN_S, CHAIN_S, 0),
+        ems.append(V.emitter(f'{name}Glow{k}', T('sc_chain_glow'), blend=4, life=BURST, pos=C, scale=(CHAIN_S, CHAIN_S, 0),
                              scale_curve=tug, color_curve=glow, pass_=9994, linger=0.3, **QUAD))
         # light running along the three inward arms (texture is symmetric: these directions always lie on arms)
-        for j, (a, R1) in enumerate(ARMS):
+        for j, (a, R1) in enumerate(ARMS if glints else ()):
             d = np.array([-sx * math.cos(math.radians(a)), 0.0, -sz * math.sin(math.radians(a))])
             start = np.array(C) + d * R0 * CHAIN_S
-            ems.append(V.emitter(f'MVS_Glint{k}_{j}', T('light_dot'), blend=4, single=False, rate=0.9 + 0.25 * j,
+            ems.append(V.emitter(f'{name}Glint{k}_{j}', T('light_dot'), blend=4, single=False, rate=0.9 + 0.25 * j,
                                  emitter_life=BURST - 0.6, delay=0.5 + 0.2 * j + 0.1 * k, life=0.55, pos=tuple(start),
                                  velocity=tuple(d * (R1 - R0) * CHAIN_S / 0.55), scale=(5.5, 5.5, 5.5),
                                  color_curve=([0, 0.2, 0.8, 1], [HI + (0,), WH + (1,), HI + (0.9,), FLOW + (0,)]),
                                  pass_=9995, misc=5, linger=0.3))
         # tension sparks crackling at the shackle and along the arms
-        ems.append(V.emitter(f'MVS_Crackle{k}', T('light_dot'), blend=4, single=False, rate=7, emitter_life=BURST - 0.5, delay=0.4,
+        ems.append(V.emitter(f'{name}Crackle{k}', T('light_dot'), blend=4, single=False, rate=7, emitter_life=BURST - 0.5, delay=0.4,
                              life=0.32, pos=tuple(np.array(C) - out * 26), spawn_radius=34, scale=(2.6, 2.6, 2.6), drag=(2, 2, 2),
                              velocity=V.vvec3((120, 0, 120), rand=[(-1, 1), None, (-1, 1)]), direction_oriented=True, dir_scale=0.02,
                              color_curve=([0, 0.3, 1], [WH + (1,), HI + (0.9,), FLOW + (0,)]), pass_=9996, misc=5, linger=0.3))
         # snap: flash where the chains are yanked tight
-        ems.append(V.emitter(f'MVS_Snap{k}', T('flash_star'), blend=4, delay=0.24, life=0.3, pos=tuple(np.array(C) - out * 30),
+        ems.append(V.emitter(f'{name}Snap{k}', T('flash_star'), blend=4, delay=0.24, life=0.3, pos=tuple(np.array(C) - out * 30),
                              scale=(42, 42, 42), scale_curve=([0, 0.3, 1], [(0.4,) * 3, (1.3,) * 3, (1.5,) * 3]),
                              color_curve=([0, 0.25, 1], [WH + (1,), HI + (0.9,), FLOW + (0,)]), pass_=9997, misc=5))
         # ---- the burst
-        ems.append(V.emitter(f'MVS_BurstFlash{k}', T('flash_star'), blend=4, delay=BURST - 0.03, life=0.4, pos=tuple(np.array(C) - out * 45),
+        ems.append(V.emitter(f'{name}BurstFlash{k}', T('flash_star'), blend=4, delay=BURST - 0.03, life=0.4, pos=tuple(np.array(C) - out * 45),
                              scale=(62, 62, 62), scale_curve=([0, 0.2, 1], [(0.3,) * 3, (1.4,) * 3, (1.8,) * 3]),
                              color_curve=([0, 0.2, 1], [WH + (1,), HI + (0.9,), FLOW + (0,)]), pass_=9998, misc=5, linger=0.6))
-        ems.append(V.emitter(f'MVS_BurstLinks{k}', T('sc_chain_frag'), blend=1, single=False, rate=650, emitter_life=0.05, delay=BURST,
+        ems.append(V.emitter(f'{name}BurstLinks{k}', T('sc_chain_frag'), blend=1, single=False, rate=650, emitter_life=0.05, delay=BURST,
                              life=0.95, pos=tuple(np.array(C) - out * 55), spawn_radius=50,
                              scale=V.vvec3((7, 7, 7), rand=[(0.6, 1.5), None, None]),
                              velocity=V.vvec3((sx * 260, 0, sz * 200), rand=[(-0.4, 1.6), None, (-0.4, 1.6)]),
@@ -247,7 +248,7 @@ def emitters(T):
                              rotation=V.vvec3((180, 0, 0), rand=[(-1, 1), None, None]),
                              spin=V.vvec3((600, 0, 0), rand=[(-1, 1), None, None]),
                              color_curve=([0, 0.7, 1], [WH + (1,), WH + (1,), WH + (0,)]), pass_=9998, misc=5, linger=1.0))
-        ems.append(V.emitter(f'MVS_BurstSparks{k}', T('light_dot'), blend=4, single=False, rate=900, emitter_life=0.04, delay=BURST,
+        ems.append(V.emitter(f'{name}BurstSparks{k}', T('light_dot'), blend=4, single=False, rate=900, emitter_life=0.04, delay=BURST,
                              life=0.5, pos=tuple(np.array(C) - out * 50), spawn_radius=40, scale=(2.5, 2.5, 2.5), drag=(2, 2, 2),
                              velocity=V.vvec3((sx * 300, 0, sz * 260), rand=[(-0.6, 1.6), None, (-0.6, 1.6)]),
                              direction_oriented=True, dir_scale=0.02,

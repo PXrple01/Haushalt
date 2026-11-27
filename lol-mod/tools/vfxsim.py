@@ -119,9 +119,9 @@ class Emitter:
         if isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_MESH:
             mm = _get(prim, 'mMesh'); self.mesh = meshes.get((_get(mm, 'mSimpleMeshName') or '').lower())
             if self.mesh is None and mm is not None:          # animated mesh (skn + skl + anm): a provider(age)
-                f = mm.field(L.fnv1a('mMeshName'))
+                f = mm.field(L.fnv1a('mMeshName')); fa = mm.field(L.fnv1a('mAnimationName'))
                 if f is not None:
-                    self.mesh = meshes.get(str(f.value).lower())
+                    self.mesh = meshes.get(f'{f.value}|{fa.value if fa is not None else ""}'.lower()) or meshes.get(str(f.value).lower())
         self.attached = isinstance(prim, L.Struct) and prim.type_hash == T_PRIM_ATTACHED
         sf = em.field(L.fnv1a('stencilMode'))
         self.stencil = bool(sf is not None and sf.value)

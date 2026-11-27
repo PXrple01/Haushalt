@@ -14,8 +14,8 @@ import screen_chains as SC  # noqa: E402
 
 
 class Overlay:
-    def __init__(self, b, textures, seed=3):
-        st = b.entry(SC.SYSTEM).struct
+    def __init__(self, b, textures, seed=3, system=SC.SYSTEM):
+        st = b.entry(system).struct
         tex = dict(textures)
         for n, im in SC.textures().items():
             tex[f'assets/characters/yunara/skins/base/particles/mvfx/mvfx_{n}.tex'] = im

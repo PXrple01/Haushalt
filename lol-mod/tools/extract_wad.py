@@ -1,5 +1,6 @@
 """Extracts what a custom-skeleton model slot needs from Yunara.wad.client (see fetch_wad.py):
-all animation clips (by path hash), the base skeleton and the base animation graph.
+all animation clips (by path hash), the base skeleton, the base animation graph and the bin with her contextual
+actions (CAC: voice lines on kills ..., extended by multikill_fx.py).
 
   python3 extract_wad.py <Yunara.wad.client> <game dir used by build_mod.py>
 """
@@ -9,8 +10,11 @@ import sys
 import pyritofile
 import xxhash
 
+CAC_BIN = ('data/characters/yunara/yunara_multi_skins_root_skins_skin0_skins_skin1_skins_skin10_skins_skin11_skins_skin12_'
+           'skins_skin13_skins_skin14_skins_skin15_skins_skin16_skins_skin2_skins_skin3_skins_skin4_skins_skin5_skins_skin6_'
+           'skins_skin7_skins_skin8_skins_skin9.bin')       # holds Yunara's contextual actions (kill VO rules ...)
 WANT = ['assets/characters/yunara/skins/base/yunara_base.skl',
-        'data/characters/yunara/animations/skin0.bin']
+        'data/characters/yunara/animations/skin0.bin', CAC_BIN]
 
 
 def main(wad_path, dest):

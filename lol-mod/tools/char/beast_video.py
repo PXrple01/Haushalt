@@ -49,7 +49,7 @@ SCRIPT = [
     (13.4, TOTAL, 'idle1', None, 0, 0),
 ]
 LABELS = {'rise': 'steigt aus dem Schattenpool', 'roar': 'brüllt - seine Ketten zerspringen', 'pound': 'trommelt auf die Brust',
-          'stomp': 'stampft auf', 'swipe': 'Klauenhieb', 'prowl': 'schleicht hinter ihm entlang', 'shout': 'breitet die Arme aus und brüllt', 'dive': 'stürzt sich in ihn hinein',
+          'stomp': 'schlägt auf den Boden', 'swipe': 'Klauenhieb', 'drift': 'schwebt hinter ihm zur Seite', 'shout': 'breitet die Arme aus und brüllt', 'dive': 'stürzt sich in ihn hinein',
           None: 'lauert hinter ihm, sieht sich um'}
 
 
@@ -139,8 +139,9 @@ def main():
         dr = ImageDraw.Draw(frame)
         dr.text((950, 40), 'DIE ULT', font=font(26), fill=(140, 200, 160))
         dr.text((950, 72), 'Ego-Bestie', font=font(46), fill=(255, 255, 255))
-        desc = ('Das Biest bleibt die ganzen 15 Sekunden hinter ihm, folgt ihm überallhin und dreht sich nie mit. '
-                'Am Ende stürzt es sich in ihn, während die Bildschirm-Ketten zerspringen.')
+        desc = ('Ein schwebender Schattenkörper: die Beine lösen sich in Rauch auf, die Arme schwingen schwer nach, '
+                'jeder Schlag lässt es einsacken und schickt einen Stoß über den Boden. Es bleibt die 15 s hinter ihm '
+                'und dreht sich nie mit.')
         for j, line in enumerate(wrap(dr, desc, font(16, True), W - 975)):
             dr.text((950, 136 + j * 23), line, font=font(16, True), fill=(190, 205, 195))
         if tb < 0:

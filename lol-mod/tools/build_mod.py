@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.11.0'
+VERSION = '0.12.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -756,6 +756,25 @@ def step_general(b, game):
     return msg
 
 
+def step_multikill(b, game):
+    """Quadra (delayed, cancelled by a penta) and penta moments: CAC multikill rules play invisible carrier clips on
+    an effect track whose particle events spawn the effects (tools/multikill_fx.py)."""
+    import multikill_fx as MK
+    import extract_wad
+    for n, im in MK.textures().items():
+        put_tex(MV + 'mvfx_' + n + '.tex', im)
+    for name, (p, u, t) in MK.meshes().items():
+        files[MV + name] = scb_bytes(p, u, t, name[:-4])
+    raw = files.get(ANIM_BIN) or open(os.path.join(game, ANIM_BIN), 'rb').read()
+    g = L.read(raw)
+    cac = L.read(os.path.join(game, extract_wad.CAC_BIN))
+    added, msg = MK.install(b, g, cac, SKIN, RES, MV)
+    data = L.write(g); L.read(data)
+    files[ANIM_BIN] = data
+    pack_used_gen(added)
+    return msg
+
+
 def step_screen_chains(b):
     """Chains in the corners of the player's own screen for the whole ult (camera-bound, owner only)."""
     import screen_chains as SC
@@ -994,6 +1013,7 @@ def main(game, variant='full'):
         print('ult (Ego beast)    :', step_ult_beast(b))
         print('screen chains      :', step_screen_chains(b))
         print('general moments    :', step_general(b, game))
+        print('multikills         :', step_multikill(b, game))
     if fx:
         print('prune              :', step_prune(b))
     data = L.write(b)

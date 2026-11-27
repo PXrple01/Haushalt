@@ -80,10 +80,11 @@ def load_meshes(fantome):
             if st.type_hash == L.fnv1a('VfxMeshDefinitionData'):
                 fs = {f.hash: f.value for f in st.fields}
                 skn, skl, anm = (fs.get(L.fnv1a(k)) for k in ('mMeshName', 'mMeshSkeletonName', 'mAnimationName'))
-                if skn and skl and anm and skn.lower() not in out:
+                key = f'{skn}|{anm}'.lower() if skn and anm else None      # one skn can play several animations
+                if skn and skl and anm and key not in out:
                     parts = [get_path(x) for x in (skn, skl, anm)]
                     if all(parts):
-                        out[skn.lower()] = animmesh.Provider(*parts)
+                        out[key] = animmesh.Provider(*parts)
             for f in st.fields:
                 v = f.value
                 if hasattr(v, 'fields'):
