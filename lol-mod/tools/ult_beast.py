@@ -32,6 +32,7 @@ from vfxshapes import holo, fade
 F = L.Field
 FLOW = (0.10, 0.65, 0.30); DEEP = (0.02, 0.36, 0.16); HI = (0.62, 0.98, 0.72); WH = (1.0, 1.0, 1.0)
 VIO = (0.55, 0.30, 0.95); LAV = (0.80, 0.70, 1.0); SHADOW = (0.05, 0.02, 0.08)
+BODY_ALPHA = 0.6                           # the beast's opacity between its hits (clarity)
 PART = 'Characters/Yunara/Skins/Skin0/Particles/'
 SYSTEM = 'MV_R_EgoBeast'
 BEAST_BASE = 'assets/characters/yunara/skins/base/particles/mvfx/mvfx_v2_beast'
@@ -68,6 +69,22 @@ def shadow_pool(s=512):
     rgb = np.dstack([SHADOW[0] + rim * VIO[0], SHADOW[1] + rim * VIO[1], SHADOW[2] + rim * VIO[2]])
     alpha = np.maximum(alpha, rim * 0.8)
     return Image.fromarray((np.dstack([np.clip(rgb, 0, 1), alpha]) * 255).astype(np.uint8), 'RGBA')
+
+
+def shadow_ring(s=512):
+    """Clarity version of the shadow floor: a thin violet ring with a green inner line and only a faint mist inside,
+    so enemy ground markers under it stay readable (alpha blend)."""
+    y, x = np.mgrid[0:s, 0:s].astype(float) / (s - 1) * 2 - 1
+    r = np.hypot(x, y); a = np.arctan2(y, x)
+    wob = 0.86 + 0.025 * np.sin(a * 7 + 1.3) + 0.015 * np.sin(a * 13)
+    ring = np.exp(-((r - wob) / 0.022) ** 2)
+    inner = np.exp(-((r - wob + 0.06) / 0.010) ** 2) * 0.8
+    mist = np.clip((r - 0.45) / (wob - 0.45), 0, 1) ** 2 * (r < wob) * 0.22 * (0.6 + 0.4 * _noise(s, 8, 9))
+    rgb = (np.dstack([np.full_like(r, VIO[0]), np.full_like(r, VIO[1]), np.full_like(r, VIO[2])]) * ring[..., None]
+           + np.dstack([np.full_like(r, HI[0]), np.full_like(r, HI[1]), np.full_like(r, HI[2])]) * inner[..., None]
+           + np.dstack([np.full_like(r, SHADOW[0]), np.full_like(r, SHADOW[1]), np.full_like(r, SHADOW[2])]) * mist[..., None])
+    alpha = np.clip(np.maximum(np.maximum(ring, inner), mist), 0, 1)
+    return Image.fromarray((np.dstack([np.clip(rgb / np.maximum(alpha, 1e-3)[..., None], 0, 1), alpha]) * 255).astype(np.uint8), 'RGBA')
 
 
 def smoke_violet(s=128):
@@ -181,7 +198,8 @@ def ground_crack(s=512):
 
 def textures(root):
     skin, glow = beast_colour(root)
-    return {'beast_skin2': skin, 'beast_glow': glow, 'shadow_pool': shadow_pool(), 'smoke_puff': smoke_puff(), 'smoke_violet': smoke_violet(),
+    return {'beast_skin2': skin, 'beast_glow': glow, 'shadow_pool': shadow_pool(), 'shadow_ring': shadow_ring(),
+            'smoke_puff': smoke_puff(), 'smoke_violet': smoke_violet(),
             'ground_crack': ground_crack()}
 
 
@@ -218,7 +236,7 @@ def emitters(T):
     # ---- rising out of the pool
     ems.append(V.emitter('MVB_Pool', T('shadow_pool'), blend=1, life=1.7, bind=1.0, ground=True, rotation=(-90, -90, 0),
                          scale=(270, 270, 1), scale_curve=([0, 0.1, 0.2, 1], [(0.2,) * 3, (1.08,) * 3, (1.0,) * 3, (1.02,) * 3]),
-                         color_curve=fade(WH, 0.04, 0.7, 1.0), pass_=-2700, **WORLD))
+                         color_curve=fade(WH, 0.04, 0.7, 0.6), pass_=-2700, **WORLD))
     ems.append(_ground_ring('MVB_PoolRing', T, 0.0, VIO, -2690, grow=5.5, life=0.55))
     ems.append(V.emitter('MVB_Smoke', T('smoke_puff'), blend=1, single=False, rate=70, emitter_life=1.4, delay=0.02, life=1.1,
                          bind=0.0, pos=(0, 20, 0), spawn_radius=230, scale=V.vvec3((40, 40, 40), rand=[(0.6, 1.6), None, None]),
@@ -230,10 +248,25 @@ def emitters(T):
         F('mMeshName', L.STRING, BEAST_BASE + '.skn'), F('mMeshSkeletonName', L.STRING, BEAST_BASE + '.skl'),
         F('mAnimationName', L.STRING, BEAST_BASE + '.anm')], L.EMBED))], L.STRUCT)
     drive = ([0, nt(0.40), nt(total - 0.12), 1], [1.0, 0.0, 0.0, 0.6])        # builds up from the pool, frays at the end
+    # clarity: after rising it is see-through (BODY_ALPHA) with a bright rim, solid only for a moment on every hit
+    ak = [(0.0, 0.0), (0.12, 1.0), (0.9, 1.0), (1.3, BODY_ALPHA)]
+    groups = []                                                        # hits close together share one solid window
+    for t_, w_ in BA.impacts():
+        if t_ <= 1.3:
+            continue
+        if groups and t_ - 0.1 < groups[-1][1] + 0.6:
+            groups[-1] = (groups[-1][0], t_, max(groups[-1][2], w_))
+        else:
+            groups.append((t_, t_, w_))
+    for a_, b_, w_ in groups:
+        peak = BODY_ALPHA + (1.0 - BODY_ALPHA) * w_
+        ak += [(a_ - 0.1, BODY_ALPHA), (a_ - 0.02, peak), (b_ + 0.3, peak), (b_ + 0.6, BODY_ALPHA)]
+    ak += [(dive - 0.1, BODY_ALPHA), (dive + 0.1, 1.0), (total - 0.04, 0.9), (total, 0.0)]
+    ak.sort()
     ems.append(V.emitter('MVB_Beast', T('beast_skin2'), blend=1, life=total, bind=1.0, primitive=anim_mesh, scale=(1, 1, 1),
                          backface=True, pass_=9310,
-                         color_curve=([0, 0.004, nt(dive), nt(total - 0.04), 1], [WH + (0,), WH + (1,), WH + (1,), (0.8, 0.6, 1.0, 0.9), VIO + (0,)]),
-                         extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.30, 0.10, 0.55)), **WORLD))
+                         color_curve=([nt(t_) for t_, _ in ak], [(0.8, 0.6, 1.0, a_) if t_ > total - 0.05 else WH + (a_,) for t_, a_ in ak]),
+                         extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.55, 0.30, 0.95)), **WORLD))
     keys = [(0.0, FLOW, 0.0), (0.3, HI, 0.55)]
     beat = 0.9                                                         # its veins pulse like a heartbeat
     while beat < total - 0.8:
@@ -256,26 +289,26 @@ def emitters(T):
                          backface=True, pass_=9311, color_curve=([nt(k[0]) for k in keys], [k[1] + (k[2],) for k in keys]),
                          extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.06, 0.40, 0.18)), **WORLD))
     # ---- a shadow body: its legs trail off as smoke, a shadow pool lies under both of them, embers rise
-    ems.append(V.emitter('MVB_ShadowFloor', T('shadow_pool'), blend=1, delay=0.45, life=total - 0.9, bind=1.0, ground=True,
+    ems.append(V.emitter('MVB_ShadowFloor', T('shadow_ring'), blend=1, delay=0.45, life=total - 0.9, bind=1.0, ground=True,
                          rotation=(-90, -90, 0), scale=(290, 290, 1), scale_curve=([0, 0.06, 1], [(0.5,) * 3, (1.0,) * 3, (1.0,) * 3]),
-                         color_curve=fade(WH, 0.05, 0.92, 0.42), pass_=-2705, **WORLD))
-    ems.append(V.emitter('MVB_Tail', T('smoke_violet'), blend=1, single=False, rate=30, emitter_life=total - 0.7, delay=0.35, life=1.3,
+                         color_curve=fade(WH, 0.05, 0.92, 0.8), pass_=-2705, **WORLD))
+    ems.append(V.emitter('MVB_Tail', T('smoke_violet'), blend=1, single=False, rate=20, emitter_life=total - 0.7, delay=0.35, life=1.3,
                          bind=0.0, pos=(0, TAIL_Y, 0), spawn_radius=165,
                          scale=V.vvec3((40, 40, 40), rand=[(0.6, 1.5), None, None]), scale_curve=([0, 1], [(0.8,) * 3, (2.0,) * 3]),
                          velocity=V.vvec3((0, -45, 0), rand=[None, (0.3, 1.6), None]), drag=(0.5, 0.5, 0.5),
                          rotation=V.vvec3((180, 0, 0), rand=[(-1, 1), None, None]), spin=V.vvec3((30, 0, 0), rand=[(-1, 1), None, None]),
                          color_curve=fade(WH, 0.15, 0.5, 0.85), pass_=9301))
-    ems.append(V.emitter('MVB_TailGlow', T('smoke_puff'), blend=4, single=False, rate=10, emitter_life=total - 0.7, delay=0.4, life=1.1,
+    ems.append(V.emitter('MVB_TailGlow', T('smoke_puff'), blend=4, single=False, rate=7, emitter_life=total - 0.7, delay=0.4, life=1.1,
                          bind=0.0, pos=(0, TAIL_Y + 20, 0), spawn_radius=120, scale=V.vvec3((50, 50, 50), rand=[(0.7, 1.3), None, None]),
                          scale_curve=([0, 1], [(0.8,) * 3, (1.6,) * 3]), velocity=V.vvec3((0, -20, 0), rand=[None, (0.3, 1.2), None]),
                          color_curve=([0, 0.3, 1], [VIO + (0,), VIO + (0.35,), DEEP + (0,)]), pass_=9304))
-    ems.append(V.emitter('MVB_TailWisps', T('smoke_violet'), blend=1, single=False, rate=12, emitter_life=total - 0.7, delay=0.4, life=1.6,
+    ems.append(V.emitter('MVB_TailWisps', T('smoke_violet'), blend=1, single=False, rate=8, emitter_life=total - 0.7, delay=0.4, life=1.6,
                          bind=0.0, pos=(0, TAIL_Y + 40, 0), spawn_radius=130,
                          scale=V.vvec3((22, 22, 22), rand=[(0.6, 1.4), None, None]), scale_curve=([0, 1], [(0.6,) * 3, (1.8,) * 3]),
                          velocity=V.vvec3((0, 60, 0), rand=[None, (0.4, 1.4), None]),
                          rotation=V.vvec3((180, 0, 0), rand=[(-1, 1), None, None]), spin=V.vvec3((25, 0, 0), rand=[(-1, 1), None, None]),
                          color_curve=fade(WH, 0.2, 0.55, 0.45), pass_=9302))
-    ems.append(V.emitter('MVB_Embers', T('light_dot'), blend=4, single=False, rate=12, emitter_life=total - 0.6, delay=0.5, life=1.6,
+    ems.append(V.emitter('MVB_Embers', T('light_dot'), blend=4, single=False, rate=8, emitter_life=total - 0.6, delay=0.5, life=1.6,
                          bind=0.0, pos=(0, TAIL_Y + 30, 0), spawn_radius=150, scale=V.vvec3((2.6, 2.6, 2.6), rand=[(0.6, 1.4), None, None]),
                          velocity=V.vvec3((20, 110, 20), rand=[(-1, 1), (0.5, 1.4), (-1, 1)]), drag=(0.6, 0.6, 0.6),
                          color_curve=([0, 0.2, 0.7, 1], [HI + (0,), HI + (0.9,), VIO + (0.7,), VIO + (0,)]), pass_=9303))
@@ -291,7 +324,7 @@ def emitters(T):
                              rotation=FLAT, scale=(70 + 60 * w, 70 + 60 * w, 1), scale_curve=([0, 0.12, 1], [(0.6,) * 3, (1.0,) * 3, (1.05,) * 3]),
                              color_curve=([0, 0.06, 0.4, 1], [HI + (0,), WH + (0.4 + 0.6 * w,), HI + (0.5 * w,), FLOW + (0,)]),
                              pass_=9400 + k, linger=0.3, primitive=QUAD, backface=True, **WORLD))
-        ems.append(V.emitter(f'MVB_Dust{k}', T('smoke_puff'), blend=1, single=False, rate=int(120 + 200 * w), emitter_life=0.05, delay=t,
+        ems.append(V.emitter(f'MVB_Dust{k}', T('smoke_puff'), blend=1, single=False, rate=int(70 + 120 * w), emitter_life=0.05, delay=t,
                              life=0.8, bind=0.0, pos=(0, GROUND_B + 15, 0), spawn_radius=120 + 60 * w,
                              scale=V.vvec3((24, 24, 24), rand=[(0.6, 1.4), None, None]), scale_curve=([0, 1], [(0.6,) * 3, (1.6,) * 3]),
                              velocity=V.vvec3((0, 110, 0), rand=[None, (0.4, 1.4), None]),
@@ -331,7 +364,7 @@ def emitters(T):
                          color_curve=([0, 0.2, 1], [WH + (1,), VIO + (0.8,), VIO + (0,)]), pass_=9363))
     # ---- the dive: the pool returns, an implosion on him, the impact as the ult ends
     ems.append(V.emitter('MVB_PoolEnd', T('shadow_pool'), blend=1, delay=dive - 0.2, life=BA.DIVE + 0.5, bind=1.0, ground=True,
-                         rotation=(-90, -90, 0), scale=(220, 220, 1), color_curve=fade(WH, 0.2, 0.7, 0.9), pass_=-2695, linger=0.4, **WORLD))
+                         rotation=(-90, -90, 0), scale=(220, 220, 1), color_curve=fade(WH, 0.2, 0.7, 0.55), pass_=-2695, linger=0.4, **WORLD))
     ems.append(V.emitter('MVB_Implode', T('shock_ring'), blend=4, delay=dive, life=BA.DIVE, bind=1.0, pos=(0, 110, 0), scale=(60, 60, 1),
                          scale_curve=([0, 1], [(6.0,) * 3, (0.4,) * 3]), color_curve=([0, 0.3, 1], [VIO + (0,), VIO + (1,), HI + (1,)]),
                          pass_=9370, linger=0.3))

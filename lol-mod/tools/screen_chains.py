@@ -10,7 +10,8 @@ The chain graphic is one texture, symmetric under left/right and up/down mirrori
 corner, so it sits correctly in all four corners whichever way the engine flips the texture (image u = screen
 x and v = screen z: Vi's tall 256x512 vein texture is drawn with scale (50, 90)). Timeline (YunaraR lasts 15 s, every rank):
   0.00 - 0.45  chains shoot in from the corner, spike into the screen and are yanked tight (overshoot, snap)
-  0.45 - 14.6  held taut: tugs every ~1.3 s, glow pulses, light runs along the links, sparks crackle
+  0.45 - 14.6  held taut: tugs every ~1.3 s, glow pulses, light runs along the links, sparks crackle; from ~1 s the
+               chains and the corner shade step back to 40 % / 22 % so the screen edges stay readable (clarity)
   14.6 - 15.6  flare, then the chains burst: links fly off the screen, flash in every corner
 If the ult ends early (death), everything fades out over 0.3 s (particle linger).
 """
@@ -200,14 +201,27 @@ def _pulse(base, hi, n=11, life=BURST):
     return [x / life for x in t], v
 
 
-def emitters(T, burst=BURST, glints=True, name='MVS_'):
-    """The whole overlay. burst: when the chains break (the penta uses a short version without the running light)."""
+HELD_ALPHA = 0.4                       # clarity: once yanked tight the chains step back to this, the pulses stay bright
+HELD_SHADE = 0.22
+
+
+def emitters(T, burst=BURST, glints=True, name='MVS_', fade_held=True):
+    """The whole overlay. burst: when the chains break (the penta uses a short version without the running light).
+    fade_held: after snapping tight (~1 s) the chains and the corner shade fade back so the edges of the screen stay
+    readable; they flare up again just before the burst."""
     BURST = burst
     ems = []
     corners = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
     tug = _tugs(BURST)
-    hold = ([0.0, 0.02, 0.985, 1.0], [WH + (0.0,), WH + (1.0,), WH + (1.0,), WH + (0.0,)])
-    shade = ([0.0, 0.03, 0.97, 1.0], [WH + (0.0,), WH + (0.62,), WH + (0.62,), WH + (0.0,)])
+    if fade_held and BURST > 3.0:
+        k = lambda t: t / BURST
+        hold = ([0.0, 0.02, k(0.9), k(1.5), k(BURST - 0.5), k(BURST - 0.15), 0.985, 1.0],
+                [WH + (0.0,), WH + (1.0,), WH + (1.0,), WH + (HELD_ALPHA,), WH + (HELD_ALPHA,), WH + (1.0,), WH + (1.0,), WH + (0.0,)])
+        shade = ([0.0, 0.03, k(0.9), k(1.5), k(BURST - 0.5), 0.97, 1.0],
+                 [WH + (0.0,), WH + (0.62,), WH + (0.62,), WH + (HELD_SHADE,), WH + (HELD_SHADE,), WH + (0.62,), WH + (0.0,)])
+    else:
+        hold = ([0.0, 0.02, 0.985, 1.0], [WH + (0.0,), WH + (1.0,), WH + (1.0,), WH + (0.0,)])
+        shade = ([0.0, 0.03, 0.97, 1.0], [WH + (0.0,), WH + (0.62,), WH + (0.62,), WH + (0.0,)])
     glow = _pulse(FLOW, HI, life=BURST)
     for k, (sx, sz) in enumerate(corners):
         C = (sx * HALF_W, 0.0, sz * HALF_H)

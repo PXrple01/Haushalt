@@ -218,21 +218,16 @@ def sys_recall(T, M):
 
 
 def sys_step(T, M):
+    """Clarity: a chalk mark only (no grass shreds / dust), short-lived, and only on every second step (STEP_EVERY)."""
     return [
-        V.emitter('MVG_Chalk', T('g_chalk'), blend=1, life=0.75, ground=True, rotation=V.vvec3((-90, -90, 0), rand=[None, (0.6, 1.4), None]),
+        V.emitter('MVG_Chalk', T('g_chalk'), blend=1, life=0.5, ground=True, rotation=V.vvec3((-90, -90, 0), rand=[None, (0.6, 1.4), None]),
                   scale=(15, 15, 1), color_curve=([0, 0.05, 0.5, 1], [CHALK + (0,), CHALK + (0.85,), CHALK + (0.55,), CHALK + (0,)]),
                   pass_=-2600, **WORLD),
-        V.emitter('MVG_Grass', T('g_grass'), blend=1, single=False, rate=200, emitter_life=0.05, life=0.45, bind=0.0, spawn_radius=8,
-                  scale=V.vvec3((3.2, 3.2, 3.2), rand=[(0.6, 1.3), None, None]), velocity=V.vvec3((90, 180, 90), rand=[(-1, 1), (0.4, 1), (-1, 1)]),
-                  accel=(0, -700, 0), rotation=V.vvec3((180, 0, 0), rand=[(-1, 1), None, None]), spin=V.vvec3((700, 0, 0), rand=[(-1, 1), None, None]),
-                  color_curve=([0, 0.7, 1], [GRASS + (1,), GRASS + (1,), GRASS + (0,)]), pass_=9100),
-        V.emitter('MVG_Dust', T('light_dot'), blend=4, life=0.3, bind=0.0, pos=(0, 4, 0), scale=(14, 14, 14),
-                  scale_curve=([0, 1], [(0.5,) * 3, (1.4,) * 3]), color_curve=([0, 0.2, 1], [CHALK + (0.35,), CHALK + (0.2,), CHALK + (0,)]), pass_=9101),
     ]
 
 
 def sys_qsteps(T, M):
-    return [V.emitter('MVG_QPrint', T('g_footprint'), blend=4, single=False, rate=3.2, emitter_life=-1, life=0.9, ground=True,
+    return [V.emitter('MVG_QPrint', T('g_footprint'), blend=4, single=False, rate=3.2, emitter_life=-1, life=0.6, ground=True,
                       rotation=(-90, -90, 0), scale=(13, 13, 1), pass_=-2590,
                       color_curve=([0, 0.08, 0.5, 1], [WH + (0,), WH + (0.95,), LAV + (0.7,), VIO + (0,)]), **WORLD)]
 
@@ -240,11 +235,11 @@ def sys_qsteps(T, M):
 def sys_qaura(T, M, big=False):
     s = 1.4 if big else 1.0
     return [
-        V.emitter('MVG_QWisp', T('light_streak'), blend=4, single=False, rate=16 * s, emitter_life=-1, life=0.55, spawn_radius=10 * s,
+        V.emitter('MVG_QWisp', T('light_streak'), blend=4, single=False, rate=10 * s, emitter_life=-1, life=0.55, spawn_radius=10 * s,
                   scale=V.vvec3((5 * s, 5 * s, 5 * s), rand=[(0.6, 1.3), None, None]), velocity=V.vvec3((0, 150, 0), rand=[None, (0.6, 1.4), None]),
                   drag=(1.0, 1.0, 1.0), direction_oriented=True, dir_scale=0.01,
                   color_curve=([0, 0.2, 0.6, 1], [WH + (0,), WH + (0.95,), LAV + (0.8,), VIO + (0,)]), pass_=9050),
-        V.emitter('MVG_QSpark', T('light_dot'), blend=4, single=False, rate=10 * s, emitter_life=-1, life=0.7, spawn_radius=14 * s,
+        V.emitter('MVG_QSpark', T('light_dot'), blend=4, single=False, rate=6 * s, emitter_life=-1, life=0.7, spawn_radius=14 * s,
                   scale=V.vvec3((2.2, 2.2, 2.2), rand=[(0.6, 1.4), None, None]), velocity=V.vvec3((30, 110, 30), rand=[(-1, 1), (0.5, 1.3), (-1, 1)]),
                   drag=(0.8, 0.8, 0.8), color_curve=([0, 0.15, 1], [WH + (1,), LAV + (0.9,), VIO + (0,)]), pass_=9051),
     ]
@@ -272,11 +267,11 @@ def sys_awake_aura(T, M, big=False):
     """R buff, awakened form: violet sparks and green-violet wisps rise from hair and shoulders."""
     k = 1.5 if big else 1.0
     return [
-        V.emitter('MVG_AwakeWisp', T('light_streak'), blend=4, single=False, rate=18 * k, emitter_life=-1, life=0.6, spawn_radius=12 * k,
+        V.emitter('MVG_AwakeWisp', T('light_streak'), blend=4, single=False, rate=11 * k, emitter_life=-1, life=0.6, spawn_radius=12 * k,
                   scale=V.vvec3((5.5 * k, 5.5 * k, 5.5 * k), rand=[(0.6, 1.3), None, None]), velocity=V.vvec3((0, 170, 0), rand=[None, (0.6, 1.4), None]),
                   drag=(1.0, 1.0, 1.0), direction_oriented=True, dir_scale=0.01,
                   color_curve=([0, 0.2, 0.6, 1], [VIO + (0,), LAV + (0.95,), VIO + (0.8,), HI + (0,)]), pass_=9060),
-        V.emitter('MVG_AwakeSpark', T('light_dot'), blend=4, single=False, rate=12 * k, emitter_life=-1, life=0.8, spawn_radius=16 * k,
+        V.emitter('MVG_AwakeSpark', T('light_dot'), blend=4, single=False, rate=7 * k, emitter_life=-1, life=0.8, spawn_radius=16 * k,
                   scale=V.vvec3((2.4, 2.4, 2.4), rand=[(0.6, 1.4), None, None]), velocity=V.vvec3((30, 120, 30), rand=[(-1, 1), (0.5, 1.3), (-1, 1)]),
                   drag=(0.8, 0.8, 0.8), color_curve=([0, 0.15, 1], [WH + (1,), LAV + (0.9,), VIO + (0,)]), pass_=9061),
     ]
@@ -329,7 +324,7 @@ def sys_ego_full(T, M):
                         extra_curve=([0, 0.3, 1], [HI + (0,), VIO + (0.8,), VIO + (0,)])),
             V.emitter('MVG_EgoSparks', T('light_dot'), blend=4, single=False, rate=14, emitter_life=-1, life=0.5, bind=1.0,
                       pos=(0, EGO_Y, 0), spawn_radius=30, scale=V.vvec3((2.0, 2.0, 2.0), rand=[(0.6, 1.4), None, None]),
-                      velocity=V.vvec3((0, 60, 0), rand=[None, (0.5, 1.5), None]), local_orientation=False,
+                      velocity=V.vvec3((40, 25, 40), rand=[(-1, 1), (0.5, 1.5), (-1, 1)]), local_orientation=False,
                       color_curve=([0, 0.2, 1], [WH + (1,), LAV + (0.9,), VIO + (0,)]), pass_=9703)]
 
 
@@ -383,8 +378,64 @@ def _particle_event(key, start, bones, end=None):
     return L.Struct('ParticleEventData', f, L.STRUCT)
 
 
-def install(b, g, skin_path, resolver_path, mv):
-    """b: skin bin, g: animation graph bin. Returns a summary."""
+# ------------------------------------------------------------------ Ego stages (grows over the game)
+# Stage 1 is his normal look. With every rank of his R (levels 6, 11, 16) a layer is added - Riot's
+# SpellRankIntDriver (slot 3 = R) in a FloatComparisonMaterialDriver, as Jax skin 14 uses it; operator 2 like
+# Samira's 'combo >= 6' (if the engine reads it as '==' only the newest layer shows - still a clean stage).
+#   stage 2 (R rank 1): the jersey trims and seams glow faintly green, a soft green line under the Ego meter
+#   stage 3 (R rank 2): the seams glow brighter, his boots glow green, single embers rise from his shoulders
+#   stage 4 (R rank 3): violet glowing hair tips, a violet sheen on the seams, small flat violet flames on the meter
+EGO_STAGES = (2, 3, 4)
+
+
+def _ego_glow(b, name, submesh, tex, col, alpha):
+    """Additive glow layer over his own animated mesh (Riot's attached-mesh edge glow of Yunara's Q beads as the
+    template: single endless particle, locked to the animated mesh) with a texture that is black except the glow."""
+    em = V.clone_emitter(b, PART + 'Yunara_Base_Q_Buff_OnBeads', 'ADD_EdgeGlow', name)
+    mm = em.get('primitive').get('mMesh')
+    mm.set('mSubmeshesToDraw', L.LIST, V.submesh_list([submesh])); mm.set('mLockMeshToAttachment', L.BOOL, True)
+    em.remove('texDiv')
+    em.set('texture', L.STRING, tex)
+    em.set('birthColor', L.EMBED, V.vcolor(tuple(col) + (alpha,)))
+    em.set('birthScale0', L.EMBED, V.vvec3((1.003, 1.0, 1.0)))
+    em.set('pass', L.S16, 7)
+    return em
+
+
+def sys_ego(T, M, stage, b=None, ego=None):
+    ems = []
+    ego = ego or {}
+    if stage == 2:
+        if 'egoseams' in ego:
+            ems.append(_ego_glow(b, 'MVG_Ego2Seams', 'Body', ego['egoseams'], (0.55, 1.0, 0.65), 0.35))
+        ems.append(_ego_sprite('MVG_Ego2Line', T('g_ego_flare'), 4, 9696, color=FLOW + (0.35,), scale=1.05))
+    elif stage == 3:
+        if 'egoseams' in ego:
+            ems.append(_ego_glow(b, 'MVG_Ego3Seams', 'Body', ego['egoseams'], (0.8, 1.0, 0.85), 0.3))
+        ems.append(V.emitter('MVG_Ego3Embers', T('light_dot'), blend=4, single=False, rate=2.5, emitter_life=-1, life=1.0, bind=1.0,
+                             pos=(0, 135, 0), spawn_radius=22, scale=V.vvec3((1.8, 1.8, 1.8), rand=[(0.6, 1.4), None, None]),
+                             velocity=V.vvec3((0, 70, 0), rand=[None, (0.6, 1.4), None]), local_orientation=False,
+                             color_curve=([0, 0.2, 1], [HI + (0,), HI + (0.8,), FLOW + (0,)]), pass_=9690))
+    elif stage == 4:
+        if 'egoseams' in ego:
+            ems.append(_ego_glow(b, 'MVG_Ego4Seams', 'Body', ego['egoseams'], (0.75, 0.55, 1.0), 0.25))
+        if 'egohair' in ego:
+            ems.append(_ego_glow(b, 'MVG_Ego4Hair', 'Pants', ego['egohair'], (0.8, 0.55, 1.0), 0.45))
+        ems.append(V.emitter('MVG_Ego4Flames', T('smoke_puff'), blend=4, single=False, rate=7, emitter_life=-1, life=0.4, bind=1.0,
+                             pos=(0, EGO_Y + 1, 0), spawn_radius=30, scale=V.vvec3((6, 6, 6), rand=[(0.6, 1.4), None, None]),
+                             scale_curve=([0, 1], [(1.0,) * 3, (0.3,) * 3]), velocity=V.vvec3((0, 22, 0), rand=[None, (0.5, 1.4), None]),
+                             local_orientation=False, color_curve=([0, 0.25, 1], [LAV + (0,), VIO + (0.7,), VIO + (0,)]), pass_=9697))
+    return ems
+
+
+def sys_ego_boot(T, M):
+    return [V.emitter('MVG_Ego3Boot', T('light_dot'), blend=4, life=-1, emitter_life=-1, bind=1.0, pos=(0, 4, 0), scale=(16, 16, 16),
+                      color=HI + (0.45,), local_orientation=False, pass_=9691)]
+
+
+def install(b, g, skin_path, resolver_path, mv, ego=None):
+    """b: skin bin, g: animation graph bin, ego: {'egoseams' | 'egohair': texture path} (the Ego stage glow layers).
+    Returns a summary."""
     T = lambda n: mv + 'mvfx_' + n + '.tex'
     M = lambda n: mv + 'mvfx_' + n + '.scb'
     for key, (fn, kw) in SYSTEMS.items():
@@ -395,11 +446,20 @@ def install(b, g, skin_path, resolver_path, mv):
             F('objectPath', L.HASH, L.fnv1a(path))], L.STRUCT)
         b.entries.append(L.Entry(path, st))
         V.add_resource(b, resolver_path, key, path)
+    ego_systems = {f'MV_G_Ego{k}': sys_ego(T, M, k, b, ego) for k in EGO_STAGES}
+    ego_systems['MV_G_Ego3Boot'] = sys_ego_boot(T, M)
+    for key, ems in ego_systems.items():
+        path = PART + key
+        st = L.Struct('VfxSystemDefinitionData', [
+            F('complexEmitterDefinitionData', L.LIST, L.List(L.STRUCT, ems)),
+            F('particleName', L.STRING, key), F('particlePath', L.STRING, path),
+            F('objectPath', L.HASH, L.fnv1a(path))], L.STRUCT)
+        b.entries.append(L.Entry(path, st))
+        V.add_resource(b, resolver_path, key, path)
     # Q buff: afterimage footprints + flow aura (head, shoulders, feet), same driver as Yunara's own Q effects
     q = L.fnv1a('Characters/Yunara/Spells/YunaraQAbility/YunaraQ')
     vfx = [('MV_G_QPrint', 'L_Buffbone_Glb_Foot_Loc'), ('MV_G_QPrint', 'R_Buffbone_Glb_Foot_Loc'),
-           ('MV_G_QAuraBig', 'C_Buffbone_Glb_Head_Loc'), ('MV_G_QAura', 'L_Shoulder'), ('MV_G_QAura', 'R_Shoulder'),
-           ('MV_G_QAura', 'L_Buffbone_Glb_Foot_Loc'), ('MV_G_QAura', 'R_Buffbone_Glb_Foot_Loc')]
+           ('MV_G_QAuraBig', 'C_Buffbone_Glb_Head_Loc'), ('MV_G_QAura', 'L_Shoulder'), ('MV_G_QAura', 'R_Shoulder')]
     cond = L.Struct('PersistentEffectConditionData', [
         F('OwnerCondition', L.STRUCT, L.Struct('HasBuffDynamicMaterialBoolDriver', [F('Spell', L.HASH, q)], L.STRUCT)),
         F('PersistentVfxs', L.LIST2, L.List(L.EMBED, [L.Struct('PersistentVfxData', [F('boneName', L.STRING, bone), F('effectKey', L.HASH, L.fnv1a(k))], L.EMBED)
@@ -432,6 +492,21 @@ def install(b, g, skin_path, resolver_path, mv):
                                                                 pvfx([(f'MV_G_EgoPip{k}', 'C_Buffbone_Glb_Layout_Loc')])], L.STRUCT))
     conds.append(L.Struct('PersistentEffectConditionData', [F('OwnerCondition', L.STRUCT, bead_alive(8)),
                                                             pvfx([('MV_G_EgoFull', 'C_Buffbone_Glb_Layout_Loc')])], L.STRUCT))
+
+    # Ego stages: R rank >= stage - 1, while alive
+    def r_rank_at_least(n):
+        return L.Struct('FloatComparisonMaterialDriver', [
+            F('mValueA', L.STRUCT, L.Struct('SpellRankIntDriver', [F('SpellSlot', L.U32, 3)], L.STRUCT)),
+            F('mValueB', L.STRUCT, L.Struct('FloatLiteralMaterialDriver', [F('mValue', L.F32, float(n))], L.STRUCT)),
+            F('mOperator', L.U32, 2)], L.STRUCT)
+    for k in EGO_STAGES:
+        items = [(f'MV_G_Ego{k}', 'C_Buffbone_Glb_Layout_Loc')]
+        if k == 3:
+            items += [('MV_G_Ego3Boot', 'L_Buffbone_Glb_Foot_Loc'), ('MV_G_Ego3Boot', 'R_Buffbone_Glb_Foot_Loc')]
+        conds.append(L.Struct('PersistentEffectConditionData', [
+            F('OwnerCondition', L.STRUCT, L.Struct('AllTrueMaterialDriver', [F('mDrivers', L.LIST, L.List(L.STRUCT, [
+                r_rank_at_least(k - 1), not_dead()]))], L.STRUCT)),
+            pvfx(items)], L.STRUCT))
     # animation events
     cm = g.entries[0].struct.field('mClipDataMap').value
     by = {k: c for k, c in cm.items}
@@ -448,10 +523,11 @@ def install(b, g, skin_path, resolver_path, mv):
             f = c.field('mEventDataMap')
         f.value.items.append((L.fnv1a(name), ev)); n += 1
     add('recall', 'MV_G_Recall', _particle_event('MV_G_Recall', 1, ['C_Buffbone_Glb_Layout_Loc'], end=RECALL_FRAMES - 1))
-    for clip, sides in STEPS.items():
+    for clip, sides in STEPS.items():                # clarity: chalk marks on every second step of each foot only
         for side, frames in sides.items():
             for k, fr in enumerate(frames):
-                add(clip, f'MV_G_Step_{side}{k}', _particle_event('MV_G_Step', fr, [f'{side}_Buffbone_Glb_Foot_Loc']))
+                if k % 2 == 0:
+                    add(clip, f'MV_G_Step_{side}{k}', _particle_event('MV_G_Step', fr, [f'{side}_Buffbone_Glb_Foot_Loc']))
     for clip in ('run_base', 'run_slow'):            # dribble: the ball is touched at every foot contact
         for side, frames in STEPS[clip].items():
             for k, fr in enumerate(frames):
@@ -459,4 +535,4 @@ def install(b, g, skin_path, resolver_path, mv):
     add('respawn', 'MV_G_Respawn', _particle_event('MV_G_Respawn', 0, ['C_Buffbone_Glb_Layout_Loc']))
     add('death', 'MV_G_Death', _particle_event('MV_G_Death', 2, ['C_Buffbone_Glb_Head_Loc']))
     add('death', 'MV_G_DeathGround', _particle_event('MV_G_DeathGround', 2, ['C_Buffbone_Glb_Layout_Loc']))
-    return f'{len(SYSTEMS)} systems, {n} clip events, Q aura on 7 bones, R awakened aura, Ego meter (9 conditions)'
+    return f'{len(SYSTEMS)} systems, {n} clip events, Q aura on head + shoulders, R awakened aura, Ego meter (9 conditions), Ego stages 2-4 on the R rank'

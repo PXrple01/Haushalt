@@ -5,6 +5,7 @@ via skinMeshProperties.materialOverride) and shows it while the R buff is on (Pe
 SubmeshesToShow, like the Metavision eyes).
 
   python3 awakened.py [slot]   -> assets_src/char/<slot>_awake.png + <slot>_awake.npz (triangle ids)
+                                 + <slot>_egoseams.png / <slot>_egohair.png (glow layers of the Ego stages)
 """
 import json
 import os
@@ -17,6 +18,7 @@ from scipy.ndimage import binary_dilation, gaussian_filter
 HERE = os.path.dirname(os.path.abspath(__file__))
 CHAR = os.path.join(HERE, '..', '..', 'assets_src', 'char')
 GLOW = np.array([0.80, 0.52, 1.00]); CORE = np.array([0.97, 0.90, 1.00]); BAND = np.array([0.30, 0.10, 0.55])
+EGO_GREEN = np.array([0.35, 1.00, 0.55])
 
 
 def pos_map(P, uv, T, size):
@@ -102,6 +104,16 @@ def main():
     changed = (glow > 0.05) | band
     awake = Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8))
     awake.save(os.path.join(CHAR, f'{slot}_awake.png'))
+    # Ego stages (general_fx.py): additive glow layers drawn over his own mesh - black everywhere except the jersey
+    # trims and seams (green) and the hair tips (violet); rgb premultiplied by the mask, alpha = mask
+    seam_m = gaussian_filter(np.maximum(violet * 0.85, seam * 1.0).astype(np.float32), 1.2)
+    seam_m = np.clip(seam_m * 1.6, 0, 1)
+    hair_m = np.zeros_like(seam_m)
+    if hair.any():
+        hair_m = gaussian_filter((hair * smoothstep(lo, hi, rr)).astype(np.float32), 1.0)
+    for name, m, c in (('egoseams', seam_m, EGO_GREEN), ('egohair', hair_m, GLOW)):
+        rgba = np.dstack([c[None, None, :] * m[..., None], m])
+        Image.fromarray((np.clip(rgba, 0, 1) * 255).astype(np.uint8), 'RGBA').save(os.path.join(CHAR, f'{slot}_{name}.png'))
     # triangles that touch a changed texel (corners + centroid, mask dilated by 3 texels)
     m = binary_dilation(changed, iterations=3)
     pts = np.concatenate([uv[T], uv[T].mean(1, keepdims=True)], 1)

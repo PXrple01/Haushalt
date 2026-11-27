@@ -128,16 +128,16 @@ def sys_quadra(T, M):
                   color_curve=([0, 0.3, 1], [WH + (0,), LAV + (0.9,), VIO + (0,)]), pass_=9241),
         # the Ego meter above his head blazes up violet
         V.emitter('MVK_QEgoBlaze', T('g_ego_flare'), blend=4, delay=d + 0.15, life=2.6, bind=1.0, pos=(0, G.EGO_Y, 0), uniform=False,
-                  scale=(36 * 1.5, 9 * 1.5, 1), scale_curve=([0, 0.08, 0.2, 1], [(0.6, 0.6, 1), (1.4, 1.6, 1), (1.15, 1.2, 1), (1.1, 1.1, 1)]),
+                  scale=(36 * 1.3, 9 * 1.2, 1), scale_curve=([0, 0.08, 0.2, 1], [(0.6, 0.6, 1), (1.25, 1.15, 1), (1.1, 1.0, 1), (1.05, 1.0, 1)]),
                   color_curve=([0, 0.06, 0.2, 0.85, 1], [VIO + (0,), WH + (1,), VIO + (0.95,), VIO + (0.85,), VIO + (0,)]),
                   pass_=9710, **WORLD),
-        V.emitter('MVK_QEgoFlames', T('smoke_puff'), blend=4, single=False, rate=26, emitter_life=2.4, delay=d + 0.15, life=0.7,
-                  bind=1.0, pos=(0, G.EGO_Y + 6, 0), spawn_radius=34, scale=V.vvec3((12, 12, 12), rand=[(0.6, 1.4), None, None]),
-                  scale_curve=([0, 1], [(1.0,) * 3, (0.3,) * 3]), velocity=V.vvec3((0, 90, 0), rand=[None, (0.6, 1.5), None]),
+        V.emitter('MVK_QEgoFlames', T('smoke_puff'), blend=4, single=False, rate=22, emitter_life=2.4, delay=d + 0.15, life=0.45,
+                  bind=1.0, pos=(0, G.EGO_Y + 2, 0), spawn_radius=36, scale=V.vvec3((8, 8, 8), rand=[(0.6, 1.4), None, None]),
+                  scale_curve=([0, 1], [(1.0,) * 3, (0.3,) * 3]), velocity=V.vvec3((0, 30, 0), rand=[None, (0.6, 1.5), None]),
                   color_curve=([0, 0.2, 1], [LAV + (0,), VIO + (0.9,), VIO + (0,)]), pass_=9711),
         V.emitter('MVK_QEgoSparks', T('light_dot'), blend=4, single=False, rate=30, emitter_life=2.4, delay=d + 0.15, life=0.6,
                   bind=1.0, pos=(0, G.EGO_Y, 0), spawn_radius=40, scale=V.vvec3((2.2, 2.2, 2.2), rand=[(0.6, 1.4), None, None]),
-                  velocity=V.vvec3((30, 110, 30), rand=[(-1, 1), (0.5, 1.5), (-1, 1)]),
+                  velocity=V.vvec3((60, 35, 60), rand=[(-1, 1), (0.5, 1.5), (-1, 1)]),
                   color_curve=([0, 0.2, 1], [WH + (1,), LAV + (0.9,), VIO + (0,)]), pass_=9712),
     ]
     return ems
@@ -156,16 +156,16 @@ def sys_penta(T, M):
     drive = ([0, nt(0.35), nt(bl - 0.5), 1], [1.0, 0.0, 0.0, 0.9])
     ems = [
         V.emitter('MVK_PBeast', T('beast_skin2'), blend=1, delay=d, life=bl, bind=1.0, primitive=anim, scale=(1, 1, 1),
-                  backface=True, pass_=9450, color_curve=([0, 0.01, 0.8, 1], [WH + (0,), (0.9, 0.85, 1.0, 0.85), (0.9, 0.85, 1.0, 0.85), VIO + (0,)]),
-                  extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.45, 0.25, 0.9)), **WORLD),
+                  backface=True, pass_=9450, color_curve=([0, 0.01, 0.8, 1], [WH + (0,), (0.9, 0.85, 1.0, 0.75), (0.9, 0.85, 1.0, 0.75), VIO + (0,)]),
+                  extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.6, 0.35, 1.0)), **WORLD),
         V.emitter('MVK_PBeastGlow', T('beast_glow'), blend=4, delay=d, life=bl, bind=1.0, primitive=anim, scale=(1.01, 1.01, 1.01),
                   backface=True, pass_=9451,
                   color_curve=([0, nt(roar - 0.1), nt(roar), nt(roar + 0.4), nt(shout), nt(shout + 0.5), 1],
                                [HI + (0.3,), HI + (0.6,), WH + (1,), HI + (0.6,), WH + (1,), HI + (0.6,), VIO + (0,)]),
                   extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.1, 0.5, 0.25)), **WORLD),
-        V.emitter('MVK_PPool', T('shadow_pool'), blend=1, delay=d, life=bl + 0.3, bind=1.0, ground=True, rotation=(-90, -90, 0),
+        V.emitter('MVK_PPool', T('shadow_ring'), blend=1, delay=d, life=bl + 0.3, bind=1.0, ground=True, rotation=(-90, -90, 0),
                   scale=(520, 520, 1), scale_curve=([0, 0.1, 1], [(0.2,) * 3, (1.0,) * 3, (1.0,) * 3]),
-                  color_curve=fade(WH, 0.05, 0.85, 0.55), pass_=-2650, **WORLD),
+                  color_curve=fade(WH, 0.05, 0.85, 0.85), pass_=-2650, **WORLD),
     ]
     for j in range(3):
         for k, (t, col) in enumerate(((roar, HI), (shout, VIO))):
@@ -178,25 +178,25 @@ def sys_penta(T, M):
     # the golden trophy of light rises above him, turning, in a gold glow with rays
     td = d + 0.9
     ems += [
-        V.emitter('MVK_PTrophyGlow', T('mk_gold_glow'), blend=4, delay=td, life=3.4, bind=1.0, pos=(0, 410, 0), scale=(210, 210, 1),
+        V.emitter('MVK_PTrophyGlow', T('mk_gold_glow'), blend=4, delay=td, life=3.4, bind=1.0, pos=(0, 640, 0), scale=(210, 210, 1),
                   scale_curve=([0, 0.1, 0.5, 1], [(0.2,) * 3, (1.2,) * 3, (1.0,) * 3, (1.1,) * 3]),
                   color_curve=([0, 0.08, 0.3, 0.8, 1], [GOLD + (0,), GOLD_HI + (1,), GOLD + (0.5,), GOLD + (0.45,), GOLD + (0,)]), pass_=9460),
         V.emitter('MVK_PTrophy', T('mk_gold'), blend=1, delay=td, life=3.4, bind=1.0, mesh=M('mk_trophy'), scale=(1.5, 1.5, 1.5),
-                  backface=True, pos=(0, 240, 0), velocity=(0, 140, 0), drag=(2.2, 2.2, 2.2),
+                  backface=True, pos=(0, 470, 0), velocity=(0, 140, 0), drag=(2.2, 2.2, 2.2),
                   spin=(0, 110, 0), scale_curve=([0, 0.12, 1], [(0.1,) * 3, (1.0,) * 3, (1.0,) * 3]),
                   color_curve=([0, 0.06, 0.85, 1], [GOLD_HI + (0,), WH + (1,), WH + (1,), WH + (0,)]), pass_=9461, **WORLD),
         V.emitter('MVK_PTrophyShine', T('mk_gold'), blend=4, delay=td, life=3.4, bind=1.0, mesh=M('mk_trophy'), scale=(1.53, 1.53, 1.53),
-                  backface=True, pos=(0, 240, 0), velocity=(0, 140, 0), drag=(2.2, 2.2, 2.2),
+                  backface=True, pos=(0, 470, 0), velocity=(0, 140, 0), drag=(2.2, 2.2, 2.2),
                   spin=(0, 110, 0), scale_curve=([0, 0.12, 1], [(0.1,) * 3, (1.0,) * 3, (1.0,) * 3]),
                   color_curve=([0, 0.06, 0.2, 1], [GOLD_HI + (0,), GOLD_HI + (0.8,), GOLD + (0.08,), GOLD + (0,)]),
                   pass_=9462, **WORLD),
         V.emitter('MVK_PTrophySparks', T('light_dot'), blend=4, single=False, rate=40, emitter_life=3.0, delay=td + 0.2, life=0.9,
-                  bind=1.0, pos=(0, 420, 0), spawn_radius=90, scale=V.vvec3((2.4, 2.4, 2.4), rand=[(0.6, 1.4), None, None]),
+                  bind=1.0, pos=(0, 650, 0), spawn_radius=90, scale=V.vvec3((2.4, 2.4, 2.4), rand=[(0.6, 1.4), None, None]),
                   velocity=V.vvec3((50, 60, 50), rand=[(-1, 1), (-0.5, 1.5), (-1, 1)]), drag=(0.8, 0.8, 0.8),
                   color_curve=([0, 0.2, 1], [WH + (1,), GOLD_HI + (0.9,), GOLD + (0,)]), pass_=9463),
     ]
     # stadium camera flashes all around
-    for k, (rad, y, rate) in enumerate(((520, 220, 26), (760, 320, 22), (380, 160, 14))):
+    for k, (rad, y, rate) in enumerate(((520, 220, 16), (760, 320, 12), (380, 160, 8))):
         ems.append(V.emitter(f'MVK_PFlash{k}', T('flash_star'), blend=4, single=False, rate=rate, emitter_life=3.6, delay=d + 0.6,
                              life=0.14, bind=0.0, pos=(0, y, 0), spawn_radius=rad,
                              scale=V.vvec3((16, 16, 16), rand=[(0.5, 1.4), None, None]),
@@ -207,7 +207,7 @@ def sys_penta(T, M):
 
 def sys_penta_screen(T):
     """Owner's screen: the corner chains shoot in, snap tight and burst (screen_chains' timeline, compressed)."""
-    return SC.emitters(T, burst=SCREEN_BURST, glints=False, name='MVK_S')
+    return SC.emitters(T, burst=SCREEN_BURST, glints=False, name='MVK_S', fade_held=False)
 
 
 SYSTEMS = {QUADRA[1]: sys_quadra, PENTA[1]: sys_penta}

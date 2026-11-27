@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.12.0'
+VERSION = '0.13.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -42,6 +42,8 @@ CHAR = os.path.join(ROOT, 'assets_src', 'char')
 STRIKER_TEX = 'assets/characters/yunara/skins/base/mvfx_striker_tx_cm.tex'
 AWAKE_TEX = 'assets/characters/yunara/skins/base/mvfx_striker_awake_tx_cm.tex'
 AWAKE_OFFSET = 0.06                     # the awakened overlay sits this far out along the normal
+EGO_TEX = {'egoseams': 'assets/characters/yunara/skins/base/mvfx_striker_egoseams_tx_cm.tex',   # Ego stages (general_fx)
+           'egohair': 'assets/characters/yunara/skins/base/mvfx_striker_egohair_tx_cm.tex'}
 # which model sits in the slot (see tools/char/import_model.py); default: the original striker
 _slot_cfg = os.path.join(CHAR, 'model.json')
 MODEL_SLOT = json.load(open(_slot_cfg))['model'] if os.path.exists(_slot_cfg) else 'striker2'
@@ -423,6 +425,15 @@ def step_character(b):
         new_v.append(av); new_i.append(ai + vcount); vcount += len(av); icount += len(ai)
         put_tex(AWAKE_TEX, Image.open(os.path.join(CHAR, f'{slot}_awake.png')))
         STATE['awake'] = True
+    for name, path in EGO_TEX.items():        # glow layers of the Ego stages, laid out like the body atlas
+        src = os.path.join(CHAR, f'{slot}_{name}.png')
+        if os.path.exists(src):
+            im = Image.open(src).convert('RGBA')
+            im = im.resize((im.width // 2, im.height // 2), Image.LANCZOS)     # soft glow: half resolution is plenty
+            if FACES is not None:
+                both = Image.new('RGBA', (im.width * 2, im.height), (0, 0, 0, 0)); both.paste(im, (0, 0)); im = both
+            put_tex(path, im)
+            STATE.setdefault('ego', {})[name] = path
     for m in s.submeshes:                     # dragon head, tail and the football beads stay
         if m['name'] in ('Body', 'Pants'):
             continue
@@ -749,7 +760,7 @@ def step_general(b, game):
     raw = files.get(ANIM_BIN) or open(os.path.join(game, ANIM_BIN), 'rb').read()
     g = L.read(raw)
     n0 = len(b.entries)
-    msg = G.install(b, g, SKIN, RES, MV)
+    msg = G.install(b, g, SKIN, RES, MV, STATE.get('ego') or {})
     data = L.write(g); L.read(data)
     files[ANIM_BIN] = data
     pack_used_gen([e.struct for e in b.entries[n0:]])
@@ -782,6 +793,44 @@ def step_screen_chains(b):
         put_tex(MV + 'mvfx_' + n + '.tex', im)
     n = SC.install(b, SKIN, RES, R_SPELL)
     return f'{n} emitters, camera-bound + owner-only on the R buff'
+
+
+def _is_warning_red(c):
+    return c is not None and c[0] >= 0.9 and c[1] <= 0.15 and c[2] <= 0.15
+
+
+def step_enemy_warnings(b, game):
+    """Clarity: Riot shows enemies their own version of some effects (the W missile and its lingering zone have
+    *_Enemy_POV systems) with a pure red ground symbol / circle as a warning. The recolor turned those green; here the
+    red warning colours come back exactly as Riot made them (only those emitters, the rest keeps the flow look)."""
+    riot = L.read(os.path.join(game, 'data/characters/yunara/skins/skin0.bin'))
+    fixed = []
+    for e in riot.entries:
+        s_ = e.struct
+        if s_ is None or not s_.is_type('VfxSystemDefinitionData') or 'nemy' not in str(s_.get('particleName')):
+            continue
+        ours = b.entry(e.path_hash)
+        if ours is None:
+            continue
+        for em in s_.get('complexEmitterDefinitionData').items:
+            reds = []
+            for key in ('birthColor', 'Color'):
+                v = em.get(key)
+                if isinstance(v, L.Struct):
+                    vals = [v.get('constantValue')] + (list(v.get('dynamics').get('values').items) if v.get('dynamics') else [])
+                    reds.append(any(_is_warning_red(c) for c in vals))
+            if not any(reds):
+                continue
+            mine = V.find_emitter(ours.struct, em.get('emitterName'))
+            if mine is None:
+                continue
+            import copy
+            for key in ('birthColor', 'Color'):
+                f = em.field(key)
+                if f is not None:
+                    mine.set(key, f.type, copy.deepcopy(f.value))
+            fixed.append(f"{s_.get('particleName')}/{em.get('emitterName')}")
+    return f'{len(fixed)} enemy warning emitters back to Riot red: ' + ', '.join(fixed)
 
 
 def step_prune(b):
@@ -1015,6 +1064,7 @@ def main(game, variant='full'):
         print('general moments    :', step_general(b, game))
         print('multikills         :', step_multikill(b, game))
     if fx:
+        print('enemy warnings     :', step_enemy_warnings(b, game))
         print('prune              :', step_prune(b))
     data = L.write(b)
     L.read(data)                                              # sanity: must parse again

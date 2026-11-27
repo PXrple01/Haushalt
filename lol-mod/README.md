@@ -3,13 +3,15 @@
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
 Alle neuen Grafiken (Fußball, Ketten, Ego-Bestie, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.12.0 enthält
+## Was Version 0.13.0 enthält
 
 | Teil | Änderung |
 |---|---|
-| Ego-Bestie als Schattenkörper (neu in v0.12) | das Biest **gleitet nicht mehr über den Boden** (seine Füße standen vorher ~120 Einheiten über dem Boden, nur der Schwanz berührte ihn): es ist jetzt ein **schwebender Schattenkörper** – die Beine lösen sich ab den Oberschenkeln in Rauch auf (Rand glimmt violett-grün), violett schimmernder Rauch zieht unter ihm, ein Schattenpool liegt unter beiden. Es schwebt mit leichtem Auf und Ab, gleitet zur Seite und **neigt sich dabei in die Bewegung**. **Schwere Arme**: die Arme werden physikalisch nachgezogen (hängen schwer, schwingen nach und pendeln aus). **Gewicht**: bei jedem Schlag (Brüllen, Brusttrommeln, Aufschlagen, Klauenhieb, Schrei) sackt der ganze Körper ein und federt zurück, und unter ihm läuft ein **Bodenstoß** – Schockring, glühende Risse, aufgewirbelter Staub, bei den großen Schlägen zusätzlich ein Ring auf dem echten Boden |
-| Quadrakill (neu in v0.12) | **3,5 s nach dem 4. Kill** (falls noch ein Penta folgt, erscheint er gar nicht): ein violetter Flutlichtkegel fällt von hoch oben auf ihn, seine Ego-Anzeige lodert violett auf (Flammen, Funken) |
-| Pentakill (neu in v0.12) | die **Ego-Bestie erscheint riesig** weit hinter ihm, bäumt sich auf und brüllt (Schockringe, Bodenstoß), ein **goldener Pokal aus Licht** steigt über ihm auf und dreht sich, **Blitzlichter wie im Stadion** rundherum, und auf **deinem Bildschirm** schießen Ketten in die Ecken und **zerspringen** (nur du siehst sie). Nie Quadra und Penta übereinander: der Penta ersetzt den noch wartenden Quadra-Effekt |
+| Ego-Stufen (neu in v0.13) | sein Aussehen wächst mit dem Spiel – gekoppelt an den Rang seiner R (Level 6 / 11 / 16), wie Riot es bei Jax Skin 14 macht. **Stufe 1** (Level 1–5) = die bisherige Grundform. **Stufe 2**: Trikot-Säume und -Nähte glimmen grün, grüne Linie unter der Ego-Anzeige. **Stufe 3**: die Säume leuchten heller, die Schuhe glühen grün, einzelne Funken steigen von den Schultern. **Stufe 4**: violett leuchtende Haarspitzen, violetter Schimmer auf den Nähten, kleine flache Flammen an der Ego-Anzeige. Das Leuchten ist eine additive Ebene über seinem eigenen Modell (Riots „Attached Mesh“-Glühen) – keine zusätzliche Geometrie. Vorschau: `previews/ego_stages_v0.13.png` |
+| Übersicht im Kampf (neu in v0.13) | **Schattenpool → Ring**: unter der Ult liegt kein dunkler Fleck mehr, nur ein dünner violett-grüner Ring mit leichtem Nebel – gegnerische Bodenmarkierungen bleiben lesbar (auch beim Penta). **Bestie durchsichtig**: nach dem Aufsteigen 60 % deckend mit heller Kontur, nur bei ihren Schlägen kurz voll sichtbar. **Bildschirm-Ketten**: nach dem Festziehen auf 40 % (Ecken-Abdunklung auf 22 %), die Lichtpulse bleiben hell, vor dem Zerspringen wieder voll. **Pokal** steigt jetzt oberhalb der Lebensleiste auf, die **Quadra-Flamme** an der Ego-Anzeige bleibt flach. **Rote Gegner-Warnung zurück**: Riot zeigt Gegnern beim W ein rotes Bodensymbol und einen roten Kreis (eigene „Enemy POV“-Effekte) – das Umfärben hatte sie grün gemacht, jetzt sind sie wieder rot. **Weniger Kleinkram**: Kreide-Spuren nur noch bei jedem zweiten Schritt und ohne Rasenfetzen/Staub, Q-Aura nur an Kopf und Schultern, alle Auren, Rauch, Funken, Staub und Penta-Blitzlichter mit deutlich weniger Partikeln |
+| Ego-Bestie als Schattenkörper (v0.12) | das Biest **gleitet nicht mehr über den Boden** (seine Füße standen vorher ~120 Einheiten über dem Boden, nur der Schwanz berührte ihn): es ist jetzt ein **schwebender Schattenkörper** – die Beine lösen sich ab den Oberschenkeln in Rauch auf (Rand glimmt violett-grün), violett schimmernder Rauch zieht unter ihm, ein Schattenpool liegt unter beiden. Es schwebt mit leichtem Auf und Ab, gleitet zur Seite und **neigt sich dabei in die Bewegung**. **Schwere Arme**: die Arme werden physikalisch nachgezogen (hängen schwer, schwingen nach und pendeln aus). **Gewicht**: bei jedem Schlag (Brüllen, Brusttrommeln, Aufschlagen, Klauenhieb, Schrei) sackt der ganze Körper ein und federt zurück, und unter ihm läuft ein **Bodenstoß** – Schockring, glühende Risse, aufgewirbelter Staub, bei den großen Schlägen zusätzlich ein Ring auf dem echten Boden |
+| Quadrakill (v0.12) | **3,5 s nach dem 4. Kill** (falls noch ein Penta folgt, erscheint er gar nicht): ein violetter Flutlichtkegel fällt von hoch oben auf ihn, seine Ego-Anzeige lodert violett auf (Flammen, Funken) |
+| Pentakill (v0.12) | die **Ego-Bestie erscheint riesig** weit hinter ihm, bäumt sich auf und brüllt (Schockringe, Bodenstoß), ein **goldener Pokal aus Licht** steigt über ihm auf und dreht sich, **Blitzlichter wie im Stadion** rundherum, und auf **deinem Bildschirm** schießen Ketten in die Ecken und **zerspringen** (nur du siehst sie). Nie Quadra und Penta übereinander: der Penta ersetzt den noch wartenden Quadra-Effekt |
 | So erkennt der Skin Multikills | wie Riot es selbst macht (gefunden in Riots Daten): Yunaras „Kontext-Aktionen“ haben schon eine Pentakill-Regel (Sprachausgabe, wie bei Samira); eine Regel kann auch eine Animation starten (Xayah/Rakan). Wir starten eine **unsichtbare Träger-Animation** auf einer eigenen Spur mit Null-Gewichten (wie Master Yis Wuju-Spuren) – sie bewegt nichts und unterbricht weder Laufen noch Angriffe, löst aber den Effekt aus. Kommt der Penta, ersetzt sein Träger-Clip den des Quadra, und der noch wartende Quadra-Effekt wird mit ihm beendet |
 | Ego-Bestie lebendiger (v0.11) | das Biest steht nicht mehr steif da: es **schleicht** hinter ihm nach links und rechts hin und her (echter Lauf-Zyklus, dreht sich weich in die Laufrichtung und wieder zurück), **atmet** sichtbar (Brustkorb hebt sich, Hüfte federt), **sieht sich um** (Kopf und Hals drehen und neigen sich), wiegt Schultern und Arme leicht – auch während der Aktionen läuft eine leichte Grundbewegung weiter. Die Adern **pulsieren wie ein Herzschlag**, dunkler Rauch umhüllt es und grüne Glut steigt auf. Die Ausrichtung bleibt fest in der Welt: dreht er sich, dreht sich das Biest nicht mit |
 | Die Ult: Ego-Bestie (v0.10) | die Ego-Bestie ist jetzt **die** Ult (alle anderen Ult-Vorschläge sind entfernt). Beim Drücken von R zerspringen die Ketten um seinen Körper, das Biest kriecht hinter ihm aus einem Schattenpool und **bleibt die ganzen 15 Sekunden hinter ihm**: es folgt ihm überallhin, dreht sich aber nie mit, wenn er sich dreht. Dabei verhält es sich wie ein Biest – 12 Bewegungen aus Meshys Katalog zu einer Choreografie verbunden: brüllen (die Ketten an seinen Klauen zerspringen), geduckt lauern und sich umsehen, auf die Brust trommeln, schwer atmen, aufstampfen (Schockwellen + Staub), Klauenhieb, mit ausgebreiteten Armen brüllen, wieder stampfen – zum Ult-Ende stürzt es sich kopfüber in ihn, genau wenn die Bildschirm-Ketten zerspringen |
@@ -51,7 +53,7 @@ Alle neuen Grafiken (Fußball, Ketten, Ego-Bestie, Spielfeld-Linien) sind selbst
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.12.0.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.13.0.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
 
@@ -78,10 +80,12 @@ Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risik
 
 ## Vorschau
 
+![Ego-Stufen (v0.13)](previews/ego_stages_v0.13.png)
+
 ![Neues Ladebild (v0.8)](previews/loadscreen_v0.8.png)
 
-Vorschauvideos (Simulation): `build/Ult_Ego-Bestie_v0.12.mp4` (die ganze Ult, 16 s: er läuft und dreht sich, das Biest
-bleibt als schwebender Schattenkörper hinter ihm), `Multikills_v0.12.mp4` (Quadra; Quadra + Penta 2 s später), `Extras_v0.9.mp4` (Dribbeln, Ego-Anzeige, erwachte Form, Recall, Respawn, Tod) und
+Vorschauvideos (Simulation): `build/Ult_Ego-Bestie_v0.13.mp4` (die ganze Ult, 16 s: er läuft und dreht sich, das Biest
+bleibt als schwebender Schattenkörper hinter ihm), `Multikills_v0.13.mp4` (Quadra; Quadra + Penta 2 s später), `Extras_v0.9.mp4` (Dribbeln, Ego-Anzeige, erwachte Form, Recall, Respawn, Tod) und
 `Mimik_Blinzeln_v0.9.mp4`.
 
 ![Ladebildschirm](previews/striker_v0.6_loadscreen.png)
@@ -148,7 +152,8 @@ Stürmers um. Riots Dateien landen nie im Repository.
 - `tools/lolrig.py` – schreibt Skelette (`.skl`) und Animationen (`.anm` v4) im Riot-Layout; `tools/animmesh.py` liest sie
   für die Vorschau; `tools/beast_anim.py` + `tools/char/beast_extract.py` – Meshy-Biest (Rig + 13 Bewegungen inkl. Laufen) → animiertes
   Effekt-Modell mit 15-s-Choreografie (Schweben, Gleiten mit Neigung, Atmen/Umsehen, schwere Arme als Feder-Simulation, Einsacken bei Schlägen) + kurzer Penta-Auftritt; `tools/char/beast_video.py` – Vorschauvideo der ganzen Ult
-- `tools/char/awakened.py` – Textur der erwachten Form + Liste der betroffenen Dreiecke
+- `tools/char/awakened.py` – Textur der erwachten Form + Liste der betroffenen Dreiecke, dazu die Leucht-Ebenen der
+  Ego-Stufen (Säume/Nähte, Haarspitzen); `tools/char/ego_stages.py` – Vorschaubild der vier Stufen
 - `tools/char/anim_check.py` – Kontrolllauf aller Animationen (Gelenk-Verdrehung, Falten/Quetschungen);
   `tools/char/face_video.py` – Video Mimik + Blinzeln
 - `tools/check_package.py` – prüft ein fertiges Paket: WAD-Sortierung + Prüfsummen, Bins gegen das Klassenschema und
