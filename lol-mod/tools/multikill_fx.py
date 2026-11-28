@@ -145,9 +145,8 @@ def sys_quadra(T, M):
 
 def sys_penta(T, M):
     d = PENTA_DELAY
-    anim = L.Struct('VfxPrimitiveMesh', [F('mMesh', L.EMBED, L.Struct('VfxMeshDefinitionData', [
-        F('mMeshName', L.STRING, UB.BEAST_BASE + '.skn'), F('mMeshSkeletonName', L.STRING, UB.BEAST_BASE + '.skl'),
-        F('mAnimationName', L.STRING, UB.BEAST_BASE + '_penta.anm')], L.EMBED))], L.STRUCT)
+    anim = UB.mesh_prim('.skn', '_penta.anm')
+    tail = UB.mesh_prim('_tail.skn', '_penta.anm')
     bl = BA.PENTA_LENGTH
     nt = lambda t: min(max(t / bl, 0.0), 1.0)
     roar, shout = [t for t, _ in BA.penta_impacts()]
@@ -163,6 +162,12 @@ def sys_penta(T, M):
                   color_curve=([0, nt(roar - 0.1), nt(roar), nt(roar + 0.4), nt(shout), nt(shout + 0.5), 1],
                                [HI + (0.3,), HI + (0.6,), WH + (1,), HI + (0.6,), WH + (1,), HI + (0.6,), VIO + (0,)]),
                   extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.1, 0.5, 0.25)), **WORLD),
+        V.emitter('MVK_PTail', T('beast_tail'), blend=1, delay=d, life=bl, bind=1.0, primitive=tail, scale=(1, 1, 1),
+                  backface=True, pass_=9448, color_curve=([0, 0.01, 0.8, 1], [WH + (0,), WH + (0.8,), WH + (0.8,), VIO + (0,)]),
+                  extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.5, 0.3, 0.9)), **WORLD),
+        V.emitter('MVK_PTailWisps', T('beast_tailglow'), blend=4, delay=d, life=bl, bind=1.0, primitive=tail, scale=(1.01, 1.01, 1.01),
+                  backface=True, pass_=9449, color_curve=([0, 0.1, 0.8, 1], [HI + (0,), WH + (0.9,), WH + (0.9,), VIO + (0,)]),
+                  extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.05, 0.3, 0.15)), **WORLD),
         V.emitter('MVK_PPool', T('shadow_ring'), blend=1, delay=d, life=bl + 0.3, bind=1.0, ground=True, rotation=(-90, -90, 0),
                   scale=(520, 520, 1), scale_curve=([0, 0.1, 1], [(0.2,) * 3, (1.0,) * 3, (1.0,) * 3]),
                   color_curve=fade(WH, 0.05, 0.85, 0.85), pass_=-2650, **WORLD),

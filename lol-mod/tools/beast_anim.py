@@ -19,6 +19,16 @@ HEIGHT = 430.0                     # standing height in League units (the strike
 BEHIND = 160.0                     # starts this far behind him (+z)
 C = np.array([[-1.0, 0, 0], [0, 0, 1.0], [0, 1.0, 0]])
 ROOT = 'MV_BeastRoot'
+CUT_LEGW = 0.45                    # triangles following the legs more than this are cut away (ghost: no legs)
+TAIL_JOINTS = 8
+TAIL_RINGS, TAIL_SEG = 40, 18
+TAIL_R0 = 58.0                     # tail radius at the hips (wraps the cut)
+
+
+def tail_curve(s):
+    """Rest shape of the smoke tail (bind space, the beast faces -z = the camera): from the hips down in an S-curve,
+    swinging a little towards the camera so League's top-down view sees it below the body instead of behind it."""
+    return np.array([30.0 * math.sin(s * math.pi * 1.4), 268.0 - 190.0 * s + 20.0 * s ** 3, 20.0 - 70.0 * s ** 1.3])
 
 
 class Beast:
@@ -42,6 +52,67 @@ class Beast:
                 g = np.array([[self.conv(m) for m in fr] for fr in d[k]])
                 g[:, :, 1, 3] += self.lift
                 self.clips[k[5:]] = g                      # (frames @ 24 fps, joints, 4, 4) world
+        self.n_body = len(self.names)
+        self.ghost()
+
+    # ---------------------------------------------------------------- the Ego ghost: no legs, a smoke tail
+    def leg_weight(self):
+        legs = [i for i, n in enumerate(self.names[:self.n_body]) if 'Leg' in n or 'Foot' in n or 'Toe' in n]
+        return (self.w * np.isin(self.infl, legs)).sum(1)
+
+    def ghost(self):
+        """Cut the body at the hips (drop every triangle that mostly follows the legs) and add a tail: TAIL_JOINTS
+        joints hanging from the hips along a curve that sweeps down and back, plus a tapered, slightly flattened tube
+        skinned to them (its own .skn, same skeleton and animation)."""
+        lw = self.leg_weight()
+        hipdom = self.infl[np.arange(len(self.infl)), self.w.argmax(1)] == self.names.index('Hips')
+        stray = (hipdom & ((self.pos[:, 1] < 230) | (np.abs(self.pos[:, 2]) > 80)))[self.tris].any(1)  # Meshy's tail strip
+        keep = (lw[self.tris].mean(1) < CUT_LEGW) & ~stray
+        tris = self.tris[keep]
+        used = np.unique(tris)
+        remap = np.full(len(self.pos), -1, np.int64); remap[used] = np.arange(len(used))
+        self.legw = lw[used]
+        self.pos, self.nrm, self.uv = self.pos[used], self.nrm[used], self.uv[used]
+        self.infl, self.w = self.infl[used], self.w[used]
+        self.tris = remap[tris]
+        # tail joints (world-aligned rest frames on the curve)
+        hips = self.names.index('Hips')
+        pts = [tail_curve(k / TAIL_JOINTS) for k in range(TAIL_JOINTS + 1)]
+        rest = list(self.rest)
+        for k in range(TAIL_JOINTS):
+            self.names.append(f'MV_Tail{k}')
+            self.parents.append(hips if k == 0 else len(self.names) - 2)
+            m = np.eye(4); m[:3, 3] = pts[k]; rest.append(m)
+        self.rest = np.array(rest)
+        self.tail_first = self.n_body
+        # tail mesh: rings along the curve, each vertex blended between the two nearest tail joints
+        P, N, U, I, Wt = [], [], [], [], []
+        for i in range(TAIL_RINGS + 1):
+            sv = i / TAIL_RINGS
+            c = tail_curve(sv); c2 = tail_curve(min(sv + 0.01, 1.0)) - tail_curve(max(sv - 0.01, 0.0))
+            tdir = c2 / (np.linalg.norm(c2) + 1e-9)
+            side = np.array([1.0, 0, 0]); fwd = np.cross(side, tdir); fwd /= np.linalg.norm(fwd) + 1e-9
+            r = TAIL_R0 * (1 - sv) ** 0.85 + 2.0
+            r *= 1 + 0.10 * math.sin(sv * 23.0) * (1 - sv)               # lumpy, smoke-like silhouette
+            jf = sv * TAIL_JOINTS
+            j0 = min(int(jf), TAIL_JOINTS - 1); f = jf - j0
+            j1 = min(j0 + 1, TAIL_JOINTS - 1)
+            for k in range(TAIL_SEG + 1):
+                a = 2 * math.pi * k / TAIL_SEG
+                dirv = math.cos(a) * side + math.sin(a) * fwd * 0.75
+                P.append(c + dirv * r); N.append(dirv / (np.linalg.norm(dirv) + 1e-9))
+                U.append((k / TAIL_SEG + sv * 0.6, sv))                  # spiral uv: the smoke streaks twist
+                if sv < 0.06:                                            # top ring: follows the hips too
+                    I.append((hips, self.tail_first, 0, 0)); Wt.append((0.5, 0.5, 0, 0))
+                else:
+                    I.append((self.tail_first + j0, self.tail_first + j1, 0, 0)); Wt.append((1 - f, f, 0, 0))
+        T = []
+        for i in range(TAIL_RINGS):
+            for k in range(TAIL_SEG):
+                a = i * (TAIL_SEG + 1) + k; b = a + TAIL_SEG + 1
+                T += [(a, a + 1, b), (a + 1, b + 1, b)]
+        self.tail = dict(pos=np.array(P), nrm=np.array(N), uv=np.array(U), tris=np.array(T, np.int64),
+                         infl=np.array(I, np.int64), w=np.array(Wt))
 
     def conv(self, M):
         out = np.eye(4)
@@ -50,11 +121,20 @@ class Beast:
         return out
 
     # ---------------------------------------------------------------- clip sampling (local TRS per joint)
-    def local_trs(self, G):
+    def local_trs(self, G, parents=None):
         out = []
-        for i, p in enumerate(self.parents):
+        for i, p in enumerate(parents if parents is not None else self.parents):
             L = G[i] if p < 0 else np.linalg.inv(G[p]) @ G[i]
             out.append(R.mat_to_trs(L))
+        return out
+
+    def tail_bind(self):
+        """Local bind TRS of the tail joints (appended to every sampled clip pose)."""
+        out = []
+        for k in range(TAIL_JOINTS):
+            i = self.tail_first + k
+            p = self.parents[i]
+            out.append(R.mat_to_trs(np.linalg.inv(self.rest[p]) @ self.rest[i]))
         return out
 
     def sample(self, clip, t, src_fps=24.0):
@@ -64,8 +144,9 @@ class Beast:
         else:
             x = min(max(t * src_fps, 0), len(g) - 1)
         a = int(math.floor(x)); b = min(a + 1, len(g) - 1); f = x - a
-        A, B = self.local_trs(g[a]), self.local_trs(g[b])
-        out = [blend(ta, tb, f) for ta, tb in zip(A, B)]
+        par = self.parents[:self.n_body]
+        A, B = self.local_trs(g[a], par), self.local_trs(g[b], par)
+        out = [blend(ta, tb, f) for ta, tb in zip(A, B)] + self.tail_bind()
         if clip in LOOPED:                              # Meshy's walk carries its hips ~12 higher than the other clips
             t0, s0, q0 = out[0]; out[0] = (t0 + np.array([0, -12.0, 0]), s0, q0)
         return out
@@ -94,13 +175,14 @@ def smooth(x):
 
 
 # ---------------------------------------------------------------- choreography
-# The beast lives for the whole ult (the R buff lasts 15 s) as a floating shadow body: its legs dissolve into smoke
-# (alpha baked into the texture, see ult_beast.beast_colour), so nothing touches the ground and nothing can slide.
+# The beast lives for the whole ult (the R buff lasts 15 s) as a floating Ego ghost: no legs (cut at the hips) but a
+# winding smoke tail on its own joints, so nothing touches the ground and nothing can slide.
 # Segments follow each other with 0.15 s cross-fades:
 # (clip, start s in the clip, length s in the clip, speed, label for synced effects, x it drifts to or None)
 # Drifts glide sideways behind him (eased, leaning into the motion and turning a little towards where it goes). On
-# top of every clip runs a procedural layer (hover bob, breathing, head looking around, sway), the arms are simulated
-# as heavy (they lag, swing through and settle) and every hit makes the whole body sink with its weight.
+# top of every clip runs a procedural layer (figure-eight float, slow sway, breathing, head looking around, the tail's
+# travelling wave), the arms and head are simulated springs (they lag, swing through and settle softly) and every hit
+# makes the whole body sink with its weight.
 DRIFT_SPEED = 140.0                # average units / s of a sideways drift (eased in and out)
 DRIFT_X = 120.0
 SEQUENCE = [   # the big actions happen right behind him (x 0), the calm watching out at his sides
@@ -123,7 +205,7 @@ SEQUENCE = [   # the big actions happen right behind him (x 0), the calm watchin
     ('slam', 0.55, 1.55, 2.0, 'dive', None),        # ... and hurls itself head first into the striker
 ]
 LOOPED = set()
-FADE = 0.15
+FADE = 0.3                         # long soft cross-fades: it flows from one action into the next
 TURN = 0.35                        # seconds to turn towards / away from a drift
 DRIFT_YAW = 30.0                   # turns a little towards where it glides
 BANK = 9.0                         # degrees it leans into a drift at full speed
@@ -206,8 +288,10 @@ def root_motion(t, total, segs, hits=None, ending='dive', behind=BEHIND):
     rise = smooth(t / RISE)
     x, yaw, vel = _path(t, segs)
     y = -HEIGHT * 0.95 * (1 - rise) + HOVER * rise
-    y += rise * BOB * math.sin(2 * math.pi * t / 2.4)
-    x += rise * 7 * math.sin(2 * math.pi * t / 4.1 + 0.7)
+    w8 = 2 * math.pi * t / 4.6                         # floating like under water: a slow figure eight
+    x += rise * 14 * math.sin(w8)
+    y += rise * BOB * math.sin(2 * w8 + 0.4)
+    yaw += rise * 5.0 * math.sin(2 * math.pi * t / 5.3 + 1.1)
     for ti, k in (hits if hits is not None else impacts()):
         if -0.4 < t - ti < 0.6:
             y += k * _dip(t - ti)
@@ -244,11 +328,11 @@ def _wobble(t, seed, period):
 
 
 # bone -> list of (world axis key, degrees, period s, seed, calm only): x = its side axis, y = up, z = facing axis
-LIFE = {
-    'Hips': [('z', 2.2, 3.1, 0.3, False)],
-    'Spine02': [('x', 2.5, 2.6, 0.0, False)],
-    'Spine01': [('x', 2.0, 2.6, 0.4, False), ('z', 1.5, 3.7, 1.1, False)],
-    'Spine': [('x', 2.0, 2.6, 0.8, False)],
+LIFE = {   # slow and wide: it sways like something floating in water
+    'Hips': [('z', 3.5, 4.2, 0.3, False), ('x', 2.5, 3.6, 1.4, False)],
+    'Spine02': [('x', 3.5, 3.4, 0.0, False), ('z', 2.0, 4.6, 0.9, False)],
+    'Spine01': [('x', 3.0, 3.4, 0.6, False), ('z', 2.5, 4.6, 1.5, False)],
+    'Spine': [('x', 3.0, 3.4, 1.2, False), ('z', 2.0, 4.6, 2.1, False)],
     'neck': [('y', 9.0, 3.4, 2.0, True), ('x', 4.0, 2.9, 0.5, True)],
     'Head': [('y', 12.0, 3.4, 2.4, True), ('x', 5.0, 2.2, 1.7, True), ('z', 4.0, 4.3, 3.0, True)],
     'LeftShoulder': [('x', 3.0, 2.6, 0.2, False)],
@@ -260,10 +344,17 @@ LIFE = {
 }
 
 
+TAIL_WAVE = (2.8, 0.75, 7.0, 15.0)     # period s, phase per joint (rad), amplitude at the root / at the tip (deg)
+TAIL_DRAG = 0.10                       # deg of trailing bend per unit/s of sideways speed
+
+
 def add_life(beast, frames, segs):
     """Procedural secondary motion on top of the composed clip (in place): breathing, weight shifts, a head that keeps
-    looking around, arms that sway. 'calm only' parts fade to 30 % during the big actions."""
+    looking around, arms that sway, and the smoke tail: a travelling wave in two directions (it winds like a snake)
+    that trails behind every sideways glide and every rise. 'calm only' parts fade to 30 % during the big actions."""
     names = [ROOT] + beast.names
+    roots = np.array([fr[0][0] for fr in frames])
+    vel = np.gradient(roots, 1.0 / FPS, axis=0) if len(roots) > 2 else np.zeros_like(roots)
     parents = [-1] + [p + 1 if p >= 0 else 0 for p in beast.parents]
     idx = {n: i for i, n in enumerate(names)}
     for k, fr in enumerate(frames):
@@ -285,6 +376,16 @@ def add_life(beast, frames, segs):
                     amp = deg * (calm if calm_only else 1.0)
                     Rd = _axis_angle(Rp.T @ axes[ax], amp * _wobble(t, seed, per)) @ Rd
                 L[:3, :3] = Rd @ L[:3, :3]
+            elif names[i].startswith('MV_Tail') and p >= 0:
+                j = int(names[i][7:])
+                per, ph, a0, a1 = TAIL_WAVE
+                amp = a0 + (a1 - a0) * j / (TAIL_JOINTS - 1)
+                w = 2 * math.pi * t / per - ph * j
+                Rp = G[p][:3, :3] / np.linalg.norm(G[p][:3, :3], axis=0)
+                side = amp * math.sin(w) - TAIL_DRAG * vel[k][0] * (0.4 + j / TAIL_JOINTS)
+                back = amp * 0.7 * math.sin(w * 0.77 + 1.3) + TAIL_DRAG * 0.6 * vel[k][1] * (0.4 + j / TAIL_JOINTS)
+                Rd = _axis_angle(Rp.T @ axes['z'], side) @ _axis_angle(Rp.T @ axes['x'], back)
+                L[:3, :3] = Rd @ L[:3, :3]
             if names[i] == 'Hips':                      # breathing
                 L[1, 3] += 2.5 * math.sin(2 * math.pi * t / 2.6)
             G.append(L if p < 0 else G[p] @ L)
@@ -294,9 +395,10 @@ def add_life(beast, frames, segs):
 
 
 # arm chain (joint, child whose position it aims at, spring frequency Hz, damping ratio, max lag deg)
-HEAVY = [('LeftArm', 'LeftForeArm', 1.9, 0.38, 32.0), ('LeftForeArm', 'LeftHand', 2.3, 0.33, 38.0),
-         ('RightArm', 'RightForeArm', 1.9, 0.38, 32.0), ('RightForeArm', 'RightHand', 2.3, 0.33, 38.0)]
-GRAVITY = 650.0                    # pulls the simulated tips down a little: the arms hang heavy
+HEAVY = [('LeftArm', 'LeftForeArm', 1.4, 0.28, 42.0), ('LeftForeArm', 'LeftHand', 1.7, 0.25, 48.0),
+         ('RightArm', 'RightForeArm', 1.4, 0.28, 42.0), ('RightForeArm', 'RightHand', 1.7, 0.25, 48.0),
+         ('neck', 'Head', 1.6, 0.35, 14.0)]
+GRAVITY = 250.0                    # a ghost: the arms float, lag behind and swing through softly
 
 
 def _globals(parents, fr):
@@ -398,32 +500,37 @@ def compose_penta(beast):
 
 
 def files(beast, frames, base, extra_anims=None):
-    """base: game path without extension. Returns {path: bytes} for .skn .skl .anm (+ extra {suffix: frames} clips
-    on the same skeleton)."""
+    """base: game path without extension. Returns {path: bytes} for the body .skn, the tail _tail.skn, .skl, .anm
+    (+ extra {suffix: frames} clips on the same skeleton)."""
     names = [ROOT] + beast.names
     parents = [-1] + [p + 1 if p >= 0 else 0 for p in beast.parents]
     local_bind = [np.eye(4)]
     for i, p in enumerate(beast.parents):
         local_bind.append(beast.rest[i] if p < 0 else np.linalg.inv(beast.rest[p]) @ beast.rest[i])
-    used = sorted(set(int(j) for j in np.unique(beast.infl[beast.w > 0])))
+    tl = beast.tail
+    used = sorted(set(int(j) for j in np.unique(beast.infl[beast.w > 0])) | set(int(j) for j in np.unique(tl['infl'][tl['w'] > 0])))
     influences = [j + 1 for j in used]
     remap = {j: k for k, j in enumerate(used)}
-    s = lolskn.Skn()
-    s.vtype = 0; s.flags = 0
-    dt = lolskn._dtype(0)
-    v = np.zeros(len(beast.pos), dt)
-    v['pos'] = beast.pos; v['nrm'] = beast.nrm
-    v['uv'] = np.stack([beast.uv[:, 0], 1 - beast.uv[:, 1]], 1)
-    v['infl'] = np.vectorize(lambda j: remap.get(int(j), 0))(beast.infl)
-    v['w'] = beast.w
-    s.verts = v
-    s.indices = beast.tris.reshape(-1).astype(np.uint16)       # same winding as the champion body (glTF order)
-    s.submeshes = [dict(name='beast', vstart=0, vcount=len(v), istart=0, icount=len(s.indices))]
     import tempfile
-    tmp = tempfile.mktemp(suffix='.skn'); lolskn.write(s, tmp); skn = open(tmp, 'rb').read(); os.remove(tmp)
+
+    def skn_bytes(pos, nrm, uv, infl, w, tris, name, flip_v):
+        sk = lolskn.Skn()
+        sk.vtype = 0; sk.flags = 0
+        v = np.zeros(len(pos), lolskn._dtype(0))
+        v['pos'] = pos; v['nrm'] = nrm
+        v['uv'] = np.stack([uv[:, 0], 1 - uv[:, 1]], 1) if flip_v else uv
+        v['infl'] = np.vectorize(lambda j: remap.get(int(j), 0))(infl)
+        v['w'] = w
+        sk.verts = v
+        sk.indices = tris.reshape(-1).astype(np.uint16)          # same winding as the champion body (glTF order)
+        sk.submeshes = [dict(name=name, vstart=0, vcount=len(v), istart=0, icount=len(sk.indices))]
+        tmp = tempfile.mktemp(suffix='.skn'); lolskn.write(sk, tmp); data = open(tmp, 'rb').read(); os.remove(tmp)
+        return data
+    skn = skn_bytes(beast.pos, beast.nrm, beast.uv, beast.infl, beast.w, beast.tris, 'beast', True)
+    tail_skn = skn_bytes(tl['pos'], tl['nrm'], tl['uv'], tl['infl'], tl['w'], tl['tris'], 'tail', False)
     skl = R.write_skl(names, parents, local_bind, influences)
     anm = R.write_anm_v4(names, frames, FPS)
-    out = {base + '.skn': skn, base + '.skl': skl, base + '.anm': anm}
+    out = {base + '.skn': skn, base + '_tail.skn': tail_skn, base + '.skl': skl, base + '.anm': anm}
     for suffix, fr in (extra_anims or {}).items():
         out[base + suffix + '.anm'] = R.write_anm_v4(names, fr, FPS)
     return out

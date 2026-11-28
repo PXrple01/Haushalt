@@ -138,10 +138,9 @@ def main():
         frame.paste(Image.fromarray((fc * 255).astype(np.uint8)), (950, 380))
         dr = ImageDraw.Draw(frame)
         dr.text((950, 40), 'DIE ULT', font=font(26), fill=(140, 200, 160))
-        dr.text((950, 72), 'Ego-Bestie', font=font(46), fill=(255, 255, 255))
-        desc = ('Ein schwebender Schattenkörper: die Beine lösen sich in Rauch auf, die Arme schwingen schwer nach, '
-                'jeder Schlag lässt es einsacken und schickt einen Stoß über den Boden. Es bleibt die 15 s hinter ihm '
-                'und dreht sich nie mit.')
+        dr.text((950, 72), 'Ego-Geist', font=font(46), fill=(255, 255, 255))
+        desc = ('Ein schwebender Ego-Geist: ab der Hüfte ein sich windender Rauchschweif, durchscheinend und von innen '
+                'leuchtend, bewegt sich fließend wie unter Wasser. Er bleibt die 15 s hinter ihm und dreht sich nie mit.')
         for j, line in enumerate(wrap(dr, desc, font(16, True), W - 975)):
             dr.text((950, 136 + j * 23), line, font=font(16, True), fill=(190, 205, 195))
         if tb < 0:

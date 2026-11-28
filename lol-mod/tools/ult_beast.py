@@ -9,11 +9,14 @@ follows him everywhere:
   - every other emitter in the system has no sideways offset (only height), so nothing depends on his facing.
     Effects at the beast's head use a height that lines up with it on screen (League's camera looks down ~56 deg:
     being 160 units further back looks like ~240 units higher).
-The beast is a floating shadow body: its legs dissolve into smoke (texture alpha, smouldering edge) and trail off as
-smoke, a shadow pool lies on the ground under both, so nothing touches the ground and nothing slides. Every hit makes
-it sink with its weight (beast_anim.impacts) and sends a shock over the ground under it (a ring and glowing cracks
-lying flat at its ground height - a height above him that lines up with it on screen - plus dust, and a ring on the
-real ground for the big ones). Its arms are simulated as heavy (lag, swing through, settle).
+The beast is an Ego ghost: cut off at the hips (beast_anim.Beast.ghost) with a winding smoke tail of its own
+(own .skn on 8 extra joints of the same skeleton, same animation), see-through (55 %, head more opaque so the face
+reads) with a bright rim and an inner light, veins pulsing like a heartbeat; solid only for a moment on each hit. A
+ring with faint mist lies on the ground under both. It floats like under water (figure eight, slow sway, soft
+cross-fades, arms and head swinging through, the tail trailing every glide). Every hit makes it sink with its weight
+(beast_anim.impacts) and sends a shock over the ground under it (a ring and glowing cracks lying flat at its ground
+height - a height above him that lines up with it on screen - plus dust, and a ring on the real ground for the big
+ones).
 Timeline (seconds after R): rise + roar, crouch and watch, glide out to his left and watch, glide back, chest pound,
 slams, glide to his right and crouch, back, claw swipe, arms-spread bellow, look, slam, crouch, then it hurls itself
 into him as the screen chains burst (14.6). Its veins pulse like a heartbeat.
@@ -32,7 +35,7 @@ from vfxshapes import holo, fade
 F = L.Field
 FLOW = (0.10, 0.65, 0.30); DEEP = (0.02, 0.36, 0.16); HI = (0.62, 0.98, 0.72); WH = (1.0, 1.0, 1.0)
 VIO = (0.55, 0.30, 0.95); LAV = (0.80, 0.70, 1.0); SHADOW = (0.05, 0.02, 0.08)
-BODY_ALPHA = 0.6                           # the beast's opacity between its hits (clarity)
+BODY_ALPHA = 0.55                          # the ghost's opacity between its hits (clarity)
 PART = 'Characters/Yunara/Skins/Skin0/Particles/'
 SYSTEM = 'MV_R_EgoBeast'
 BEAST_BASE = 'assets/characters/yunara/skins/base/particles/mvfx/mvfx_v2_beast'
@@ -105,24 +108,17 @@ def smoke_puff(s=128):
     return Image.fromarray((np.dstack([rgb, a]) * 255).astype(np.uint8), 'RGBA')
 
 
-FEET_Y = 120.0                     # bind height of Meshy's feet (the mesh also has a tail down to 0)
-FADE_LO, FADE_HI = 35.0, 120.0     # above the feet: fully smoke below LO, fully solid above HI (knees ~80)
+BODY_TEX_ALPHA = 0.8               # body opacity in the texture; the head keeps 1.0 (its face stays readable)
 
 
-def leg_fade(root, s=1024):
-    """Alpha of the shadow body in texture space: the legs dissolve into smoke from the thighs down. Vertex alpha from
-    the bind height, rasterised into the UV layout (barycentric), gaps filled from the nearest texel, the edge made
-    ragged with noise. Returns (alpha, edge) with edge = how much a texel sits in the dissolving band."""
+def _raster(b, values, s):
+    """A per-vertex value of the (cut) body rasterised into its UV layout (barycentric), gaps filled from the nearest
+    texel."""
     from scipy.ndimage import distance_transform_edt
-    b = BA.Beast(os.path.join(root, 'assets_src', 'vfx', 'beast_rig.npz'))
-    h = b.pos[:, 1] - FEET_Y
-    legs = [b.names.index(n) for n in b.names if 'Leg' in n or 'Foot' in n or 'Toe' in n or n == 'Hips']
-    legw = (b.w * np.isin(b.infl, legs)).sum(1)                       # only legs / hips dissolve, not the long arms
-    va = 1 - np.clip(legw * 1.4, 0, 1) * (1 - np.clip((h - FADE_LO) / (FADE_HI - FADE_LO), 0, 1))
     uv = np.stack([b.uv[:, 0], 1 - b.uv[:, 1]], 1) * (s - 1)        # skn uv (v flipped) -> texel
     acc = np.zeros((s, s)); cnt = np.zeros((s, s))
     for tri in b.tris:
-        p = uv[tri]; a = va[tri]
+        p = uv[tri]; a = values[tri]
         x0, y0 = np.floor(p.min(0)).astype(int); x1, y1 = np.ceil(p.max(0)).astype(int)
         x0, y0 = max(x0, 0), max(y0, 0); x1, y1 = min(x1, s - 1), min(y1, s - 1)
         if x1 < x0 or y1 < y0:
@@ -137,20 +133,32 @@ def leg_fade(root, s=1024):
         m = (l0 > -0.02) & (l1 > -0.02) & (l2 > -0.02)
         acc[gy[m], gx[m]] += (l0 * a[0] + l1 * a[1] + l2 * a[2])[m]; cnt[gy[m], gx[m]] += 1
     covered = cnt > 0
-    alpha = np.where(covered, acc / np.maximum(cnt, 1), 0)
+    field = np.where(covered, acc / np.maximum(cnt, 1), 0)
     _, (iy, ix) = distance_transform_edt(~covered, return_indices=True)
-    alpha = alpha[iy, ix]
-    band = (alpha > 0.0) & (alpha < 1.0)
-    rag = alpha + (_noise(s, 3, 21) - 0.5) * 0.55 * band
-    alpha = np.clip(rag, 0, 1) ** 1.3
-    edge = np.clip(4 * alpha * (1 - alpha), 0, 1)
+    return field[iy, ix]
+
+
+def ghost_alpha(root, s=1024):
+    """Alpha of the ghost body in texture space: the hips (cut, see beast_anim.Beast.ghost) dissolve into a ragged
+    smoky edge where the tail takes over; the head stays more opaque than the body so the face reads clearly.
+    Returns (alpha, edge) with edge = how much a texel sits in the dissolving band."""
+    b = BA.Beast(os.path.join(root, 'assets_src', 'vfx', 'beast_rig.npz'))
+    cut = 1 - np.clip((b.legw - 0.10) / (BA.CUT_LEGW - 0.10), 0, 1)
+    head = [b.names.index(n) for n in ('neck', 'Head', 'head_end', 'headfront')]
+    headw = np.clip((b.w * np.isin(b.infl, head)).sum(1) * 1.5, 0, 1)
+    a_cut = _raster(b, cut, s)
+    band = (a_cut > 0.0) & (a_cut < 1.0)
+    a_cut = np.clip(a_cut + (_noise(s, 3, 21) - 0.5) * 0.6 * band, 0, 1) ** 1.3
+    edge = np.clip(4 * a_cut * (1 - a_cut), 0, 1)
+    a_head = _raster(b, headw, s)
+    alpha = a_cut * (BODY_TEX_ALPHA + (1 - BODY_TEX_ALPHA) * a_head)
     return alpha, edge
 
 
 def beast_colour(root, s=1024):
     """Epic green-violet skin from Meshy's base colour: obsidian to violet by brightness, Meshy's own green (eyes,
-    horn tips) boosted, plus glowing green veins (iso-lines of a smooth noise). The legs dissolve into smoke (alpha),
-    their dissolving edge smoulders violet-green. Returns (skin, emissive)."""
+    horn tips) boosted, plus glowing green veins (iso-lines of a smooth noise). The cut hips dissolve into smoke (alpha),
+    their dissolving edge smoulders violet-green; the head is more opaque. Returns (skin, emissive, inner light)."""
     from scipy.ndimage import gaussian_filter
     base = np.asarray(Image.open(os.path.join(root, 'assets_src', 'vfx', 'beast_basecolor.png')).convert('RGB').resize((s, s))).astype(np.float32) / 255
     Lum = base.mean(-1)
@@ -165,7 +173,7 @@ def beast_colour(root, s=1024):
     glow = np.clip(np.maximum(green, veins * 0.9), 0, 1)
     gcol = np.array([0.25, 1.0, 0.50])
     col = col * (1 - glow[..., None]) + gcol * glow[..., None]
-    alpha, edge = leg_fade(root, s)
+    alpha, edge = ghost_alpha(root, s)
     col = col * (1 - 0.6 * edge[..., None]) + np.array([0.35, 0.12, 0.6]) * 0.6 * edge[..., None]
     skin = Image.fromarray((np.dstack([np.clip(col, 0, 1), alpha]) * 255).astype(np.uint8), 'RGBA')
     gl = np.clip(glow[..., None] * gcol + (t > 0.85)[..., None] * vio * 0.35, 0, 1)
@@ -175,7 +183,32 @@ def beast_colour(root, s=1024):
     gl = gl * (1 - ember[..., None]) + ecol * ember[..., None]
     ga = np.maximum(ga, ember * 0.9)
     glow_im = Image.fromarray((np.dstack([np.clip(gl, 0, 1), ga]) * 255).astype(np.uint8), 'RGBA')
-    return skin, glow_im
+    # inner light: the ghost glows from within (soft, violet-white, brighter where the skin is lighter)
+    inner = gaussian_filter(np.clip(t * 1.2, 0, 1), 6) * alpha
+    icol = np.array([0.55, 0.40, 1.0]) * (1 - inner[..., None] * 0.4) + np.array([0.9, 0.95, 1.0]) * inner[..., None] * 0.4
+    inner_im = Image.fromarray((np.dstack([np.clip(icol * inner[..., None], 0, 1), inner]) * 255).astype(np.uint8), 'RGBA')
+    return skin, glow_im, inner_im
+
+
+def tail_textures(w=256, h=512):
+    """Smoke tail (u around, v from the hips to the tip): twisting smoke streaks, dark violet with lighter folds,
+    fading out to the tip (alpha blend) + thin green-violet wisps winding along it (additive)."""
+    from scipy.ndimage import gaussian_filter
+    rng = np.random.default_rng(31)
+    v = np.linspace(0, 1, h)[:, None].repeat(w, 1)
+    streak = gaussian_filter(rng.random((h, w)), (14, 3), mode='wrap'); streak = (streak - streak.min()) / np.ptp(streak)
+    fold = gaussian_filter(rng.random((h, w)), (30, 8), mode='wrap'); fold = (fold - fold.min()) / np.ptp(fold)
+    fade = (1 - v) ** 0.9 * np.clip(v / 0.05, 0.55, 1)
+    alpha = np.clip(fade * (0.55 + 0.45 * streak) * (0.75 + 0.25 * fold), 0, 1)
+    lite = np.clip((streak - 0.55) * 2.5, 0, 1)
+    col = np.array([0.22, 0.10, 0.38]) * (1 - lite[..., None]) + np.array([0.62, 0.42, 1.0]) * lite[..., None]
+    smoke = Image.fromarray((np.dstack([np.clip(col, 0, 1), alpha]) * 255).astype(np.uint8), 'RGBA')
+    wisp = np.exp(-((streak - 0.62) / 0.025) ** 2) * (fold > 0.45)
+    wisp = np.clip(gaussian_filter(wisp, 1.2) * 2.2, 0, 1) * (1 - v) ** 1.0
+    green = fold[..., None]
+    wcol = np.array([0.30, 1.0, 0.55]) * green + np.array([0.60, 0.35, 1.0]) * (1 - green)
+    glow = Image.fromarray((np.dstack([np.clip(wcol * wisp[..., None], 0, 1), wisp]) * 255).astype(np.uint8), 'RGBA')
+    return smoke, glow
 
 
 def ground_crack(s=512):
@@ -197,8 +230,9 @@ def ground_crack(s=512):
 
 
 def textures(root):
-    skin, glow = beast_colour(root)
-    return {'beast_skin2': skin, 'beast_glow': glow, 'shadow_pool': shadow_pool(), 'shadow_ring': shadow_ring(),
+    skin, glow, inner = beast_colour(root)
+    tail, tail_glow = tail_textures()
+    return {'beast_skin2': skin, 'beast_glow': glow, 'beast_inner': inner, 'beast_tail': tail, 'beast_tailglow': tail_glow, 'shadow_pool': shadow_pool(), 'shadow_ring': shadow_ring(),
             'smoke_puff': smoke_puff(), 'smoke_violet': smoke_violet(),
             'ground_crack': ground_crack()}
 
@@ -212,6 +246,14 @@ def anim_files(root):
 
 
 # ------------------------------------------------------------------ the persistent system (R buff, 15 s)
+def mesh_prim(skn_suffix, anm_suffix, base=None):
+    """Animated mesh primitive: one of the beast's meshes (body / tail) with the shared skeleton and an animation."""
+    base = base or BEAST_BASE
+    return L.Struct('VfxPrimitiveMesh', [F('mMesh', L.EMBED, L.Struct('VfxMeshDefinitionData', [
+        F('mMeshName', L.STRING, base + skn_suffix), F('mMeshSkeletonName', L.STRING, base + '.skl'),
+        F('mAnimationName', L.STRING, base + anm_suffix)], L.EMBED))], L.STRUCT)
+
+
 def _ring(name, T, t, y, col, pass_, size=50, grow=7.0, life=0.45):
     return V.emitter(name, T('shock_ring'), blend=4, delay=t, life=life, bind=1.0, pos=(0, y, 0), scale=(size, size, 1),
                      scale_curve=([0, 1], [(1,) * 3, (grow,) * 3]),
@@ -244,9 +286,8 @@ def emitters(T):
                          rotation=V.vvec3((180, 0, 0), rand=[(-1, 1), None, None]), spin=V.vvec3((40, 0, 0), rand=[(-1, 1), None, None]),
                          color_curve=fade(WH, 0.15, 0.6, 0.7), pass_=9300))
     # ---- the beast (whole ult) + its emissive veins, flaring on every action
-    anim_mesh = L.Struct('VfxPrimitiveMesh', [F('mMesh', L.EMBED, L.Struct('VfxMeshDefinitionData', [
-        F('mMeshName', L.STRING, BEAST_BASE + '.skn'), F('mMeshSkeletonName', L.STRING, BEAST_BASE + '.skl'),
-        F('mAnimationName', L.STRING, BEAST_BASE + '.anm')], L.EMBED))], L.STRUCT)
+    anim_mesh = mesh_prim('.skn', '.anm')
+    tail_mesh = mesh_prim('_tail.skn', '.anm')
     drive = ([0, nt(0.40), nt(total - 0.12), 1], [1.0, 0.0, 0.0, 0.6])        # builds up from the pool, frays at the end
     # clarity: after rising it is see-through (BODY_ALPHA) with a bright rim, solid only for a moment on every hit
     ak = [(0.0, 0.0), (0.12, 1.0), (0.9, 1.0), (1.3, BODY_ALPHA)]
@@ -266,11 +307,23 @@ def emitters(T):
     ems.append(V.emitter('MVB_Beast', T('beast_skin2'), blend=1, life=total, bind=1.0, primitive=anim_mesh, scale=(1, 1, 1),
                          backface=True, pass_=9310,
                          color_curve=([nt(t_) for t_, _ in ak], [(0.8, 0.6, 1.0, a_) if t_ > total - 0.05 else WH + (a_,) for t_, a_ in ak]),
-                         extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.55, 0.30, 0.95)), **WORLD))
-    keys = [(0.0, FLOW, 0.0), (0.3, HI, 0.55)]
-    beat = 0.9                                                         # its veins pulse like a heartbeat
+                         extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.75, 0.50, 1.0)), **WORLD))
+    body_curve = ([nt(t_) for t_, _ in ak], [(0.8, 0.6, 1.0, a_) if t_ > total - 0.05 else WH + (a_,) for t_, a_ in ak])
+    # the smoke tail (same skeleton + animation, own mesh): smoke streaks + winding green-violet wisps
+    ems.append(V.emitter('MVB_TailMesh', T('beast_tail'), blend=1, life=total, bind=1.0, primitive=tail_mesh, scale=(1, 1, 1),
+                         backface=True, pass_=9308, color_curve=body_curve,
+                         extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.45, 0.25, 0.85)), **WORLD))
+    ems.append(V.emitter('MVB_TailWispMesh', T('beast_tailglow'), blend=4, life=total, bind=1.0, primitive=tail_mesh, scale=(1.01, 1.01, 1.01),
+                         backface=True, pass_=9309, color_curve=([0, nt(0.5), nt(total - 0.3), 1], [HI + (0,), WH + (0.8,), WH + (0.8,), VIO + (0,)]),
+                         extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.05, 0.30, 0.15)), **WORLD))
+    # it glows from within (soft violet-white light through the see-through body)
+    ems.append(V.emitter('MVB_BeastInner', T('beast_inner'), blend=4, life=total, bind=1.0, primitive=anim_mesh, scale=(1.0, 1.0, 1.0),
+                         backface=True, pass_=9312, color_curve=([0, nt(0.4), nt(total - 0.2), 1], [WH + (0,), WH + (0.45,), WH + (0.45,), VIO + (0,)]),
+                         extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.0, 0.0, 0.0)), **WORLD))
+    keys = [(0.0, FLOW, 0.0), (0.3, HI, 0.6)]
+    beat = 0.9                                                         # its veins pulse like a heartbeat (strong)
     while beat < total - 0.8:
-        keys += [(beat, HI, 0.78), (beat + 0.12, HI, 0.5), (beat + 0.24, HI, 0.68), (beat + 0.5, HI, 0.5)]
+        keys += [(beat, WH, 0.95), (beat + 0.12, HI, 0.45), (beat + 0.24, HI, 0.85), (beat + 0.55, HI, 0.45)]
         beat += 1.15
     for t, c, a in [(roar, WH, 0.95)] + [(p, HI, 0.85) for p in pounds] + [(t_, HI, 0.85) for t_, w_ in BA.impacts() if w_ >= 1.0] + \
                    [(swipe, LAV, 0.9), (shout, WH, 1.0), (dive, VIO, 0.9), (total - 0.05, WH, 1.0)]:
