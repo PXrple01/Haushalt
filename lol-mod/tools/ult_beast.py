@@ -41,10 +41,10 @@ SYSTEM = 'MV_R_EgoBeast'
 BEAST_BASE = 'assets/characters/yunara/skins/base/particles/mvfx/mvfx_v2_beast'
 WORLD = dict(local_orientation=False)
 SCREEN_UP = math.tan(math.radians(56))          # height that matches being further back on screen
-HEAD_Y = 400 + BA.BEHIND * SCREEN_UP           # the beast's head, as a height above him
-CHEST_Y = 290 + BA.BEHIND * SCREEN_UP
+HEAD_Y = 390 + BA.HOVER + BA.BEHIND * SCREEN_UP   # the beast's head, as a height above him (it floats at HOVER)
+CHEST_Y = 300 + BA.HOVER + BA.BEHIND * SCREEN_UP
 GROUND_B = BA.BEHIND * SCREEN_UP           # the ground under the beast, as a height above him
-TAIL_Y = GROUND_B + 110                    # where its legs dissolve into smoke (it floats, see beast_anim.HOVER)
+TAIL_Y = GROUND_B + 150                    # around the middle of its smoke tail (it floats, see beast_anim.HOVER)
 FLAT = (90, 0, 0)                          # Riot's rotation for a quad lying flat (not glued to the terrain)
 QUAD = L.Struct('VfxPrimitiveArbitraryQuad', [], L.STRUCT)
 
@@ -111,13 +111,14 @@ def smoke_puff(s=128):
 BODY_TEX_ALPHA = 0.8               # body opacity in the texture; the head keeps 1.0 (its face stays readable)
 
 
-def _raster(b, values, s):
-    """A per-vertex value of the (cut) body rasterised into its UV layout (barycentric), gaps filled from the nearest
-    texel."""
+def _raster(b, values, s, uv=None, tris=None):
+    """A per-vertex value rasterised into a UV layout (barycentric), gaps filled from the nearest texel. Default: the
+    (cut) body, whose skn uv is the npz uv with v flipped; uv/tris: any mesh with uv already in image convention."""
     from scipy.ndimage import distance_transform_edt
-    uv = np.stack([b.uv[:, 0], 1 - b.uv[:, 1]], 1) * (s - 1)        # skn uv (v flipped) -> texel
+    uv = (np.stack([b.uv[:, 0], 1 - b.uv[:, 1]], 1) if uv is None else np.asarray(uv, float)) * (s - 1)
+    tris = b.tris if tris is None else tris
     acc = np.zeros((s, s)); cnt = np.zeros((s, s))
-    for tri in b.tris:
+    for tri in tris:
         p = uv[tri]; a = values[tri]
         x0, y0 = np.floor(p.min(0)).astype(int); x1, y1 = np.ceil(p.max(0)).astype(int)
         x0, y0 = max(x0, 0), max(y0, 0); x1, y1 = min(x1, s - 1), min(y1, s - 1)
@@ -190,9 +191,36 @@ def beast_colour(root, s=1024):
     return skin, glow_im, inner_im
 
 
-def tail_textures(w=256, h=512):
+def meshy_tail_textures(root, s=1024):
+    """The genie tail Meshy modelled: its colours mapped to the ghost palette (obsidian -> violet by brightness, like
+    the body), see-through like the body and fading out towards the tip (alpha from each vertex's distance along the
+    tail, rasterised into its UV layout); the bright smoke ribbons glow green-violet in the additive layer."""
+    from scipy.ndimage import gaussian_filter
+    b = BA.Beast(os.path.join(root, 'assets_src', 'vfx', 'beast_rig.npz'))
+    tl = b.tail
+    base = np.asarray(Image.open(os.path.join(root, 'assets_src', 'vfx', 'genie_tail_basecolor.png')).convert('RGB').resize((s, s))).astype(np.float32) / 255
+    Lum = base.mean(-1)
+    t = np.clip((Lum - np.percentile(Lum, 5)) / (np.percentile(Lum, 98) - np.percentile(Lum, 5) + 1e-6), 0, 1) ** 1.2
+    deep = np.array([0.05, 0.015, 0.09]); vio = np.array([0.46, 0.20, 0.80]); hi = np.array([0.80, 0.66, 1.0])
+    col = deep + (vio - deep) * t[..., None] + (hi - vio) * np.clip(t - 0.7, 0, 1)[..., None] * 2.5
+    sv = _raster(b, b.tail_s, s, uv=tl['uv'], tris=tl['tris'])
+    fade = 1 - np.clip((sv - 0.72) / 0.28, 0, 1) ** 1.5
+    alpha = np.clip(BODY_TEX_ALPHA * fade * (0.75 + 0.25 * t), 0, 1)
+    smoke = Image.fromarray((np.dstack([np.clip(col, 0, 1), alpha]) * 255).astype(np.uint8), 'RGBA')
+    rib = np.clip((t - 0.62) * 3.0, 0, 1)
+    n = gaussian_filter(np.random.default_rng(41).random((s, s)), 18, mode='wrap'); n = (n - n.min()) / np.ptp(n)
+    gcol = np.array([0.30, 1.0, 0.55]) * n[..., None] + np.array([0.60, 0.35, 1.0]) * (1 - n[..., None])
+    ga = rib * fade
+    glow = Image.fromarray((np.dstack([np.clip(gcol * ga[..., None], 0, 1), ga]) * 255).astype(np.uint8), 'RGBA')
+    return smoke, glow
+
+
+def tail_textures(w=256, h=512, root=None):
     """Smoke tail (u around, v from the hips to the tip): twisting smoke streaks, dark violet with lighter folds,
-    fading out to the tip (alpha blend) + thin green-violet wisps winding along it (additive)."""
+    fading out to the tip (alpha blend) + thin green-violet wisps winding along it (additive). With the Meshy genie
+    tail present its own textures (meshy_tail_textures) are used instead."""
+    if root is not None and os.path.exists(BA.MESHY_TAIL):
+        return meshy_tail_textures(root)
     from scipy.ndimage import gaussian_filter
     rng = np.random.default_rng(31)
     v = np.linspace(0, 1, h)[:, None].repeat(w, 1)
@@ -231,7 +259,7 @@ def ground_crack(s=512):
 
 def textures(root):
     skin, glow, inner = beast_colour(root)
-    tail, tail_glow = tail_textures()
+    tail, tail_glow = tail_textures(root=root)
     return {'beast_skin2': skin, 'beast_glow': glow, 'beast_inner': inner, 'beast_tail': tail, 'beast_tailglow': tail_glow, 'shadow_pool': shadow_pool(), 'shadow_ring': shadow_ring(),
             'smoke_puff': smoke_puff(), 'smoke_violet': smoke_violet(),
             'ground_crack': ground_crack()}
@@ -314,7 +342,7 @@ def emitters(T):
                          backface=True, pass_=9308, color_curve=body_curve,
                          extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.45, 0.25, 0.85)), **WORLD))
     ems.append(V.emitter('MVB_TailWispMesh', T('beast_tailglow'), blend=4, life=total, bind=1.0, primitive=tail_mesh, scale=(1.01, 1.01, 1.01),
-                         backface=True, pass_=9309, color_curve=([0, nt(0.5), nt(total - 0.3), 1], [HI + (0,), WH + (0.8,), WH + (0.8,), VIO + (0,)]),
+                         backface=True, pass_=9309, color_curve=([0, nt(0.5), nt(total - 0.3), 1], [HI + (0,), WH + (0.5,), WH + (0.5,), VIO + (0,)]),
                          extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.05, 0.30, 0.15)), **WORLD))
     # it glows from within (soft violet-white light through the see-through body)
     ems.append(V.emitter('MVB_BeastInner', T('beast_inner'), blend=4, life=total, bind=1.0, primitive=anim_mesh, scale=(1.0, 1.0, 1.0),

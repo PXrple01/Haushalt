@@ -23,6 +23,10 @@ CUT_LEGW = 0.45                    # triangles following the legs more than this
 TAIL_JOINTS = 8
 TAIL_RINGS, TAIL_SEG = 40, 18
 TAIL_R0 = 58.0                     # tail radius at the hips (wraps the cut)
+MESHY_TAIL = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets_src', 'vfx', 'genie_tail.npz')
+TAIL_HEIGHT = 300.0                # the Meshy genie tail, scaled to this height
+TAIL_TOP = np.array([0.0, 290.0, 18.0])   # where its top (the waist) sits, inside the cut hips (bind space)
+TAIL_TILT = 22.0                   # degrees its lower end swings towards the camera, so the top-down view sees it
 
 
 def tail_curve(s):
@@ -75,8 +79,11 @@ class Beast:
         self.pos, self.nrm, self.uv = self.pos[used], self.nrm[used], self.uv[used]
         self.infl, self.w = self.infl[used], self.w[used]
         self.tris = remap[tris]
-        # tail joints (world-aligned rest frames on the curve)
         hips = self.names.index('Hips')
+        if os.path.exists(MESHY_TAIL):
+            self.meshy_tail(hips)
+            return
+        # tail joints (world-aligned rest frames on the curve)
         pts = [tail_curve(k / TAIL_JOINTS) for k in range(TAIL_JOINTS + 1)]
         rest = list(self.rest)
         for k in range(TAIL_JOINTS):
@@ -127,6 +134,57 @@ class Beast:
             L = G[i] if p < 0 else np.linalg.inv(G[p]) @ G[i]
             out.append(R.mat_to_trs(L))
         return out
+
+    def meshy_tail(self, hips):
+        """The genie tail Meshy modelled (tools/char/glb_read.py -> assets_src/vfx/genie_tail.npz): glTF y-up facing +z,
+        turned to face the camera (-z), scaled to TAIL_HEIGHT, its top put into the cut hips and tilted a little
+        towards the camera. Every vertex gets s = its distance along the surface from the top (Dijkstra over the welded
+        mesh, so the coils are followed), the TAIL_JOINTS joints sit at the centroids along s and each vertex is
+        blended between the two joints around its s (the top also follows the hips)."""
+        import scipy.sparse as sp
+        import scipy.sparse.csgraph as cg
+        from scipy.spatial import cKDTree
+        d = np.load(MESHY_TAIL)
+        P = d['pos'] * np.array([-1.0, 1.0, -1.0]); N = d['nrm'] * np.array([-1.0, 1.0, -1.0])
+        sc = TAIL_HEIGHT / np.ptp(P[:, 1])
+        P = P * sc
+        top = P[:, 1] > P[:, 1].max() - 0.12 * np.ptp(P[:, 1])
+        P = P - np.array([P[top, 0].mean(), P[:, 1].max(), P[top, 2].mean()])
+        tilt = _axis_angle((1, 0, 0), TAIL_TILT)                     # lower end swings towards -z (the camera)
+        P = P @ tilt.T + TAIL_TOP; N = N @ tilt.T
+        # geodesic parameter along the tail (vertices welded by position for the graph)
+        key = np.round(P, 3)
+        _, weld = np.unique(key, axis=0, return_inverse=True)
+        weld = weld.reshape(-1)
+        T = d['tris'].astype(np.int64)
+        e = np.concatenate([T[:, [0, 1]], T[:, [1, 2]], T[:, [2, 0]]])
+        we = weld[e]
+        ln = np.linalg.norm(P[e[:, 0]] - P[e[:, 1]], axis=1) + 1e-6
+        nw = weld.max() + 1
+        A = sp.coo_matrix((ln, (we[:, 0], we[:, 1])), shape=(nw, nw)).tocsr()
+        src = np.unique(weld[top])
+        dist = cg.dijkstra(A, directed=False, indices=src, min_only=True)[weld]
+        ok = np.isfinite(dist)
+        if (~ok).any():                                              # loose wisps: take their nearest connected point
+            _, nn = cKDTree(P[ok]).query(P[~ok]); dist[~ok] = dist[ok][nn]
+        sv = dist / dist.max()
+        self.tail_s = sv
+        rest = list(self.rest)
+        self.tail_first = self.n_body
+        for k in range(TAIL_JOINTS):
+            m_ = np.abs(sv - k / TAIL_JOINTS) < 0.5 / TAIL_JOINTS
+            c = P[m_].mean(0) if m_.any() else P[np.argmin(np.abs(sv - k / TAIL_JOINTS))]
+            self.names.append(f'MV_Tail{k}')
+            self.parents.append(hips if k == 0 else len(self.names) - 2)
+            mm = np.eye(4); mm[:3, 3] = c; rest.append(mm)
+        self.rest = np.array(rest)
+        jf = np.clip(sv * TAIL_JOINTS, 0, TAIL_JOINTS - 1e-6)
+        j0 = np.floor(jf).astype(int); f = jf - j0; j1 = np.minimum(j0 + 1, TAIL_JOINTS - 1)
+        I = np.stack([self.tail_first + j0, self.tail_first + j1, np.zeros_like(j0), np.zeros_like(j0)], 1)
+        Wt = np.stack([1 - f, f, np.zeros_like(f), np.zeros_like(f)], 1)
+        near_top = sv < 0.06                                         # the waist follows the hips too
+        I[near_top] = np.array([hips, self.tail_first, 0, 0]); Wt[near_top] = np.array([0.5, 0.5, 0, 0])
+        self.tail = dict(pos=P, nrm=N, uv=d['uv'], tris=T, infl=I.astype(np.int64), w=Wt, meshy=True)
 
     def tail_bind(self):
         """Local bind TRS of the tail joints (appended to every sampled clip pose)."""
@@ -212,7 +270,7 @@ BANK = 9.0                         # degrees it leans into a drift at full speed
 RISE = 0.45                        # seconds to climb out of the ground
 DIVE = 0.55                        # last seconds: lunge into the striker and shrink away
 LENGTH = 14.95                     # the R buff (15 s) ends right after
-HOVER = -50.0                      # root height while floating (Meshy's feet sit ~125 above the root)
+HOVER = 40.0                       # root height while floating (the hips sit ~275 above it, the tail hangs below)
 BOB = 9.0                          # hover bob amplitude
 
 
