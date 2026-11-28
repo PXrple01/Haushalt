@@ -29,6 +29,7 @@ import beast_anim as BA
 import general_fx as G
 import screen_chains as SC
 import ult_beast as UB
+import meshy_props as MP
 from vfxshapes import combine, holo, fade
 
 F = L.Field
@@ -69,7 +70,12 @@ def gold_glow(s=256):
 
 
 def textures():
-    return {'mk_gold': gold(), 'mk_gold_glow': gold_glow()}
+    out = {'mk_gold': gold(), 'mk_gold_glow': gold_glow()}
+    if MP.available('trophy'):
+        out['mk_trophy'] = MP.texture('trophy', 'gold')
+    if MP.available('floodhead'):
+        out['mk_floodhead'] = MP.texture('floodhead')
+    return out
 
 
 def _lathe(profile, seg=28):
@@ -105,11 +111,18 @@ def _handle(side, seg=12, ring=8, R=22.0, r=4.5, cy=112.0, cx=46.0):
 
 
 def meshes():
+    out = {}
+    if MP.available('floodhead'):
+        out['mvfx_mk_floodhead.scb'] = MP.floodlight_head()
+    if MP.available('trophy'):                  # Meshy's trophy (v0.16)
+        out['mvfx_mk_trophy.scb'] = MP.trophy()
+        return out
     prof = [(0.0, 0.0), (34, 0), (34, 9), (27, 12), (22, 20), (9, 28), (6, 52), (11, 60), (14, 64), (8, 70), (10, 74),
             (28, 86), (40, 104), (45, 126), (46, 146), (48, 150), (43, 150)]
     cup = _lathe(prof)
     trophy = combine([cup, _handle(1), _handle(-1)])
-    return {'mvfx_mk_trophy.scb': trophy}
+    out['mvfx_mk_trophy.scb'] = trophy
+    return out
 
 
 # ------------------------------------------------------------------ systems
@@ -120,6 +133,12 @@ def sys_quadra(T, M):
                   uniform=False, scale_curve=([0, 0.07, 1], [(0.15, 1, 0.15), (1, 1, 1), (1.05, 1, 1.05)]),
                   color_curve=([0, 0.05, 0.7, 1], [LAV + (0,), (0.92, 0.88, 1.0, 0.8), (0.85, 0.8, 1.0, 0.65), VIO + (0,)]),
                   pass_=9240, **WORLD),
+        V.emitter('MVK_QFloodHead', T('mk_floodhead'), blend=1, delay=d - 0.1, life=3.2, bind=1.0, mesh=M('mk_floodhead'),
+                  pos=(0, 960, 0), scale=(1, 1, 1), backface=True, scale_curve=([0, 0.08, 1], [(0.3,) * 3, (1.0,) * 3, (1.0,) * 3]),
+                  color_curve=([0, 0.05, 0.9, 1], [WH + (0,), WH + (1,), WH + (1,), WH + (0,)]), pass_=9238, **WORLD),
+        V.emitter('MVK_QFloodGlow', T('flash_star'), blend=4, delay=d, life=3.0, bind=1.0, pos=(0, 945, 0), scale=(120, 120, 1),
+                  scale_curve=([0, 0.08, 0.3, 1], [(0.2,) * 3, (1.4,) * 3, (1.0,) * 3, (1.0,) * 3]),
+                  color_curve=([0, 0.06, 0.7, 1], [WH + (0,), WH + (1,), LAV + (0.75,), LAV + (0,)]), pass_=9239),
         V.emitter('MVK_QSpotPool', T('light_dot'), blend=4, delay=d, life=3.0, ground=True, rotation=(-90, -90, 0), scale=(120, 120, 1),
                   color_curve=fade(LAV, 0.05, 0.7, 0.7), pass_=-2660, **WORLD),
         V.emitter('MVK_QDust', T('light_dot'), blend=4, single=False, rate=40, emitter_life=2.6, delay=d + 0.1, life=1.2, bind=0.0,
@@ -168,6 +187,13 @@ def sys_penta(T, M):
         V.emitter('MVK_PTailWisps', T('beast_tailglow'), blend=4, delay=d, life=bl, bind=1.0, primitive=tail, scale=(1.01, 1.01, 1.01),
                   backface=True, pass_=9449, color_curve=([0, 0.1, 0.8, 1], [HI + (0,), WH + (0.9,), WH + (0.9,), VIO + (0,)]),
                   extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.05, 0.3, 0.15)), **WORLD),
+        *([V.emitter('MVK_PCrown', T('beast_crown'), blend=1, delay=d, life=bl, bind=1.0, primitive=UB.mesh_prim('_crown.skn', '_penta.anm'),
+                     scale=(1, 1, 1), backface=True, pass_=9452, color_curve=([0, 0.08, 0.85, 1], [WH + (0,), WH + (1,), WH + (1,), WH + (0,)]),
+                     extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.5, 0.3, 0.9)), **WORLD),
+           V.emitter('MVK_PCrownGlow', T('beast_crownglow'), blend=4, delay=d, life=bl, bind=1.0, primitive=UB.mesh_prim('_crown.skn', '_penta.anm'),
+                     scale=(1.01, 1.01, 1.01), backface=True, pass_=9453,
+                     color_curve=([0, nt(roar), nt(roar + 0.3), nt(shout), nt(shout + 0.4), 1], [HI + (0.5,), WH + (1,), HI + (0.7,), WH + (1,), HI + (0.7,), VIO + (0,)]),
+                     extra=holo(T('holo_erode'), drive[0], drive[1], rim=(0.1, 0.5, 0.25)), **WORLD)] if MP.available('crown') else []),
         V.emitter('MVK_PPool', T('shadow_ring'), blend=1, delay=d, life=bl + 0.3, bind=1.0, ground=True, rotation=(-90, -90, 0),
                   scale=(520, 520, 1), scale_curve=([0, 0.1, 1], [(0.2,) * 3, (1.0,) * 3, (1.0,) * 3]),
                   color_curve=fade(WH, 0.05, 0.85, 0.85), pass_=-2650, **WORLD),
@@ -186,11 +212,11 @@ def sys_penta(T, M):
         V.emitter('MVK_PTrophyGlow', T('mk_gold_glow'), blend=4, delay=td, life=3.4, bind=1.0, pos=(0, 640, 0), scale=(210, 210, 1),
                   scale_curve=([0, 0.1, 0.5, 1], [(0.2,) * 3, (1.2,) * 3, (1.0,) * 3, (1.1,) * 3]),
                   color_curve=([0, 0.08, 0.3, 0.8, 1], [GOLD + (0,), GOLD_HI + (1,), GOLD + (0.5,), GOLD + (0.45,), GOLD + (0,)]), pass_=9460),
-        V.emitter('MVK_PTrophy', T('mk_gold'), blend=1, delay=td, life=3.4, bind=1.0, mesh=M('mk_trophy'), scale=(1.5, 1.5, 1.5),
+        V.emitter('MVK_PTrophy', T('mk_trophy' if MP.available('trophy') else 'mk_gold'), blend=1, delay=td, life=3.4, bind=1.0, mesh=M('mk_trophy'), scale=(1.5, 1.5, 1.5),
                   backface=True, pos=(0, 470, 0), velocity=(0, 140, 0), drag=(2.2, 2.2, 2.2),
                   spin=(0, 110, 0), scale_curve=([0, 0.12, 1], [(0.1,) * 3, (1.0,) * 3, (1.0,) * 3]),
                   color_curve=([0, 0.06, 0.85, 1], [GOLD_HI + (0,), WH + (1,), WH + (1,), WH + (0,)]), pass_=9461, **WORLD),
-        V.emitter('MVK_PTrophyShine', T('mk_gold'), blend=4, delay=td, life=3.4, bind=1.0, mesh=M('mk_trophy'), scale=(1.53, 1.53, 1.53),
+        V.emitter('MVK_PTrophyShine', T('mk_trophy' if MP.available('trophy') else 'mk_gold'), blend=4, delay=td, life=3.4, bind=1.0, mesh=M('mk_trophy'), scale=(1.53, 1.53, 1.53),
                   backface=True, pos=(0, 470, 0), velocity=(0, 140, 0), drag=(2.2, 2.2, 2.2),
                   spin=(0, 110, 0), scale_curve=([0, 0.12, 1], [(0.1,) * 3, (1.0,) * 3, (1.0,) * 3]),
                   color_curve=([0, 0.06, 0.2, 1], [GOLD_HI + (0,), GOLD_HI + (0.8,), GOLD + (0.08,), GOLD + (0,)]),

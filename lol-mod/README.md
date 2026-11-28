@@ -3,11 +3,14 @@
 Eigener Mod für den **CSLoL Manager**. Er ersetzt Yunaras Standard-Skin (nur bei dir sichtbar).
 Alle neuen Grafiken (Fußball, Ketten, Ego-Bestie, Spielfeld-Linien) sind selbst erstellt.
 
-## Was Version 0.15.0 enthält
+## Was Version 0.16.0 enthält
 
 | Teil | Änderung |
 |---|---|
-| Dschinn-Schweif von Meshy (neu in v0.15) | der Unterkörper des Ego-Geists ist jetzt **mit Meshy modelliert**, genauso detailreich wie der Oberkörper: ein gewundener Rauchschweif mit Rauchbändern, Zacken und eingerollter Spitze (Text-zu-3D, Textur, auf 8.353 Dreiecke reduziert). Er sitzt in der Hüfte, ist 300 Einheiten lang und leicht zur Kamera gekippt. Die 8 Schweif-Gelenke folgen seinen Windungen: jeder Punkt wird nach seinem Weg entlang der Oberfläche ab der Hüfte eingeordnet, so biegt sich der Schweif sauber durch alle Schlaufen. Farben in der Geister-Palette des Oberkörpers, zur Spitze hin weich ausgeblendet, die hellen Rauchbänder leuchten grün-violett. Der Geist schwebt dafür etwas höher |
+| Meshy-Modelle für die Effekte (neu in v0.16) | alle bisher selbst gebauten Formen sind jetzt **echte Meshy-Modelle** (Text-zu-3D, Textur, für das Spiel reduziert): **Penta-Pokal** (goldener Pokal mit Henkeln und Fußball-Relief), **Recall-Tor** (Pfosten, Latte und ein echtes Netz mit Maschen – als Tor aus Licht, das sich aufbaut und beim Tor nach hinten ausbeult), **Metavision-Kettenglieder** (gezackte Eisenglieder mit Runen – im Kettenring beim Ult-Start und in allen fliegenden Kettensplittern), **Quadra-Flutlicht** (Stadion-Lampenkopf mit 10 Strahlern oben am Lichtkegel), **Penta-Krone** (Krone aus Ketten und Hörnern auf dem Kopf der riesigen Penta-Bestie, mit leuchtenden Kristallen) |
+| Ego-Geist: neue Haut + neue Bewegungen (neu in v0.16) | **neue Körpertextur** von Meshy im Stil des Dschinn-Schweifs (gleiche UV-Aufteilung, passt exakt aufs Modell); Augen, Maul und Adern leuchten weiter grün. **6 neue Bewegungen** aus Meshys Katalog: die Arm-Züge von „Schwimmen“ liegen über der aufrechten Haltung – er **schwimmt mit den Armen durch die Luft**, wenn er gleitet, und **paddelt** leicht, wenn er schwebt; zwei **Zauber-Gesten** (mit Runen-Aufblitzen und Funken), ein **Aufwärts-Klauenhieb**, und vor dem Sturz **lädt er sich auf** (Arme hoch, Ringe ziehen sich zusammen, ein Licht wächst) |
+| Neues Ladebild + Icons (neu in v0.16) | Ladebild mit dem **Ego-Geist hinter dem Stürmer** (gehörnt, grün leuchtende Augen, Rauchschweif), dazu neue Champion-Icons (eckig + rund) mit seinem Gesicht und dem Geist dahinter – mit Meshys Bild-Werkzeug aus dem bisherigen Ladebild und einem Render des Geists |
+| Dschinn-Schweif von Meshy (v0.15) | der Unterkörper des Ego-Geists ist jetzt **mit Meshy modelliert**, genauso detailreich wie der Oberkörper: ein gewundener Rauchschweif mit Rauchbändern, Zacken und eingerollter Spitze (Text-zu-3D, Textur, auf 8.353 Dreiecke reduziert). Er sitzt in der Hüfte, ist 300 Einheiten lang und leicht zur Kamera gekippt. Die 8 Schweif-Gelenke folgen seinen Windungen: jeder Punkt wird nach seinem Weg entlang der Oberfläche ab der Hüfte eingeordnet, so biegt sich der Schweif sauber durch alle Schlaufen. Farben in der Geister-Palette des Oberkörpers, zur Spitze hin weich ausgeblendet, die hellen Rauchbänder leuchten grün-violett. Der Geist schwebt dafür etwas höher |
 | Ego-Geist (v0.14) | die Bestie ist jetzt ein **schwebender Ego-Geist**: **ab der Hüfte abgeschnitten** (die Beine sind aus dem Modell entfernt, die Schnittkante raucht aus) und darunter ein **Rauchschweif wie bei einem Dschinn** – ein eigenes Modell mit 8 eigenen Gelenken, durch das eine Welle läuft: er schlängelt sich, schwingt in einer S-Kurve leicht nach vorn (damit man ihn von oben sieht) und zieht bei jedem Gleiten nach. **Fließende Bewegung** wie unter Wasser: langsame Achter-Bahn, weites Wogen von Hüfte und Wirbelsäule, doppelt so weiche Übergänge zwischen den Aktionen, Arme und Kopf als weiche Federn, die nachschwingen. **Geister-Look**: durchscheinend (55 %) und **von innen leuchtend**, hellere Kontur, das Gesicht bleibt deckender und gut erkennbar, die Adern pulsieren stärker wie ein Herzschlag. Auch der Penta-Auftritt hat den Rauchschweif |
 | Ego-Stufen (v0.13) | sein Aussehen wächst mit dem Spiel – gekoppelt an den Rang seiner R (Level 6 / 11 / 16), wie Riot es bei Jax Skin 14 macht. **Stufe 1** (Level 1–5) = die bisherige Grundform. **Stufe 2**: Trikot-Säume und -Nähte glimmen grün, grüne Linie unter der Ego-Anzeige. **Stufe 3**: die Säume leuchten heller, die Schuhe glühen grün, einzelne Funken steigen von den Schultern. **Stufe 4**: violett leuchtende Haarspitzen, violetter Schimmer auf den Nähten, kleine flache Flammen an der Ego-Anzeige. Das Leuchten ist eine additive Ebene über seinem eigenen Modell (Riots „Attached Mesh“-Glühen) – keine zusätzliche Geometrie. Vorschau: `previews/ego_stages_v0.13.png` |
 | Übersicht im Kampf (v0.13) | **Schattenpool → Ring**: unter der Ult liegt kein dunkler Fleck mehr, nur ein dünner violett-grüner Ring mit leichtem Nebel – gegnerische Bodenmarkierungen bleiben lesbar (auch beim Penta). **Bestie durchsichtig**: nach dem Aufsteigen 60 % deckend mit heller Kontur, nur bei ihren Schlägen kurz voll sichtbar. **Bildschirm-Ketten**: nach dem Festziehen auf 40 % (Ecken-Abdunklung auf 22 %), die Lichtpulse bleiben hell, vor dem Zerspringen wieder voll. **Pokal** steigt jetzt oberhalb der Lebensleiste auf, die **Quadra-Flamme** an der Ego-Anzeige bleibt flach. **Rote Gegner-Warnung zurück**: Riot zeigt Gegnern beim W ein rotes Bodensymbol und einen roten Kreis (eigene „Enemy POV“-Effekte) – das Umfärben hatte sie grün gemacht, jetzt sind sie wieder rot. **Weniger Kleinkram**: Kreide-Spuren nur noch bei jedem zweiten Schritt und ohne Rasenfetzen/Staub, Q-Aura nur an Kopf und Schultern, alle Auren, Rauch, Funken, Staub und Penta-Blitzlichter mit deutlich weniger Partikeln |
@@ -55,7 +58,7 @@ Alle neuen Grafiken (Fußball, Ketten, Ego-Bestie, Spielfeld-Linien) sind selbst
 ## Installieren (CSLoL Manager)
 
 1. CSLoL Manager öffnen.
-2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.15.0.fantome` auswählen.
+2. Auf **„Add mod“** (Plus-Symbol) klicken und `FlowStriker_Yunara_v0.16.0.fantome` auswählen.
 3. Häkchen beim Mod setzen, dann **„Run“** drücken.
 4. League starten und im Übungstool Yunara mit dem **Standard-Skin** spielen.
 
@@ -82,12 +85,14 @@ Custom Skins sind von Riot nicht offiziell erlaubt – Nutzung auf eigenes Risik
 
 ## Vorschau
 
+![Neues Ladebild (v0.16)](previews/loadscreen_v0.16.png)
+
 ![Ego-Stufen (v0.13)](previews/ego_stages_v0.13.png)
 
 ![Neues Ladebild (v0.8)](previews/loadscreen_v0.8.png)
 
-Vorschauvideos (Simulation): `build/Ult_Ego-Geist_v0.15.mp4` (die ganze Ult, 16 s: er läuft und dreht sich, der Ego-Geist
-bleibt hinter ihm), `Multikills_v0.15.mp4` (Quadra; Quadra + Penta 2 s später), `Extras_v0.9.mp4` (Dribbeln, Ego-Anzeige, erwachte Form, Recall, Respawn, Tod) und
+Vorschauvideos (Simulation): `build/Ult_Ego-Geist_v0.16.mp4` (die ganze Ult, 16 s: er läuft und dreht sich, der Ego-Geist
+bleibt hinter ihm), `Multikills_v0.16.mp4` (Quadra; Quadra + Penta 2 s später), `Extras_v0.16.mp4` (Dribbeln, Ego-Anzeige, erwachte Form, Recall, Respawn, Tod) und
 `Mimik_Blinzeln_v0.9.mp4`.
 
 ![Ladebildschirm](previews/striker_v0.6_loadscreen.png)
@@ -154,6 +159,8 @@ Stürmers um. Riots Dateien landen nie im Repository.
 - `tools/lolrig.py` – schreibt Skelette (`.skl`) und Animationen (`.anm` v4) im Riot-Layout; `tools/animmesh.py` liest sie
   für die Vorschau; `tools/beast_anim.py` + `tools/char/beast_extract.py` – Meshy-Biest (Rig + 13 Bewegungen inkl. Laufen) → animiertes
   Effekt-Modell (Ego-Geist: ab der Hüfte abgeschnitten, Rauchschweif mit eigenen Gelenken) mit 15-s-Choreografie (fließendes Schweben, Gleiten mit Neigung, Schweif-Welle, Arme/Kopf als Federn, Einsacken bei Schlägen) + kurzer Penta-Auftritt; `tools/char/beast_video.py` – Vorschauvideo der ganzen Ult
+- `tools/meshy_props.py` – die Meshy-Modelle der Effekte (Pokal, Tor, Kettenglied/-ring, Flutlicht-Kopf, Krone):
+  Ausrichtung, Größe, Platz, Texturen (`assets_src/vfx/meshy/`)
 - `tools/char/glb_read.py` – liest Meshy-GLBs ohne Blender (Netz, UVs, Grundfarbe), z. B. den Dschinn-Schweif
   (`assets_src/vfx/genie_tail.npz` + `genie_tail_basecolor.png`), den `tools/beast_anim.py` einbaut und riggt
 - `tools/char/awakened.py` – Textur der erwachten Form + Liste der betroffenen Dreiecke, dazu die Leucht-Ebenen der

@@ -30,6 +30,7 @@ from PIL import Image
 import lolbin as L
 import vfxlib as V
 import beast_anim as BA
+import meshy_props as MP
 from vfxshapes import holo, fade
 
 F = L.Field
@@ -162,15 +163,23 @@ def beast_colour(root, s=1024):
     their dissolving edge smoulders violet-green; the head is more opaque. Returns (skin, emissive, inner light)."""
     from scipy.ndimage import gaussian_filter
     base = np.asarray(Image.open(os.path.join(root, 'assets_src', 'vfx', 'beast_basecolor.png')).convert('RGB').resize((s, s))).astype(np.float32) / 255
-    Lum = base.mean(-1)
-    t = np.clip(Lum * 2.2, 0, 1) ** 1.1
+    v2 = os.path.join(root, 'assets_src', 'vfx', 'beast_basecolor_v2.png')
+    if os.path.exists(v2):      # Meshy retexture in the genie tail's style (same UVs): its surface detail drives the shading
+        skin2 = np.asarray(Image.open(v2).convert('RGB').resize((s, s))).astype(np.float32) / 255
+        Lum = skin2.mean(-1)
+        t = np.clip((Lum - np.percentile(Lum, 5)) / (np.percentile(Lum, 98) - np.percentile(Lum, 5) + 1e-6), 0, 1) ** 1.2
+    else:
+        Lum = base.mean(-1)
+        t = np.clip(Lum * 2.2, 0, 1) ** 1.1
     deep = np.array([0.05, 0.015, 0.09]); vio = np.array([0.46, 0.20, 0.80]); hi = np.array([0.78, 0.62, 1.0])
     col = deep + (vio - deep) * t[..., None] + (hi - vio) * np.clip(t - 0.75, 0, 1)[..., None] * 2
     green = np.clip((base[..., 1] - np.maximum(base[..., 0], base[..., 2])) * 6, 0, 1)
+    warm = np.clip((np.minimum(base[..., 0], base[..., 1]) - base[..., 2]) * 4 - 0.4, 0, 1)    # the glowing mouth
+    green = np.maximum(green, warm)
     n = gaussian_filter(np.random.default_rng(14).random((s, s)), 22, mode='wrap'); n = (n - n.min()) / np.ptp(n)
     n2 = gaussian_filter(np.random.default_rng(15).random((s, s)), 40, mode='wrap'); n2 = (n2 - n2.min()) / np.ptp(n2)
     veins = (np.exp(-((n - 0.5) / 0.010) ** 2) + 0.7 * np.exp(-((n - 0.32) / 0.008) ** 2)) * np.clip((n2 - 0.45) * 4, 0, 1)
-    veins = np.clip(veins, 0, 1) * (Lum < 0.45)
+    veins = np.clip(veins, 0, 1) * (t < 0.55)
     glow = np.clip(np.maximum(green, veins * 0.9), 0, 1)
     gcol = np.array([0.25, 1.0, 0.50])
     col = col * (1 - glow[..., None]) + gcol * glow[..., None]
@@ -260,7 +269,15 @@ def ground_crack(s=512):
 def textures(root):
     skin, glow, inner = beast_colour(root)
     tail, tail_glow = tail_textures(root=root)
-    return {'beast_skin2': skin, 'beast_glow': glow, 'beast_inner': inner, 'beast_tail': tail, 'beast_tailglow': tail_glow, 'shadow_pool': shadow_pool(), 'shadow_ring': shadow_ring(),
+    out = {}
+    if MP.available('crown'):
+        cr = np.asarray(MP.texture('crown')).astype(np.float32) / 255
+        green = np.clip((cr[..., 1] - np.maximum(cr[..., 0], cr[..., 2])) * 5, 0, 1)
+        violet = np.clip((cr[..., 2] - cr[..., 1]) * 4 - 0.3, 0, 1)
+        gl = np.clip(green[..., None] * np.array([0.3, 1.0, 0.55]) + violet[..., None] * np.array([0.65, 0.35, 1.0]), 0, 1)
+        out['beast_crown'] = Image.fromarray((np.clip(cr * 1.5 + 0.04, 0, 1) * 255).astype(np.uint8))
+        out['beast_crownglow'] = Image.fromarray((np.dstack([gl, np.maximum(green, violet)]) * 255).astype(np.uint8), 'RGBA')
+    return {**out, 'beast_skin2': skin, 'beast_glow': glow, 'beast_inner': inner, 'beast_tail': tail, 'beast_tailglow': tail_glow, 'shadow_pool': shadow_pool(), 'shadow_ring': shadow_ring(),
             'smoke_puff': smoke_puff(), 'smoke_violet': smoke_violet(),
             'ground_crack': ground_crack()}
 
@@ -270,7 +287,15 @@ def anim_files(root):
     b = BA.Beast(os.path.join(root, 'assets_src', 'vfx', 'beast_rig.npz'))
     frames, total = BA.compose(b)
     penta, _ = BA.compose_penta(b)
-    return BA.files(b, frames, BEAST_BASE, {'_penta': penta}), total
+    extra = {}
+    if MP.available('crown'):                 # the penta ghost's crown of chains and horns, on its Head joint
+        head = b.pos[np.argmax(b.pos[:, 1])]
+        P, N, U, T = MP.crown(head)
+        hi = b.names.index('Head')
+        I = np.zeros((len(P), 4), np.int64); I[:, 0] = hi
+        W = np.zeros((len(P), 4)); W[:, 0] = 1.0
+        extra['_crown'] = dict(pos=P, nrm=N, uv=U, tris=T, infl=I, w=W)
+    return BA.files(b, frames, BEAST_BASE, {'_penta': penta}, extra), total
 
 
 # ------------------------------------------------------------------ the persistent system (R buff, 15 s)
@@ -416,7 +441,7 @@ def emitters(T):
     for j in range(3):
         ems.append(_ring(f'MVB_Roar{j}', T, roar + 0.08 * j, HEAD_Y, HI if j % 2 else VIO, 9320 + j))
     ems.append(_ground_ring('MVB_RoarGround', T, roar, VIO, -2680, size=80, grow=6.5))
-    ems.append(V.emitter('MVB_ChainBurst', T('chain_metal'), blend=1, single=False, rate=500, emitter_life=0.06, delay=roar + 0.1,
+    ems.append(V.emitter('MVB_ChainBurst', T('chain_meshy' if MP.available('chainlink_lo') else 'chain_metal'), blend=1, single=False, rate=500, emitter_life=0.06, delay=roar + 0.1,
                          life=1.0, bind=0.0, pos=(0, CHEST_Y, 0), spawn_radius=150, mesh=T('chain_link').replace('.tex', '.scb'),
                          backface=True, scale=V.vvec3((1.4, 1.4, 1.4), rand=[(0.7, 1.3), None, None]),
                          velocity=V.vvec3((700, 600, 700), rand=[(-1, 1), (0.1, 1.0), (-1, 1)]), accel=(0, -1500, 0),
@@ -437,6 +462,28 @@ def emitters(T):
                              pos=(0, CHEST_Y + 40, 0), uniform=False, scale=(14, 130, 1), rotation=(35 + 12 * k, 0, 0),
                              scale_curve=([0, 0.3, 1], [(0.4, 0.2, 1), (1, 1, 1), (0.6, 1.2, 1)]),
                              color_curve=([0, 0.15, 1], [WH + (1,), LAV + (0.9,), VIO + (0,)]), pass_=9350 + k))
+    # ---- casting: a rune of light flares at its raised claw, sparks gather
+    for k, t in enumerate(BA.event_times('cast', 0.45)):
+        ems.append(V.emitter(f'MVB_CastRune{k}', T('reticle'), blend=4, delay=t, life=0.9, bind=1.0, pos=(0, HEAD_Y + 40, 0),
+                             scale=(60, 60, 1), scale_curve=([0, 0.25, 1], [(0.3,) * 3, (1.1,) * 3, (1.3,) * 3]), spin=(90, 0, 0),
+                             color_curve=([0, 0.2, 0.7, 1], [HI + (0,), WH + (0.9,), VIO + (0.6,), VIO + (0,)]), pass_=9380 + 40 + k))
+        ems.append(V.emitter(f'MVB_CastSparks{k}', T('light_dot'), blend=4, single=False, rate=60, emitter_life=0.6, delay=t - 0.2,
+                             life=0.5, bind=1.0, pos=(0, HEAD_Y + 20, 0), spawn_radius=110, scale=V.vvec3((2.4, 2.4, 2.4), rand=[(0.6, 1.4), None, None]),
+                             velocity=V.vvec3((0, 60, 0), rand=[None, (0.5, 1.5), None]), drag=(1.5, 1.5, 1.5),
+                             color_curve=([0, 0.3, 1], [WH + (0,), HI + (0.9,), VIO + (0,)]), pass_=9380 + 44 + k))
+    # ---- charging before the dive: rings pull inwards, a light grows between its raised claws
+    ch = BA.event_times('charge', 0.0)[0]
+    for j in range(5):
+        ems.append(V.emitter(f'MVB_ChargeRing{j}', T('shock_ring'), blend=4, delay=ch + 0.35 + 0.55 * j, life=0.55, bind=1.0,
+                             pos=(0, HEAD_Y - 30, 0), scale=(70, 70, 1), scale_curve=([0, 1], [(5.0,) * 3, (0.4,) * 3]),
+                             color_curve=([0, 0.3, 1], [VIO + (0,), HI + (0.8,), WH + (1,)]), pass_=9450 + j))
+    ems.append(V.emitter('MVB_ChargeCore', T('light_dot'), blend=4, delay=ch + 0.2, life=dive - ch - 0.1, bind=1.0, pos=(0, HEAD_Y - 30, 0),
+                         scale=(30, 30, 30), scale_curve=([0, 0.85, 1], [(0.4,) * 3, (2.6,) * 3, (4.0,) * 3]),
+                         color_curve=([0, 0.2, 0.9, 1], [HI + (0,), HI + (0.6,), WH + (1,), WH + (0,)]), pass_=9456))
+    ems.append(V.emitter('MVB_ChargeMotes', T('light_dot'), blend=4, single=False, rate=40, emitter_life=dive - ch - 0.4, delay=ch + 0.2,
+                         life=0.7, bind=1.0, pos=(0, HEAD_Y - 40, 0), spawn_radius=170, scale=V.vvec3((2.2, 2.2, 2.2), rand=[(0.6, 1.4), None, None]),
+                         velocity=V.vvec3((0, 150, 0), rand=[None, (0.6, 1.4), None]), drag=(1.0, 1.0, 1.0),
+                         color_curve=([0, 0.3, 1], [WH + (0,), HI + (0.9,), FLOW + (0,)]), pass_=9457))
     # ---- arms-spread bellow: violet rings + a flash at its head
     for j in range(3):
         ems.append(_ring(f'MVB_Shout{j}', T, shout + 0.1 * j, HEAD_Y, VIO if j % 2 else LAV, 9360 + j, size=60, grow=8.0, life=0.55))

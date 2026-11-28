@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GEN = os.path.join(ROOT, 'assets_src', 'gen')
 BUILD = os.path.join(ROOT, 'build')
-VERSION = '0.15.0'
+VERSION = '0.16.0'
 
 SKIN = 'Characters/Yunara/Skins/Skin0'
 PART = SKIN + '/Particles/'
@@ -529,9 +529,17 @@ def step_ult_cast(b):
     """R activation: chains wrap around his body and burst (then the Ego beast rises, see step_ult_beast)."""
     for n in ('chain_metal', 'reticle', 'flash_star', 'shock_ring', 'light_dot'):
         put_tex(MV + 'mvfx_' + n + '.tex', gen(n))
-    rp, ru, rt = make_assets.chain_ring(radius=64.0, count=20)
+    import meshy_props as MP
+    chain_tex = 'chain_metal'
+    if MP.available('chainlink_lo'):          # Meshy's spiked iron link with runes (v0.16)
+        rp, ru, rt = MP.chain_ring(radius=64.0, count=16)
+        lp, lu, lt = MP.chain_link()
+        put_tex(MV + 'mvfx_chain_meshy.tex', MP.texture('chainlink_lo', 'iron'))
+        chain_tex = 'chain_meshy'
+    else:
+        rp, ru, rt = make_assets.chain_ring(radius=64.0, count=20)
+        lp, lu, lt = make_assets.chain_link()
     files[MV + 'mvfx_chain_ring.scb'] = scb_bytes(rp, ru, rt, 'mvfx_chain_ring')
-    lp, lu, lt = make_assets.chain_link()
     files[MV + 'mvfx_chain_link.scb'] = scb_bytes(lp, lu, lt, 'mvfx_chain_link')
     T = lambda n: MV + 'mvfx_' + n + '.tex'
     FLOW = (0.10, 0.65, 0.30); DEEP = (0.02, 0.36, 0.16); HI = (0.62, 0.98, 0.72)
@@ -542,16 +550,16 @@ def step_ult_cast(b):
     rings = [((0, 60, 0), (8, 0, 0)), ((0, 105, 0), (-13, 35, 0)), ((0, 150, 0), (10, 70, 0))]
     for k, (pos, rot) in enumerate(rings):
         tighten = ([0.0, 0.22, 0.85, 1.0], [(1.28, 1.28, 1.28), (1.0, 1.0, 1.0), (0.93, 0.93, 0.93), (0.9, 0.9, 0.9)])
-        ems.append(V.emitter(f'MV_Chain{k}', T('chain_metal'), blend=1, life=BREAK + 0.02, pos=pos, rotation=rot,
+        ems.append(V.emitter(f'MV_Chain{k}', T(chain_tex), blend=1, life=BREAK + 0.02, pos=pos, rotation=rot,
                              scale=(1.0, 1.0, 1.0), scale_curve=tighten, spin=(0, 25 * (1 if k % 2 else -1), 0),
                              mesh=MV + 'mvfx_chain_ring.scb', color_curve=fade((1.0, 1.0, 1.0), 0.12, 0.95),
                              pass_=9000 + k, backface=True))
-        ems.append(V.emitter(f'MV_ChainGlow{k}', T('chain_metal'), blend=4, life=BREAK + 0.02, pos=pos, rotation=rot,
+        ems.append(V.emitter(f'MV_ChainGlow{k}', T(chain_tex), blend=4, life=BREAK + 0.02, pos=pos, rotation=rot,
                              scale=(1.03, 1.03, 1.03), scale_curve=tighten, spin=(0, 25 * (1 if k % 2 else -1), 0),
                              mesh=MV + 'mvfx_chain_ring.scb', pass_=9010 + k, backface=True,
                              color_curve=([0.0, 0.5, 0.88, 1.0], [FLOW + (0.0,), FLOW + (0.35,), HI + (1.0,), (1, 1, 1, 0.0)])))
     # ---- the burst
-    ems.append(V.emitter('MV_ChainShards', T('chain_metal'), blend=1, single=False, rate=650, emitter_life=0.05,
+    ems.append(V.emitter('MV_ChainShards', T(chain_tex), blend=1, single=False, rate=650, emitter_life=0.05,
                          delay=BREAK, life=0.95, bind=0.0, pos=(0, 105, 0), spawn_radius=60,
                          mesh=MV + 'mvfx_chain_link.scb', backface=True,
                          scale=V.vvec3((1.1, 1.1, 1.1), rand=[(0.7, 1.3), None, None]),

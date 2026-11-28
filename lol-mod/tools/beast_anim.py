@@ -247,22 +247,26 @@ SEQUENCE = [   # the big actions happen right behind him (x 0), the calm watchin
     ('arise', 0.75, 1.08, 1.8, 'rise', None),       # claws its way up out of the pool, from all fours to upright
     ('scream', 0.55, 1.45, 1.65, 'roar', None),     # rears up, crouches wide and roars
     ('alert', 0.0, 1.4, 1.15, None, None),          # crouched, menacing, looks around
-    ('idle', 0.0, None, None, 'drift', -DRIFT_X),   # glides out to his left side ...
-    ('look', 0.6, 1.5, 1.25, None, None),           # ... breathes heavily, watches the field
-    ('idle', 0.3, None, None, 'drift', 0.0),        # glides back behind him
+    ('idle', 0.0, None, None, 'drift', -DRIFT_X),   # swims through the air out to his left side ...
+    ('cast1', 0.2, 1.9, 1.3, 'cast', None),         # ... raises a claw and gathers Ego like a spell
+    ('idle', 0.3, None, None, 'drift', 0.0),        # swims back behind him
     ('pound', 1.38, 1.37, 1.4, 'pound', None),      # beats its chest
     ('stomp2', 0.0, 1.4, 1.4, 'stomp', None),       # slams the ground twice (shock waves under it)
-    ('idle', 0.6, None, None, 'drift', DRIFT_X),    # glides out to his right side ...
-    ('alert', 2.0, 1.4, 1.15, None, None),          # ... crouched, menacing
+    ('idle', 0.6, None, None, 'drift', DRIFT_X),    # swims out to his right side ...
+    ('cast2', 0.1, 1.9, 1.3, 'cast', None),         # ... casts low with both claws
     ('idle', 0.1, None, None, 'drift', 0.0),        # back behind him
-    ('swipe', 0.0, 1.0, 1.0, 'swipe', None),        # rips the air with an uppercut claw
+    ('upslash', 0.45, 1.25, 1.0, 'swipe', None),    # rips the air with an uppercut claw
     ('shout', 2.3, 1.9, 1.45, 'shout', None),       # spreads its arms and bellows
     ('look', 3.0, 1.0, 1.0, None, None),
     ('stomp', 0.0, 1.4, 1.4, 'stomp', None),        # angry slam
-    ('alert', 0.4, None, 1.0, None, None),          # crouches, ready ... (length fills up to LENGTH)
+    ('charge', 0.1, None, 0.75, 'charge', None),    # charges up, both arms raised ... (length fills up to LENGTH)
     ('slam', 0.55, 1.55, 2.0, 'dive', None),        # ... and hurls itself head first into the striker
 ]
 LOOPED = set()
+# arm layers: Meshy's swim clips lie the body flat, so only their arm strokes are laid over the upright pose -
+# it swims through the air while gliding and treads the air while hovering calmly (label -> clip, weight)
+ARM_LAYER = {'drift': ('swimfwd', 0.8), None: ('swimidle', 0.45)}
+ARM_JOINTS = ('LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand', 'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand')
 FADE = 0.3                         # long soft cross-fades: it flows from one action into the next
 TURN = 0.35                        # seconds to turn towards / away from a drift
 DRIFT_YAW = 30.0                   # turns a little towards where it glides
@@ -418,7 +422,7 @@ def add_life(beast, frames, segs):
     for k, fr in enumerate(frames):
         t = k / FPS
         lab = next((lb for a, b, _, _, _, lb, _, _ in segs if a <= t < b), None)
-        calm = 1.0 if lab in (None, 'drift') else 0.3
+        calm = 1.0 if lab in (None, 'drift', 'cast') else 0.3
         q0 = fr[0][2]
         yaw_m = R.quat_to_mat(q0)                       # root yaw: the beast's own side/facing axes turn with it
         axes = {'x': yaw_m @ np.array([1.0, 0, 0]), 'y': np.array([0, 1.0, 0]), 'z': yaw_m @ np.array([0, 0, 1.0])}
@@ -534,9 +538,17 @@ def compose(beast, seq=None, length=LENGTH, hits=None, ending='dive', behind=BEH
     for k in range(n):
         t = min(k / FPS, total)
         pose = None
-        for a, b, clip, s0, sp, _, _, _ in segs:
+        for a, b, clip, s0, sp, lab, _, _ in segs:
             if a - 1e-6 <= t <= b + 1e-6:
                 p = beast.sample(clip, s0 + (t - a) * sp)
+                if lab in ARM_LAYER and ARM_LAYER[lab][0] in beast.clips:
+                    lc, lw = ARM_LAYER[lab]
+                    n_ = (len(beast.clips[lc]) - 1) / 24.0
+                    q_ = beast.sample(lc, (t * 0.9) % n_)
+                    ramp = smooth((t - a) / 0.35) * (1 - smooth((t - (b - 0.35)) / 0.35))
+                    for jn in ARM_JOINTS:
+                        i_ = beast.names.index(jn)
+                        p[i_] = (p[i_][0], p[i_][1], slerp(p[i_][2], q_[i_][2], lw * ramp))
                 if pose is None:
                     pose = p
                 else:                                  # inside the cross-fade with the previous segment
@@ -557,7 +569,7 @@ def compose_penta(beast):
     return compose(beast, PENTA_SEQUENCE, PENTA_LENGTH, penta_impacts(), 'sink', PENTA_BEHIND, PENTA_SCALE)
 
 
-def files(beast, frames, base, extra_anims=None):
+def files(beast, frames, base, extra_anims=None, extra_meshes=None):
     """base: game path without extension. Returns {path: bytes} for the body .skn, the tail _tail.skn, .skl, .anm
     (+ extra {suffix: frames} clips on the same skeleton)."""
     names = [ROOT] + beast.names
@@ -566,7 +578,9 @@ def files(beast, frames, base, extra_anims=None):
     for i, p in enumerate(beast.parents):
         local_bind.append(beast.rest[i] if p < 0 else np.linalg.inv(beast.rest[p]) @ beast.rest[i])
     tl = beast.tail
-    used = sorted(set(int(j) for j in np.unique(beast.infl[beast.w > 0])) | set(int(j) for j in np.unique(tl['infl'][tl['w'] > 0])))
+    em = extra_meshes or {}
+    used = sorted(set(int(j) for j in np.unique(beast.infl[beast.w > 0])) | set(int(j) for j in np.unique(tl['infl'][tl['w'] > 0]))
+                  | set(int(j) for m_ in em.values() for j in np.unique(m_['infl'][m_['w'] > 0])))
     influences = [j + 1 for j in used]
     remap = {j: k for k, j in enumerate(used)}
     import tempfile
@@ -586,9 +600,13 @@ def files(beast, frames, base, extra_anims=None):
         return data
     skn = skn_bytes(beast.pos, beast.nrm, beast.uv, beast.infl, beast.w, beast.tris, 'beast', True)
     tail_skn = skn_bytes(tl['pos'], tl['nrm'], tl['uv'], tl['infl'], tl['w'], tl['tris'], 'tail', False)
+    extra_skn = {suffix: skn_bytes(m_['pos'], m_['nrm'], m_['uv'], m_['infl'], m_['w'], m_['tris'], suffix.strip('_'), False)
+                 for suffix, m_ in em.items()}
     skl = R.write_skl(names, parents, local_bind, influences)
     anm = R.write_anm_v4(names, frames, FPS)
     out = {base + '.skn': skn, base + '_tail.skn': tail_skn, base + '.skl': skl, base + '.anm': anm}
+    for suffix, data in extra_skn.items():
+        out[base + suffix + '.skn'] = data
     for suffix, fr in (extra_anims or {}).items():
         out[base + suffix + '.anm'] = R.write_anm_v4(names, fr, FPS)
     return out

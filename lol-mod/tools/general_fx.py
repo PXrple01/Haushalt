@@ -20,6 +20,7 @@ import os
 
 import lolbin as L
 import vfxlib as V
+import meshy_props as MP
 from vfxshapes import holo, fade, quad, box, cone, combine
 
 F = L.Field
@@ -158,6 +159,8 @@ def ego_flare():
 def textures():
     tx = {'g_chalk': chalk_dash(), 'g_grass': grass_fleck(), 'g_footprint': footprint(), 'g_whistle_wave': whistle_wave(),
           'g_whistle': whistle_icon(), 'g_confetti': confetti(), 'g_ego_frame': ego_frame(), 'g_ego_flare': ego_flare()}
+    if MP.available('goal'):
+        tx['g_goal_meshy'] = MP.texture('goal', 'light')
     for k in range(1, EGO_PIPS + 1):
         tx[f'g_ego_pip{k}'] = ego_pip(k)
     return tx
@@ -176,6 +179,8 @@ def meshes():
                    quad((-W, 0, z0), (-W, 0, z0 + D), (-W, H * 0.92, z0 + D), (-W, H, z0), ((0, 1), (0.6, 1), (0.6, 0), (0, 0))),
                    quad((W, 0, z0), (W, 0, z0 + D), (W, H * 0.92, z0 + D), (W, H, z0), ((0, 1), (0.6, 1), (0.6, 0), (0, 0)))])
     spot = cone((0, 900, 0), (0, 0, 0), 25.0, 110.0, seg=24)
+    if MP.available('goal'):                    # Meshy's goal with a real net (v0.16): one mesh, frame + net
+        return {'mvfx_g_goal_meshy.scb': MP.goal(GOAL_W, z0), 'mvfx_g_spot.scb': spot}
     return {'mvfx_g_goal_frame.scb': frame, 'mvfx_g_goal_net.scb': net, 'mvfx_g_spot.scb': spot}
 
 
@@ -185,16 +190,26 @@ def sys_recall(T, M):
     life = RECALL_FRAMES / FPS
     BUILD = 0.15; NET = 7.75
     nt = lambda t: t / life
-    ems.append(V.emitter('MVG_GoalFrame', T('holo_body'), blend=4, life=life, mesh=M('g_goal_frame'), scale=(1, 1, 1), backface=True,
-                         pass_=9200, color_curve=([0, nt(BUILD + 0.6), nt(NET), nt(NET + 0.1), 1],
-                                                  [HI + (0,), (0.85, 1, 0.9, 0.95), (0.85, 1, 0.9, 0.95), WH + (1,), WH + (0,)]),
-                         extra=holo(T('holo_erode'), [0, nt(BUILD), nt(BUILD + 0.7), 1], [1, 1, 0, 0], rim=(0.5, 1.0, 0.7)), **WORLD))
-    ems.append(V.emitter('MVG_GoalNet', T('goal_net'), blend=4, life=life, mesh=M('g_goal_net'), scale=(1, 1, 1), backface=True,
-                         uniform=False, pass_=9199,
-                         scale_curve=([0, nt(NET), nt(NET + 0.08), nt(NET + 0.2), 1], [(1, 1, 1), (1, 1, 1), (1.03, 1.02, 1.35), (1, 1, 1.08), (1, 1, 1)]),
-                         color_curve=([0, nt(BUILD + 0.9), nt(NET), nt(NET + 0.08), 1],
-                                      [HI + (0,), FLOW + (0.65,), FLOW + (0.65,), WH + (1,), WH + (0,)]),
-                         extra=holo(T('holo_erode'), [0, nt(BUILD + 0.3), nt(BUILD + 1.0), 1], [1, 1, 0, 0])[0:1], **WORLD))
+    if MP.available('goal'):
+        # the goal built of light: Meshy's goal (posts, crossbar, the real net) drawn additively, materialising
+        # through an alpha erosion, the whole goal bulging back when the ball goes in
+        ems.append(V.emitter('MVG_Goal', T('g_goal_meshy'), blend=4, life=life, mesh=M('g_goal_meshy'), scale=(1, 1, 1), backface=True,
+                             uniform=False, pass_=9200,
+                             scale_curve=([0, nt(NET), nt(NET + 0.08), nt(NET + 0.2), 1], [(1, 1, 1), (1, 1, 1), (1.02, 1.02, 1.18), (1, 1, 1.04), (1, 1, 1)]),
+                             color_curve=([0, nt(BUILD + 0.6), nt(NET), nt(NET + 0.1), 1],
+                                          [HI + (0,), (0.75, 1, 0.85, 0.9), (0.75, 1, 0.85, 0.9), WH + (1,), WH + (0,)]),
+                             extra=holo(T('holo_erode'), [0, nt(BUILD), nt(BUILD + 0.9), 1], [1, 1, 0, 0], rim=(0.5, 1.0, 0.7)), **WORLD))
+    else:
+        ems.append(V.emitter('MVG_GoalFrame', T('holo_body'), blend=4, life=life, mesh=M('g_goal_frame'), scale=(1, 1, 1), backface=True,
+                             pass_=9200, color_curve=([0, nt(BUILD + 0.6), nt(NET), nt(NET + 0.1), 1],
+                                                      [HI + (0,), (0.85, 1, 0.9, 0.95), (0.85, 1, 0.9, 0.95), WH + (1,), WH + (0,)]),
+                             extra=holo(T('holo_erode'), [0, nt(BUILD), nt(BUILD + 0.7), 1], [1, 1, 0, 0], rim=(0.5, 1.0, 0.7)), **WORLD))
+        ems.append(V.emitter('MVG_GoalNet', T('goal_net'), blend=4, life=life, mesh=M('g_goal_net'), scale=(1, 1, 1), backface=True,
+                             uniform=False, pass_=9199,
+                             scale_curve=([0, nt(NET), nt(NET + 0.08), nt(NET + 0.2), 1], [(1, 1, 1), (1, 1, 1), (1.03, 1.02, 1.35), (1, 1, 1.08), (1, 1, 1)]),
+                             color_curve=([0, nt(BUILD + 0.9), nt(NET), nt(NET + 0.08), 1],
+                                          [HI + (0,), FLOW + (0.65,), FLOW + (0.65,), WH + (1,), WH + (0,)]),
+                             extra=holo(T('holo_erode'), [0, nt(BUILD + 0.3), nt(BUILD + 1.0), 1], [1, 1, 0, 0])[0:1], **WORLD))
     ems.append(V.emitter('MVG_GoalLine', T('shock_ring'), blend=4, delay=BUILD, life=0.5, ground=True, rotation=(-90, -90, 0),
                          scale=(50, 50, 1), scale_curve=([0, 1], [(1,) * 3, (5.0,) * 3]),
                          color_curve=([0, 0.1, 1], [HI + (0,), FLOW + (1,), DEEP + (0,)]), pass_=-2700, **WORLD))
